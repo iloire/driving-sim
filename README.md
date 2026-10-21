@@ -74,9 +74,8 @@ to the road model happens offline. `--refresh` downloads everything again. See
 
 ## Deploy
 
-GitHub Pages, from CI. Every push to `main` that passes the tests is built with the
-`/driving-sim/` base path and deployed. The deploy job then fetches the live page and the site
-file, so a green badge means that commit is live.
+Not deployed yet: GitHub Pages needs a public repo on this plan, and hosting is still to be decided.
+Run it locally with `npm run dev`. CI runs the tests, lint and production build.
 
 ## Licence
 
