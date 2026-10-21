@@ -1,0 +1,101 @@
+# Architecture
+
+```
+src/sim/    pure TypeScript, no three.js, no DOM — unit-tested
+  car.ts      the car: rigid body, struts, tyres, engine, gearbox
+  roads.ts    road model: profiles, carving, nearest-road index
+  terrain.ts  Heightmap with 5 m detail tiles (shared with paragliding-sim)
+  sun.ts      sun position and daylight hours (shared with paragliding-sim)
+src/game/   three.js scene, input, HUD, audio — the rendering layer
+public/sites/lanzarote/   site.json + generated terrain and road data
+scripts/fetch-terrain.ts  IGN + OSM download → height.bin, ortho.jpg, roads.json, carved detail tiles
+```
+
+The terrain pipeline, `Heightmap`, the LOD terrain view and the sky come from
+[paragliding-sim](https://github.com/iloire/paragliding-sim). The differences are listed under each
+section below.
+
+## Frames
+
+Site frame: **x east, y north, z up**, metres, origin at the bbox's south-west corner (UTM 28N).
+three.js: `X = x − e/2, Y = z, Z = e/2 − y`, so the site is centred on the origin.
+Car body frame: **X forward, Y left, Z up**, origin at the centre of mass. A heading is a compass
+bearing in radians (0 = north, clockwise).
+
+## Car (`src/sim/car.ts`)
+
+One rigid body (1300 kg, principal inertias for roll, pitch and yaw) integrated at 480 Hz (4
+sub-steps of each 120 Hz game step). Newton handles the centre of mass and Euler's equations the
+rotation.
+
+- **Struts.** Each wheel casts down its strut from the mount. The strut length is the distance to
+  the terrain minus the wheel radius, and the cast is capped at the strut's reach, so a steeply
+  pitched car can't find a cliff top tens of metres along it. The spring and damper force is the
+  tyre's load, applied at the contact point along the body's up axis. A bump stop takes over past
+  the travel.
+- **Tyres.** The axes are laid in the ground plane under the contact point. Lateral force uses a
+  lean Pacejka on the slip angle (`B = 10, C = 1.4`), peaking near 8° and keeping about 80 % in a
+  full slide. The slip angle is taken against at least 2.5 m/s, so a parked car doesn't jitter.
+  Drive, brake and rolling resistance make up the longitudinal force. A friction circle caps the
+  total at μ × load, so wheelspin or hard braking steals cornering grip.
+- **Brakes and handbrake.** A brake resists rolling like a stiff damper up to its cap, so a car
+  stops dead instead of oscillating. The handbrake locks the rear wheels, which then skate with
+  kinetic friction against their sliding direction.
+- **Powertrain.** The torque curve is a broad hump (300 N m peak at 4400 rpm, nothing past the
+  6800 redline), feeding six gears, a 3.9 final drive and 90 % efficiency. The clutch slips
+  pulling away. It changes up near the redline and down below 2400 rpm. Off the throttle the
+  engine brakes a little. When stopped, the brake pedal engages reverse (and the pedals swap).
+  With no pedal and under 0.4 m/s, the hill hold keeps it parked.
+- **Body contact.** Eight corners of the body box push out of the ground with friction (a roll, a
+  bottomed landing, the roof). The friction is capped at what would stop the corner's slide in one
+  sub-step, which keeps it stable at rest.
+
+`src/sim/car.test.ts` pins the envelope: 0–100 km/h in 5–9 s, a top speed of 200–260 km/h,
+100–0 km/h in 35–50 m, under ~1.1 g steady cornering, holding on a 10 % grade, the handbrake
+kicking the tail out, surviving an upside-down landing, and noticing the sea.
+
+**Surfaces** come from the road index: on a paved carriageway grip ×1.0 and rolling 0.012, on a
+track ×0.72 and 0.03, anywhere else (picón, lava, sand) ×0.62 and 0.06.
+
+## Roads (`src/sim/roads.ts`, `scripts/fetch-terrain.ts`)
+
+- **Source.** Overpass returns every `highway=*` way of a drivable kind over the bbox, and they
+  are mapped to seven kinds (`highway` … `track`). Driveways, parking aisles, private ways,
+  areas and tunnels are dropped. Bridges are kept but never carved. Coordinates go to the site
+  frame, to the decimetre, in `roads.json` (2.2 MB, gzipped by Pages).
+- **Profile.** Each road is resampled every 4 m, and its height under the centreline is smoothed
+  along its length (three passes of a ±20 m moving average, with the window shrinking at the
+  ends). That gives a graded ride and keeps the climbs. The road never goes below sea level.
+- **Carving** (offline, in `fetch-terrain`). Every 5 m cell within reach of a segment takes the
+  profile height, weighted 1 across the carriageway plus a 1 m verge and blending to 0 over a 6 m
+  shoulder. Where roads meet, cells average the heights by weight, and the strongest weight sets
+  how much of the natural ground is replaced. All profiles are taken before any cutting. The
+  raw IGN tiles stay in `cache/`, and the tiles in `public/` are the carved ones.
+- **Index.** `RoadIndex` buckets segments in a 100 m grid for nearest-road lookups. It gives the
+  tyre surfaces (16 lookups per 120 Hz step), the HUD plate, the spawn points (snapped to the
+  nearest paved road) and the **R** recovery.
+
+## Terrain loading (`src/game/site.ts`, `terrain-view.ts`)
+
+paragliding-sim fetches every detail tile's heights up front (54 tiles near the launches).
+Here all 105 land tiles have detail (about 74 MB of heights), so they load lazily:
+
+- A chunk loads its photo **and** its heights together when the camera comes within 4.5 km. It
+  frees both (`Heightmap.removeDetail`) when it drops back to the coarse mesh.
+- `site.ensureDetail(x, y, r)` waits for the tiles around a point. It runs before the car is
+  placed (1.6 km) and every half second around the car (400 m), so the physics always runs on
+  the 5 m ground, whatever the view has loaded.
+- At the finest level (within 1.5 km) a chunk also gets its road ribbons (`road-view.ts`): asphalt
+  strips 6 cm above the carved surface, with a canvas texture of white edge lines and a dashed
+  centre line on main roads, and bare worn tarmac on minor ones. A segment belongs to the chunk
+  holding its start, so chunks never double up.
+
+## HUD (`src/game/hud.ts`)
+
+- **The road plate.** An OSM `ref` like `LZ-67` goes in a green plate, with the name beside it,
+  and it swaps in whenever you turn onto a different road.
+- **Speed and revs.** A segmented rev strip with the redline in rust.
+- **The map.** Heading-up and redrawn at 15 Hz: the site photo under the road vectors, zooming out
+  with speed.
+
+The palette is black picón, lime-wash white, Manrique's shutter green and Timanfaya rust.

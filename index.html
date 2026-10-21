@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Lanzarote Drive</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Barlow:wght@500;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+
+    <div id="loading">
+      <div class="brand">LANZAROTE <span>DRIVE</span></div>
+      <div class="loading-line">Loading the island…</div>
+    </div>
+
+    <div id="plate" aria-live="polite">
+      <b id="plate-ref" hidden></b>
+      <span id="plate-name"></span>
+    </div>
+
+    <section id="cluster" aria-label="Speed">
+      <div class="speed-row">
+        <div id="speed">0</div>
+        <div class="speed-side">
+          <div id="gear">1</div>
+          <div class="unit">km/h</div>
+        </div>
+      </div>
+      <div id="rpm" aria-hidden="true"></div>
+    </section>
+
+    <canvas id="minimap" aria-label="Map of the roads around the car"></canvas>
+
+    <div id="message" role="status"></div>
+    <div id="rotate">Turn your phone sideways to drive</div>
+
+    <nav id="touch-buttons" aria-label="Game">
+      <button type="button" data-action="camera">CAM</button>
+      <button type="button" data-action="reset">RESET</button>
+      <button type="button" data-action="spawns">PLACES</button>
+      <button type="button" data-action="pause">PAUSE</button>
+    </nav>
+
+    <div id="picker" hidden tabindex="-1">
+      <h2>Start from</h2>
+      <div id="picker-list"></div>
+      <p>↑ ↓ to choose · Esc to close</p>
+    </div>
+
+    <aside id="help">
+      <h2><button type="button" onclick="this.closest('#help').classList.toggle('collapsed')">Controls <kbd>H</kbd></button></h2>
+      <table>
+        <tr><td>W / ↑</td><td>Accelerate</td></tr>
+        <tr><td>S / ↓</td><td>Brake · reverse when stopped</td></tr>
+        <tr><td>A D / ← →</td><td>Steer</td></tr>
+        <tr><td>Space</td><td>Handbrake</td></tr>
+        <tr><td>R</td><td>Back on the nearest road</td></tr>
+        <tr><td>M · N</td><td>Places · next place</td></tr>
+        <tr><td>C · G</td><td>Camera · map</td></tr>
+        <tr><td>V · P · H</td><td>Mute · pause · help</td></tr>
+      </table>
+      <p>Gamepad: RT throttle, LT brake, stick steers, A handbrake, Y camera.</p>
+    </aside>
+
+    <footer id="credits">
+      <span class="credit-long">Terrain MDT05 &amp; PNOA </span>© <a href="https://www.ign.es" target="_blank" rel="noopener">IGN</a> (CC BY 4.0) · Roads © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors
+      <span id="sha"></span>
+    </footer>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

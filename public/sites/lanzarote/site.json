@@ -1,0 +1,22 @@
+{
+  "name": "Lanzarote",
+  "country": "Spain",
+  "proj4": "+proj=utm +zone=28 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs",
+  "crs": "EPSG:4083",
+  "bbox": [616000, 3193000, 658000, 3235000],
+  "heightmap": { "file": "height.bin", "size": 2048 },
+  "ortho": { "file": "ortho.jpg", "size": 4096 },
+  "detail": { "dir": "detail", "tileM": 3000, "orthoSize": 2048 },
+  "spawns": [
+    { "id": "timanfaya", "name": "Timanfaya (LZ-67)", "lat": 29.0255, "lon": -13.7346 },
+    { "id": "mirador", "name": "Mirador del Río", "lat": 29.2128, "lon": -13.4812 },
+    { "id": "famara", "name": "Caleta de Famara", "lat": 29.1146, "lon": -13.5566 },
+    { "id": "haria", "name": "Haría", "lat": 29.1456, "lon": -13.4993 },
+    { "id": "la-geria", "name": "La Geria (LZ-30)", "lat": 28.9787, "lon": -13.7062 },
+    { "id": "el-golfo", "name": "El Golfo coast road", "lat": 28.9585, "lon": -13.8274 },
+    { "id": "arrecife", "name": "Arrecife", "lat": 28.9618, "lon": -13.5502 },
+    { "id": "teguise", "name": "Teguise", "lat": 29.0604, "lon": -13.5605 },
+    { "id": "playa-blanca", "name": "Playa Blanca", "lat": 28.8653, "lon": -13.8301 },
+    { "id": "orzola", "name": "Órzola", "lat": 29.2209, "lon": -13.4513 }
+  ]
+}
