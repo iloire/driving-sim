@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/iloire/driving-sim/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/iloire/driving-sim/actions/workflows/ci.yml)
 
+### ▶ Play it now: **[https://iloire.github.io/driving-sim/](https://iloire.github.io/driving-sim/)**
+
 A browser driving simulator over the real island of Lanzarote: the IGN 5 m terrain and aerial photo
 used by [Famara Glide](https://github.com/iloire/paragliding-sim), with every OpenStreetMap road on
 the island carved into it. You can drive the LZ-67 through Timanfaya, wind along La Geria, or leave
@@ -103,8 +105,9 @@ it stays fast.
 
 ## Deploy
 
-Not deployed yet: GitHub Pages needs a public repo on this plan, and hosting is still to be decided.
-Run it locally with `npm run dev`. CI runs the tests, lint and production build.
+GitHub Pages, from CI. Every push to `main` that passes the tests is built with the
+`/driving-sim/` base path and deployed. The deploy job then fetches the live page, the site file and
+a detail photo, so a green badge means that commit is live.
 
 ## Licence
 
