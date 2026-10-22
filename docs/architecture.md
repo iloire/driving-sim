@@ -4,6 +4,8 @@
 src/sim/    pure TypeScript, no three.js, no DOM — unit-tested
   car.ts      the car: rigid body, struts, tyres, engine, gearbox
   roads.ts    road model: profiles, carving, nearest-road index
+  buildings.ts  building footprints as obstacles: point-in-polygon, way out, per-tile index
+  objects.ts  per-tile objects file, building heights, lamp and edge-post placement
   terrain.ts  Heightmap with 5 m detail tiles (shared with paragliding-sim)
   sun.ts      sun position and daylight hours (shared with paragliding-sim)
 src/game/   three.js scene, input, HUD, audio — the rendering layer
@@ -50,9 +52,14 @@ rotation.
   bottomed landing, the roof). The friction is capped at what would stop the corner's slide in one
   sub-step, which keeps it stable at rest.
 
+- **Walls.** Eight points round the body's waist are pushed back out of any building footprint
+  they enter, along the nearest wall's outward normal. The push is stiff (1 MN/m) and close to
+  critically damped (40 kN·s/m), so a crash stops the car without bouncing it back, and the rub
+  along the wall is capped like the ground friction.
+
 `src/sim/car.test.ts` pins the envelope: 0–100 km/h in 5–9 s, a top speed of 200–260 km/h,
 100–0 km/h in 35–50 m, under ~1.1 g steady cornering, holding on a 10 % grade, the handbrake
-kicking the tail out, surviving an upside-down landing, and noticing the sea.
+kicking the tail out, surviving an upside-down landing, stopping against a wall, and noticing the sea.
 
 **Surfaces** come from the road index: on a paved carriageway grip ×1.0 and rolling 0.012, on a
 track ×0.72 and 0.03, anywhere else (picón, lava, sand) ×0.62 and 0.06.
@@ -75,13 +82,35 @@ track ×0.72 and 0.03, anywhere else (picón, lava, sand) ×0.62 and 0.06.
   tyre surfaces (16 lookups per 120 Hz step), the HUD plate, the spawn points (snapped to the
   nearest paved road) and the **R** recovery.
 
+## Buildings and street furniture (`src/sim/objects.ts`, `src/game/dress.ts`)
+
+- **Buildings.** OSM `building=*` ways (about 27,500 on the island; OSM is incomplete outside the
+  towns). Construction sites, ruins and footprints under 8 m² are dropped. The height comes from
+  `height` or `building:levels` when tagged. Otherwise it is one to three 3.2 m storeys, picked from
+  the OSM id so it never changes, with bigger footprints likelier to be taller. Each building is
+  filed under the tile holding its centroid in `objects/<col>_<row>.json`.
+- **Furniture**, placed offline from the roads and buildings. A road with a building within 30 m
+  is in town and gets street lamps every 28 m, alternating sides, 1.4 m past the kerb, with their
+  arms over the road. Main roads in the open get edge posts (*hitos*) every 50 m on both sides,
+  1 m past the edge. Nothing is placed inside a building or on another road's carriageway.
+- **Drawing.** Walls sit on the lowest ground under the footprint and rise to the highest plus
+  the building's height. They use a canvas texture of one window bay per 3.2 m × 3.2 m: lime
+  wall, dark glass, a painted frame and shutters in one of three woodwork colours. The roofs are
+  flat. A tile's buildings merge into four meshes (three wall colours and the roofs), and its
+  lamps and posts are instanced, so a town costs a handful of draw calls. A tile is dressed once
+  it is within 4.5 km (about 20 ms for Arrecife's busiest tile) and freed with its heights.
+- **Collisions.** `BuildingIndex` buckets the loaded tiles' footprints in a 25 m grid, and
+  `env.wall` asks it for the way out. Lamps and posts aren't solid.
+
 ## Terrain loading (`src/game/site.ts`, `terrain-view.ts`)
 
 paragliding-sim fetches every detail tile's heights up front (54 tiles near the launches).
 Here all 105 land tiles have detail (about 74 MB of heights), so they load lazily:
 
-- A chunk loads its photo **and** its heights together when the camera comes within 4.5 km. It
-  frees both (`Heightmap.removeDetail`) when it drops back to the coarse mesh.
+- A chunk loads its photo, heights and objects together when the camera comes within 4.5 km,
+  nearest first and two tiles at a time, so the ground under the car never queues behind the
+  horizon. It frees them all when it drops back to the coarse mesh (64² segments a chunk, about
+  47 m between vertices).
 - `site.ensureDetail(x, y, r)` waits for the tiles around a point. It runs before the car is
   placed (1.6 km) and every half second around the car (400 m), so the physics always runs on
   the 5 m ground, whatever the view has loaded.

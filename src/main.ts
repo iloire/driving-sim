@@ -4,11 +4,12 @@ import * as THREE from 'three';
 import { CarAudio } from './game/audio';
 import { CameraRig } from './game/camera';
 import { createCarModel } from './game/car-model';
+import { TileDresser } from './game/dress';
 import { Hud } from './game/hud';
 import { Input, type Action } from './game/input';
 import { SpawnPicker } from './game/picker';
 import { RoadView } from './game/road-view';
-import { loadSite, tileHeights, type Spawn } from './game/site';
+import { loadSite, type Spawn } from './game/site';
 import { TerrainView } from './game/terrain-view';
 import { TouchPad } from './game/touch';
 import { createSurround, Sunlight } from './game/world';
@@ -64,8 +65,12 @@ async function boot(): Promise<void> {
   const ortho = await new THREE.TextureLoader().loadAsync(site.orthoUrl);
   const anisotropy = renderer.capabilities.getMaxAnisotropy();
   const roadView = new RoadView(site.roads.roads, terrain, anisotropy);
-  const terrainView = new TerrainView(terrain, ortho, site.detailTileM, site.detailTiles, anisotropy,
-    (t) => tileHeights(site, t), (x0, y0, size) => roadView.build(x0, y0, size));
+  const dresser = new TileDresser(terrain, roadView, site.detailTileM, anisotropy);
+  const terrainView = new TerrainView(terrain, ortho, site.detailTileM, site.detailTiles, anisotropy, {
+    load: (t) => site.loadTile(t),
+    free: (t) => { dresser.free(t); site.freeTile(t); },
+    dress: (t, level) => dresser.dress(t, level),
+  });
   scene.add(terrainView.group, createSurround(extent));
 
   const settings = { drivetrain: 'AWD (40/60)' };
@@ -82,6 +87,7 @@ async function boot(): Promise<void> {
       const road = onRoad(site.roads, x, y, 0.75);
       return !road ? OFFROAD : isPaved(road.kind) ? TARMAC : GRAVEL;
     },
+    wall: (x, y) => site.buildings.wall(x, y),
   };
 
   let spawn: Spawn = site.spawns.find((s) => s.spec.id === query.get('spawn')) ?? site.spawns[0];
@@ -157,7 +163,8 @@ async function boot(): Promise<void> {
   hud.say(`${spawn.spec.name} — ${TOUCH ? 'right thumb up to drive' : 'W to drive, A/D to steer'}`, 5);
 
   // Dev builds expose the live state for poking at from the console.
-  if (import.meta.env.DEV) Object.assign(window, { drive: { car: () => car, controls: input.controls, terrain, site } });
+  const perf = { physics: 0, terrain: 0, render: 0, frames: 0, worst: 0 };
+  if (import.meta.env.DEV) Object.assign(window, { drive: { car: () => car, controls: input.controls, terrain, site, perf, renderer } });
 
   const carPos = new THREE.Vector3();
   const ground = (p: THREE.Vector3) => terrain.heightAt(p.x + extent / 2, extent / 2 - p.z);
@@ -169,10 +176,12 @@ async function boot(): Promise<void> {
     input.update(dt);
     if (!paused && !picker.open) {
       acc += dt;
+      const t0 = performance.now();
       while (acc >= STEP) {
         stepCar(car, spec, input.controls, env, STEP);
         acc -= STEP;
       }
+      perf.physics += performance.now() - t0;
       const upright = rotate(car.q, [0, 0, 1])[2] > 0.3;
       if (car.inWater || (!upright && Math.hypot(...car.vel) < 1)) {
         if (stuck === 0) hud.say(car.inWater ? `Into the Atlantic. ${KEY.reset} to get back on the road` : `On its roof. ${KEY.reset} to get back on the road`);
@@ -200,7 +209,9 @@ async function boot(): Promise<void> {
     const followHeading = moving > 4 && car.speed > 0 ? travel : car.heading;
     rig.update(dt, model.group, followHeading, ground);
     sunlight.follow(carPos);
+    const t1 = performance.now();
     terrainView.update(camera.position, camera.position.y - ground(camera.position));
+    perf.terrain += performance.now() - t1;
 
     const road = onRoad(site.roads, car.pos[0], car.pos[1], 2);
     hud.update(dt, {
@@ -210,7 +221,11 @@ async function boot(): Promise<void> {
     const slip = Math.max(...car.wheels.map((w) => (w.contact ? w.slip : 0)));
     audio.update(car.rpm, car.gear > 0 ? input.controls.throttle : input.controls.brake, slip, Math.abs(car.speed));
 
+    const t2 = performance.now();
     renderer.render(scene, camera);
+    perf.render += performance.now() - t2;
+    perf.frames++;
+    perf.worst = Math.max(perf.worst, dt);
     requestAnimationFrame(frame);
   }
 

@@ -1,9 +1,10 @@
 // The terrain as a grid of square chunks. Far away every chunk is the coarse site mesh
-// (~23 m vertices) draped with the site-wide orthophoto. Near the camera a chunk that has
+// (~47 m vertices) draped with the site-wide orthophoto. Near the camera a chunk that has
 // a detail tile swaps to a 10 m mesh, then the native 5 m one, each with its own sharper
 // photo, built and freed as the camera moves. A detail tile's heights load with its photo (the
-// whole island is too much to fetch up front) and are freed with it, and at the finest level
-// the chunk also gets its road surfaces. Chunk edges hang skirts so the seams between levels
+// whole island is too much to fetch up front) and are freed with it, nearest first and a couple at
+// a time so the ground under the car never queues behind the horizon. A detailed chunk is also
+// dressed (buildings, road furniture, and at the finest level the road surfaces). Chunk edges hang skirts so the seams between levels
 // never show sky. The material adds a fine grain close up (the photo is ~1.5 m/px).
 
 import * as THREE from 'three';
@@ -11,7 +12,7 @@ import type { Heightmap } from '../sim/terrain';
 import type { DetailTile } from './site';
 
 /** Coarse-mesh segments per chunk side. */
-const BASE_SEGS = 128;
+const BASE_SEGS = 64;
 /** Detail meshes: full = native DEM grid, half = every other sample. */
 const LEVEL_SEGS = [0, 300, 600];
 /** Camera distance (m) under which a tile goes to level 1, level 2. */
@@ -19,6 +20,8 @@ const LEVEL_DIST = [Infinity, 4500, 1500];
 /** A tile only drops a level once the camera is this much further than the threshold. */
 const HYSTERESIS = 1.2;
 const SKIRT_M = 80;
+/** Tiles downloading at once. */
+const MAX_LOADS = 2;
 /** Land within this distance of the bbox edge slopes down to what lies beyond (sea or plain) instead of ending in a wall. */
 const EDGE_FADE_M = 700;
 
@@ -148,8 +151,18 @@ interface Chunk {
     loading: boolean;
     texture?: THREE.Texture;
     mesh?: THREE.Mesh;
-    roads?: THREE.Object3D;
+    dress?: THREE.Object3D;
   };
+}
+
+/** What the view asks of the rest of the game for a detail tile. */
+export interface TileHooks {
+  /** Fetch the tile's 5 m heights (and anything else that comes with them). */
+  load(tile: DetailTile): Promise<void>;
+  /** Release them: the chunk is back to the coarse mesh. */
+  free(tile: DetailTile): void;
+  /** What stands on the chunk at this level (owned and cached by the caller), or null. */
+  dress(tile: DetailTile, level: number): THREE.Object3D | null;
 }
 
 export class TerrainView {
@@ -157,6 +170,7 @@ export class TerrainView {
   private readonly chunks: Chunk[] = [];
   private readonly chunkM: number;
   private readonly loader = new THREE.TextureLoader();
+  private loads = 0;
 
   constructor(
     private readonly terrain: Heightmap,
@@ -164,10 +178,7 @@ export class TerrainView {
     tileM: number,
     tiles: DetailTile[],
     private readonly anisotropy: number,
-    /** Fetches a tile's 5 m heights into the terrain. */
-    private readonly loadHeights: (tile: DetailTile) => Promise<void>,
-    /** The road surfaces over a chunk, built once its heights are in. */
-    private readonly buildRoads: (x0: number, y0: number, size: number) => THREE.Object3D | null,
+    private readonly hooks: TileHooks,
   ) {
     const e = terrain.extent;
     ortho.colorSpace = THREE.SRGBColorSpace;
@@ -192,6 +203,7 @@ export class TerrainView {
     const e = this.terrain.extent;
     const cx = cam.x + e / 2, cy = e / 2 - cam.z;
     let next: { chunk: Chunk; want: number; dist: number } | undefined;
+    const fetchable: { d: NonNullable<Chunk['detail']>; dist: number }[] = [];
     for (const chunk of this.chunks) {
       const d = chunk.detail;
       if (!d) continue;
@@ -203,9 +215,14 @@ export class TerrainView {
       for (let level = LEVEL_DIST.length - 1; level > 0; level--) {
         if (dist < LEVEL_DIST[level] * (d.level >= level ? HYSTERESIS : 1)) { want = level; break; }
       }
-      if (want > 0 && !d.texture && !d.loading) this.loadPhoto(d);
+      if (want > 0 && !d.texture && !d.loading) fetchable.push({ d, dist });
       if (want > 0 && !d.texture) want = 0;
       if (want !== d.level && (!next || dist < next.dist)) next = { chunk, want, dist };
+    }
+    fetchable.sort((a, b) => a.dist - b.dist);
+    for (const { d } of fetchable) {
+      if (this.loads >= MAX_LOADS) break;
+      this.loadPhoto(d);
     }
     // One rebuild per frame keeps the hitches small; nearest tile first.
     if (next) this.setLevel(next.chunk, next.want);
@@ -214,11 +231,12 @@ export class TerrainView {
   /** The photo and the heights together: a chunk only goes up a level once it has both. */
   private loadPhoto(d: NonNullable<Chunk['detail']>): void {
     d.loading = true;
-    Promise.all([this.loader.loadAsync(d.tile.orthoUrl), this.loadHeights(d.tile)]).then(([texture]) => {
+    this.loads++;
+    Promise.all([this.loader.loadAsync(d.tile.orthoUrl), this.hooks.load(d.tile)]).then(([texture]) => {
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.anisotropy = this.anisotropy;
       d.texture = texture;
-    }).catch(() => undefined).finally(() => { d.loading = false; });
+    }).catch(() => undefined).finally(() => { d.loading = false; this.loads--; });
   }
 
   private setLevel(chunk: Chunk, level: number): void {
@@ -229,10 +247,9 @@ export class TerrainView {
       (d.mesh.material as THREE.Material).dispose();
       d.mesh = undefined;
     }
-    if (d.roads) {
-      this.group.remove(d.roads);
-      d.roads.traverse((o) => { if (o instanceof THREE.Mesh) o.geometry.dispose(); });
-      d.roads = undefined;
+    if (d.dress) {
+      this.group.remove(d.dress);
+      d.dress = undefined;
     }
     d.level = level;
     chunk.base.visible = level === 0;
@@ -240,7 +257,7 @@ export class TerrainView {
       // Out of range: free the photo and the heights too; the browser cache makes reloading cheap.
       d.texture?.dispose();
       d.texture = undefined;
-      this.terrain.removeDetail(chunk.col, chunk.row);
+      this.hooks.free(d.tile);
       return;
     }
     const geometry = buildPatch(this.terrain, chunk.col * this.chunkM, chunk.row * this.chunkM, this.chunkM,
@@ -248,9 +265,7 @@ export class TerrainView {
     d.mesh = new THREE.Mesh(geometry, terrainMaterial(d.texture!));
     d.mesh.receiveShadow = true;
     this.group.add(d.mesh);
-    if (level === LEVEL_SEGS.length - 1) {
-      d.roads = this.buildRoads(chunk.col * this.chunkM, chunk.row * this.chunkM, this.chunkM) ?? undefined;
-      if (d.roads) this.group.add(d.roads);
-    }
+    d.dress = this.hooks.dress(d.tile, level) ?? undefined;
+    if (d.dress) this.group.add(d.dress);
   }
 }

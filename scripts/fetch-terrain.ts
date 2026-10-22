@@ -3,6 +3,7 @@
 //                row 0 = north edge, sea = SEA_FLOOR_M
 //   ortho.jpg  — PNOA orthophoto over exactly the same bbox
 //   roads.json — the drivable OSM ways in the site frame (see src/sim/roads.ts)
+//   objects/   — per detail tile: OSM buildings, street lamps and edge posts (src/sim/objects.ts)
 //   detail/    — the same pair at the DEM's native 5 m (and a sharper photo) for every square
 //                tile with land, the roads carved into their heights, plus tiles.json listing them
 // Downloads are cached in cache/<site>/ (git-ignored) and reused, so re-carving after a change
@@ -13,6 +14,8 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fromArrayBuffer } from 'geotiff';
 import proj4 from 'proj4';
+import { area, BuildingIndex, type Building } from '../src/sim/buildings';
+import { buildingHeight, placeFurniture, type TileObjectsFile } from '../src/sim/objects';
 import { carveRoads, parseRoads, type RoadKind, type RoadsFile } from '../src/sim/roads';
 import { Heightmap } from '../src/sim/terrain';
 
@@ -146,18 +149,19 @@ function pickTiles(site: SiteFile, base: Int16Array): [number, number][] {
 }
 
 interface OsmWay {
+  id: number;
   tags: Record<string, string>;
   geometry: { lat: number; lon: number }[];
 }
 
-/** Every drivable way over the site's bbox, from the Overpass API. */
-async function fetchOsm(site: SiteFile): Promise<OsmWay[]> {
+/** Ways matching an Overpass filter over the site's bbox, with their geometry. */
+async function fetchOsm(site: SiteFile, filter: string): Promise<OsmWay[]> {
   const [x0, y0, x1, y1] = site.bbox;
   const proj = proj4('EPSG:4326', site.proj4);
   const corners = [[x0, y0], [x1, y0], [x0, y1], [x1, y1]].map(([e, n]) => proj.inverse([e, n]));
   const lons = corners.map((c) => c[0]), lats = corners.map((c) => c[1]);
   const box = `${Math.min(...lats)},${Math.min(...lons)},${Math.max(...lats)},${Math.max(...lons)}`;
-  const query = `[out:json][timeout:180];way["highway"~"^(${Object.keys(HIGHWAYS).join('|')})$"](${box});out tags geom;`;
+  const query = `[out:json][timeout:600];way${filter}(${box});out tags geom;`;
   const res = await fetch(OVERPASS, {
     method: 'POST',
     body: new URLSearchParams({ data: query }),
@@ -165,6 +169,26 @@ async function fetchOsm(site: SiteFile): Promise<OsmWay[]> {
   });
   if (!res.ok) throw new Error(`Overpass: ${res.status} ${res.statusText}`);
   return ((await res.json()) as { elements: OsmWay[] }).elements;
+}
+
+/** OSM building ways → footprints in the site frame (to the decimetre), slivers dropped. */
+function toBuildings(site: SiteFile, ways: OsmWay[]): Building[] {
+  const [x0, y0] = site.bbox;
+  const proj = proj4('EPSG:4326', site.proj4);
+  const out: Building[] = [];
+  for (const way of ways) {
+    if (['construction', 'ruins', 'collapsed'].includes(way.tags.building)) continue;
+    const pts: number[] = [];
+    for (const g of way.geometry) {
+      const [e, n] = proj.forward([g.lon, g.lat]);
+      pts.push(Math.round((e - x0) * 10) / 10, Math.round((n - y0) * 10) / 10);
+    }
+    if (pts[0] === pts[pts.length - 2] && pts[1] === pts[pts.length - 1]) pts.length -= 2; // OSM closes the ring
+    const footprint = Math.abs(area(pts));
+    if (pts.length < 6 || footprint < 8) continue;
+    out.push({ pts, height: Math.round(buildingHeight(way.tags, way.id, footprint) * 10) / 10 });
+  }
+  return out;
 }
 
 /** OSM ways → roads.json: site-frame coordinates to the decimetre, the private drives dropped. */
@@ -213,7 +237,7 @@ async function main(): Promise<void> {
   mkdirSync(cache, { recursive: true });
   if (fresh(osmFile)) {
     console.log('Roads from OpenStreetMap (Overpass) …');
-    writeFileSync(osmFile, JSON.stringify(await fetchOsm(site)));
+    writeFileSync(osmFile, JSON.stringify(await fetchOsm(site, `["highway"~"^(${Object.keys(HIGHWAYS).join('|')})$"]`)));
   }
   const roadsFile = toRoads(site, JSON.parse(readFileSync(osmFile, 'utf8')) as OsmWay[]);
   writeFileSync(join(dir, 'roads.json'), JSON.stringify(roadsFile));
@@ -252,6 +276,31 @@ async function main(): Promise<void> {
     const col = Math.round(tile.x0 / tileM), row = Math.round(tile.y0 / tileM);
     writeFileSync(join(detailDir, `${col}_${row}.bin`), Buffer.from(out.buffer));
   }
+
+  // Buildings and street furniture, filed under the tile that holds each one.
+  const buildingsFile = join(cache, 'buildings-osm.json');
+  if (fresh(buildingsFile)) {
+    console.log('Buildings from OpenStreetMap (Overpass) …');
+    writeFileSync(buildingsFile, JSON.stringify(await fetchOsm(site, '["building"]')));
+  }
+  const buildings = toBuildings(site, JSON.parse(readFileSync(buildingsFile, 'utf8')) as OsmWay[]);
+  const index = new BuildingIndex();
+  index.add('all', buildings);
+  const { lamps, posts } = placeFurniture(parseRoads(roadsFile), index);
+  const objects = new Map(tiles.map(([col, row]): [string, TileObjectsFile] => [`${col}_${row}`, { b: [], l: [], p: [] }]));
+  const fileOf = (x: number, y: number) => objects.get(`${Math.floor(x / tileM)}_${Math.floor(y / tileM)}`);
+  const r1 = (v: number) => Math.round(v * 10) / 10;
+  for (const b of buildings) {
+    let cx = 0, cy = 0;
+    for (let i = 0; i < b.pts.length; i += 2) { cx += b.pts[i]; cy += b.pts[i + 1]; }
+    fileOf(cx / (b.pts.length / 2), cy / (b.pts.length / 2))?.b.push([b.height, ...b.pts]);
+  }
+  for (const l of lamps) fileOf(l.x, l.y)?.l.push(r1(l.x), r1(l.y), Math.round(l.heading * 100) / 100);
+  for (const p of posts) fileOf(p.x, p.y)?.p.push(r1(p.x), r1(p.y));
+  const objectsDir = join(dir, 'objects');
+  mkdirSync(objectsDir, { recursive: true });
+  for (const [key, file] of objects) writeFileSync(join(objectsDir, `${key}.json`), JSON.stringify(file));
+  console.log(`${buildings.length} buildings, ${lamps.length} lamps, ${posts.length} edge posts`);
   console.log('Done');
 }
 

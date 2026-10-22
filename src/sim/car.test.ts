@@ -120,6 +120,17 @@ describe('rough handling', () => {
     expect(speedOf(s)).toBeLessThan(0.5);
   });
 
+  it('stops dead against a wall instead of driving through it', () => {
+    // A house across the road 40 m ahead: everything north of y = 40 is inside it, the way out is south.
+    const walled: CarEnv = { ...flat, wall: (_x, y) => (y > 40 && y < 60 ? { nx: 0, ny: -1, depth: y - 40 } : null) };
+    const s = createCar(HATCH, 0, 0, 10, 0);
+    let peak = 0;
+    run(s, { ...idle(), throttle: 1 }, 6, walled, () => { peak = Math.max(peak, s.pos[1]); });
+    expect(peak + HATCH.body[1]).toBeLessThan(41); // the bumper went at most a metre in
+    expect(s.pos.every(Number.isFinite)).toBe(true);
+    expect(s.pos[2] - 10).toBeLessThan(2); // not launched over it
+  });
+
   it('knows when it has driven into the sea', () => {
     const coast: CarEnv = { height: (_x, y) => (y < 20 ? 5 : -15), surface: () => TARMAC };
     const s = createCar(HATCH, 0, 0, 5, 0);

@@ -24,6 +24,9 @@ const KINETIC = 0.8;
 /** Body corners touching the ground (a roll, a bottoming): stiffness N/m, damping N per m/s. */
 const BODY_K = 200000;
 const BODY_C = 15000;
+/** Walls: stiff and close to critically damped, so a crash stops the car rather than bouncing it. */
+const WALL_K = 1000000;
+const WALL_C = 40000;
 
 export interface Controls {
   /** 0..1 — the accelerator, or reverse when backing up. */
@@ -46,6 +49,8 @@ export interface CarEnv {
   /** Terrain height (m) at a point of the site frame; below 0 is sea floor. */
   height(x: number, y: number): number;
   surface(x: number, y: number): Surface;
+  /** The way out of a building a point is inside (horizontal outward normal, depth in m), or null. */
+  wall?(x: number, y: number): { nx: number; ny: number; depth: number } | null;
 }
 
 export interface CarSpec {
@@ -325,6 +330,23 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
     // Sliding friction, but never more than stops the corner's slide in this sub-step (stable at rest).
     const scrape = vtLen > 1e-6 ? scale(vt, -Math.min(0.6 * press, (vtLen * spec.mass) / (4 * dt)) / vtLen) : vt;
     apply(add(scale(n, press), scrape), p);
+  }
+
+  // Walls: points round the body's waist pushed back out of any building they are in.
+  if (env.wall) {
+    for (const [bx, by] of [[front, side], [front, 0], [front, -side], [0, side], [0, -side], [-back, side], [-back, 0], [-back, -side]]) {
+      const p = add(s.pos, rotate(s.q, [bx, by, 0.1]));
+      const hit = env.wall(p[0], p[1]);
+      if (!hit) continue;
+      const n: V3 = [hit.nx, hit.ny, 0];
+      const v = add(s.vel, cross(s.w, sub(p, s.pos)));
+      const vn = dot(v, n);
+      const press = Math.max(WALL_K * Math.min(hit.depth, 1) - WALL_C * vn, 0);
+      const vt = sub(v, scale(n, vn));
+      const vtLen = Math.hypot(...vt);
+      const rub = vtLen > 1e-6 ? scale(vt, -Math.min(0.3 * press, (vtLen * spec.mass) / (4 * dt)) / vtLen) : vt;
+      apply(add(scale(n, press), rub), p);
+    }
   }
 
   const speed = Math.hypot(...s.vel);

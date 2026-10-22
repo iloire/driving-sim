@@ -20,9 +20,15 @@ It runs in a desktop browser, or on a phone held sideways. Nothing to install.
 - **A car that is a rigid body**: four raycast struts, tyres with a slip-angle curve and a friction
   circle, a torque curve and an automatic six-speed. Weight transfer, power oversteer, handbrake
   turns and rollovers all come out of the physics.
+- **Towns**: about 27,500 OSM buildings, extruded with flat roofs, lime-white walls and green, blue
+  or brown woodwork, as the island's building rules have it. They are solid, so you can crash into
+  them. Street lamps line the roads through town, and white-and-black edge posts line the main
+  roads in the open.
 - **Surfaces**: tarmac grips, gravel tracks slide, and picón and lava slide more.
 - **The road you're on** as a sign plate, a heading-up map, and sound for the engine and tyres.
 - **Time of day**: from sunrise to sunset, with the sun where it really is over Lanzarote today.
+
+![Calle Trinidad, Arrecife: the OSM buildings drawn as the island's white houses](docs/screenshots/arrecife.png)
 
 ## Run it
 
@@ -57,7 +63,7 @@ A link starts someone at the same place and time: `?spawn=timanfaya&time=17:30`.
 ## Check it
 
 ```bash
-npm test           # car physics, road carving, terrain, sun, touch (Vitest)
+npm test           # car physics, road carving, buildings, street furniture, terrain, sun, touch (Vitest)
 npm run lint
 npm run build      # typecheck + production bundle
 ```
@@ -68,7 +74,8 @@ CI runs all three on every push to `main` and on every pull request.
 
 `public/sites/lanzarote/` holds what the game loads. `npm run fetch-terrain -- lanzarote` builds
 it: the IGN heightmap and photo, the 5 m tiles, and the OSM roads from Overpass, which it then
-carves into the tiles. Downloads are cached in `cache/` (git-ignored), so re-carving after a change
+carves into the tiles. It also writes each tile's OSM buildings, street lamps and edge posts to
+`objects/<col>_<row>.json`. Downloads are cached in `cache/` (git-ignored), so re-carving after a change
 to the road model happens offline. `--refresh` downloads everything again. See
 [docs/architecture.md](docs/architecture.md).
 

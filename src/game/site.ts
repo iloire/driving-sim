@@ -1,9 +1,12 @@
 // Loads a site folder from public/sites/<id>/ and converts between lat/lon and the local frame
 // (x east, y north, metres from the bbox's south-west corner). The 5 m detail tiles cover the
-// whole island, too many to fetch up front: their heights load with their photos as the car
-// nears them (terrain-view.ts), and `ensureDetail` waits for the tiles around a point.
+// whole island, too many to fetch up front: a tile's heights and objects (buildings, lamps, posts)
+// load with its photo as the car nears it (terrain-view.ts), and `ensureDetail` waits for the
+// tiles around a point.
 
 import proj4 from 'proj4';
+import { BuildingIndex } from '../sim/buildings';
+import { parseObjects, type TileObjects, type TileObjectsFile } from '../sim/objects';
 import { isPaved, parseRoads, RoadIndex, type RoadsFile } from '../sim/roads';
 import { Heightmap } from '../sim/terrain';
 
@@ -41,6 +44,9 @@ export interface DetailTile {
   row: number;
   orthoUrl: string;
   binUrl: string;
+  objectsUrl: string;
+  /** Set once the tile's heights and objects are in. */
+  objects?: TileObjects;
 }
 
 export interface Site {
@@ -50,10 +56,16 @@ export interface Site {
   detailTileM: number;
   detailTiles: DetailTile[];
   roads: RoadIndex;
+  /** The buildings of the loaded tiles, for the car to crash into. */
+  buildings: BuildingIndex;
   spawns: Spawn[];
   toLatLon(x: number, y: number): [number, number];
   /** Loads the heights of the detail tiles within `radius` of a point (they stay until the view frees them). */
   ensureDetail(x: number, y: number, radius?: number): Promise<void>;
+  /** Loads one tile's heights and objects. */
+  loadTile(t: DetailTile): Promise<void>;
+  /** Frees a tile's heights and objects (the coarse map takes over there). */
+  freeTile(t: DetailTile): void;
 }
 
 const BASE = `${import.meta.env.BASE_URL}sites/`;
@@ -76,13 +88,22 @@ export async function loadSite(id: string): Promise<Site> {
 
   const detailTiles = index.tiles.map(([col, row]): DetailTile => ({
     col, row, orthoUrl: `${detailDir}${col}_${row}.jpg`, binUrl: `${detailDir}${col}_${row}.bin`,
+    objectsUrl: `${base}objects/${col}_${row}.json`,
   }));
+  const buildings = new BuildingIndex();
   const pending = new Map<DetailTile, Promise<void>>();
-  const loadHeights = (t: DetailTile): Promise<void> => {
+  const loaded = (t: DetailTile) => !!t.objects && !!terrain.detailAt((t.col + 0.5) * tileM, (t.row + 0.5) * tileM);
+  const loadTile = (t: DetailTile): Promise<void> => {
+    if (loaded(t)) return Promise.resolve();
     let p = pending.get(t);
     if (!p) {
-      p = fetch(t.binUrl).then((r) => r.arrayBuffer()).then((buf) => {
+      p = Promise.all([
+        fetch(t.binUrl).then((r) => r.arrayBuffer()),
+        fetch(t.objectsUrl).then((r) => r.json() as Promise<TileObjectsFile>),
+      ]).then(([buf, objects]) => {
         terrain.addDetail(tileM, t.col, t.row, Heightmap.fromInt16(buf, index.size, tileM, unitM, t.col * tileM, t.row * tileM));
+        t.objects = parseObjects(objects);
+        buildings.add(`${t.col}_${t.row}`, t.objects.buildings);
       }).finally(() => pending.delete(t));
       pending.set(t, p);
     }
@@ -102,6 +123,7 @@ export async function loadSite(id: string): Promise<Site> {
     detailTileM: tileM,
     detailTiles,
     roads,
+    buildings,
     spawns,
     toLatLon(x, y) {
       const [lon, lat] = proj.inverse([x + x0, y + y0]);
@@ -111,14 +133,15 @@ export async function loadSite(id: string): Promise<Site> {
       const near = detailTiles.filter((t) => {
         const dx = Math.max(t.col * tileM - x, 0, x - (t.col + 1) * tileM);
         const dy = Math.max(t.row * tileM - y, 0, y - (t.row + 1) * tileM);
-        return Math.hypot(dx, dy) <= radius && !terrain.detailAt((t.col + 0.5) * tileM, (t.row + 0.5) * tileM);
+        return Math.hypot(dx, dy) <= radius && !loaded(t);
       });
-      await Promise.all(near.map(loadHeights));
+      await Promise.all(near.map(loadTile));
+    },
+    loadTile,
+    freeTile(t) {
+      terrain.removeDetail(t.col, t.row);
+      buildings.remove(`${t.col}_${t.row}`);
+      t.objects = undefined;
     },
   };
-}
-
-/** Exposed for the terrain view, which loads a tile's heights with its photo. */
-export function tileHeights(site: Site, t: DetailTile): Promise<void> {
-  return site.ensureDetail((t.col + 0.5) * site.detailTileM, (t.row + 0.5) * site.detailTileM, 0);
 }
