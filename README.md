@@ -1,5 +1,9 @@
 # Lanzarote Drive
 
+
+https://github.com/user-attachments/assets/2760293f-edd4-4c84-ab65-bea412dab348
+
+
 [![CI](https://github.com/iloire/driving-sim/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/iloire/driving-sim/actions/workflows/ci.yml)
 
 ### ▶ Play it now: **[https://iloire.github.io/driving-sim/](https://iloire.github.io/driving-sim/)**
