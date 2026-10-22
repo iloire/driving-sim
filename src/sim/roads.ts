@@ -5,7 +5,7 @@
 
 import type { Heightmap } from './terrain';
 
-export type RoadKind = 'highway' | 'primary' | 'secondary' | 'tertiary' | 'minor' | 'service' | 'track';
+export type RoadKind = 'highway' | 'primary' | 'secondary' | 'tertiary' | 'minor' | 'service' | 'track' | 'runway';
 
 export interface Road {
   kind: RoadKind;
@@ -19,8 +19,11 @@ export interface Road {
 
 /** Carriageway width (m) per kind; OSM's dual carriageways come as two one-way roads. */
 export const ROAD_WIDTH: Record<RoadKind, number> = {
-  highway: 8, primary: 7.5, secondary: 7, tertiary: 6.5, minor: 5.5, service: 4, track: 3.5,
+  highway: 8, primary: 7.5, secondary: 7, tertiary: 6.5, minor: 5.5, service: 4, track: 3.5, runway: 45,
 };
+
+/** Half the widest carriageway: how far a surface lookup must search to find any road under a point. */
+export const MAX_HALF_WIDTH = Math.max(...Object.values(ROAD_WIDTH)) / 2;
 
 export const isPaved = (kind: RoadKind): boolean => kind !== 'track';
 

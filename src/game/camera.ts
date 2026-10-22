@@ -9,6 +9,9 @@ const MODES: CameraMode[] = ['chase', 'bonnet', 'orbit'];
 
 const CHASE_BACK = 6.8;
 const CHASE_UP = 2.3;
+/** With the wings out the chase camera drops further back, to see the whole span. */
+const FLY_BACK = 17;
+const FLY_UP = 4.5;
 
 export class CameraRig {
   mode: CameraMode = 'chase';
@@ -18,6 +21,8 @@ export class CameraRig {
   private readonly look = new THREE.Vector3();
   /** The chase camera's own heading, lagging the car's so turns read. */
   private heading = 0;
+  /** 0 car … 1 plane: how far back the chase camera sits. */
+  private wings = 0;
 
   constructor(readonly camera: THREE.PerspectiveCamera, dom: HTMLElement) {
     this.orbit = new OrbitControls(camera, dom);
@@ -56,13 +61,15 @@ export class CameraRig {
 
   private chaseTarget(p: THREE.Vector3): void {
     const fx = Math.sin(this.heading), fz = -Math.cos(this.heading);
-    this.desired.set(p.x - fx * CHASE_BACK, p.y + CHASE_UP, p.z - fz * CHASE_BACK);
+    const back = CHASE_BACK + (FLY_BACK - CHASE_BACK) * this.wings, up = CHASE_UP + (FLY_UP - CHASE_UP) * this.wings;
+    this.desired.set(p.x - fx * back, p.y + up, p.z - fz * back);
     this.look.set(p.x + fx * 4, p.y + 0.9, p.z + fz * 4);
   }
 
   /** `heading`: compass heading to follow (the car's, or its travel when sliding); `groundY` under the camera. */
-  update(dt: number, car: THREE.Object3D, heading: number, groundAt: (p: THREE.Vector3) => number): void {
+  update(dt: number, car: THREE.Object3D, heading: number, groundAt: (p: THREE.Vector3) => number, wings = 0): void {
     const cam = this.camera;
+    this.wings = wings;
     if (this.mode === 'orbit') {
       cam.position.add(new THREE.Vector3().subVectors(car.position, this.lastTarget));
       this.orbit.target.copy(car.position);

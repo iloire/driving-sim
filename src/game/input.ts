@@ -1,5 +1,7 @@
 // Keyboard + gamepad + touch → Controls. Keys are digital, so steering and pedals ramp towards
 // their targets instead of snapping; the pad's stick and triggers are analog and used as they are.
+// The same keys fly the plane: W/S push and pull the stick, A/D roll, Q/E rudder; the jet sits at
+// cruise thrust, Shift for full, Ctrl for idle.
 
 import type { Controls } from '../sim/car';
 
@@ -7,15 +9,17 @@ import type { Controls } from '../sim/car';
 const STEER_RATE = 2.2;
 const CENTRE_RATE = 4;
 const PEDAL_RATE = 4;
+const STICK_RATE = 3;
+const CRUISE_THRUST = 0.6;
 
-export type Action = 'reset' | 'camera' | 'mute' | 'pause' | 'help' | 'spawns' | 'next' | 'map';
+export type Action = 'reset' | 'camera' | 'mute' | 'pause' | 'help' | 'spawns' | 'next' | 'map' | 'transform';
 
 const ACTION_KEYS: Record<string, Action> = {
-  KeyR: 'reset', KeyC: 'camera', KeyV: 'mute', KeyP: 'pause', KeyH: 'help', KeyM: 'spawns', KeyN: 'next', KeyG: 'map',
+  KeyR: 'reset', KeyC: 'camera', KeyV: 'mute', KeyP: 'pause', KeyH: 'help', KeyM: 'spawns', KeyN: 'next', KeyG: 'map', KeyF: 'transform',
 };
 // Standard-mapping gamepad buttons.
-const PAD = { A: 0, B: 1, X: 2, Y: 3, LT: 6, RT: 7, BACK: 8, START: 9 };
-const PAD_ACTIONS: [number, Action][] = [[PAD.Y, 'camera'], [PAD.BACK, 'reset'], [PAD.START, 'pause']];
+const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9 };
+const PAD_ACTIONS: [number, Action][] = [[PAD.Y, 'camera'], [PAD.X, 'transform'], [PAD.BACK, 'reset'], [PAD.START, 'pause']];
 
 /** What the touch layer reports: the same shape as Controls, already analog. */
 export interface TouchControls {
@@ -25,12 +29,16 @@ export interface TouchControls {
 }
 
 export class Input {
-  readonly controls: Controls = { throttle: 0, brake: 0, steer: 0, handbrake: false };
+  readonly controls: Controls = {
+    throttle: 0, brake: 0, steer: 0, handbrake: false, flight: { pitch: 0, roll: 0, yaw: 0, thrust: CRUISE_THRUST },
+  };
   private keys = new Set<string>();
   private padPrev: boolean[] = [];
   private keySteer = 0;
   private keyThrottle = 0;
   private keyBrake = 0;
+  private keyPitch = 0;
+  private keyRoll = 0;
   touch: (() => TouchControls) | null = null;
 
   constructor(private readonly onAction: (a: Action) => void) {
@@ -57,7 +65,11 @@ export class Input {
     this.keyThrottle = ramp(this.keyThrottle, this.down('KeyW', 'ArrowUp'));
     this.keyBrake = ramp(this.keyBrake, this.down('KeyS', 'ArrowDown'));
 
-    let padSteer = 0, padThrottle = 0, padBrake = 0, padHand = false;
+    const toward = (v: number, t: number) => v + Math.max(-STICK_RATE * dt, Math.min(STICK_RATE * dt, t - v));
+    this.keyPitch = toward(this.keyPitch, (this.down('KeyS', 'ArrowDown') ? 1 : 0) - (this.down('KeyW', 'ArrowUp') ? 1 : 0));
+    this.keyRoll = toward(this.keyRoll, (this.down('KeyD', 'ArrowRight') ? 1 : 0) - (this.down('KeyA', 'ArrowLeft') ? 1 : 0));
+
+    let padSteer = 0, padThrottle = 0, padBrake = 0, padHand = false, padPitch = 0, padYaw = 0;
     const pad = navigator.getGamepads?.().find((p) => p && p.connected);
     if (pad) {
       const stick = pad.axes[0] ?? 0;
@@ -65,6 +77,9 @@ export class Input {
       padThrottle = pad.buttons[PAD.RT]?.value ?? 0;
       padBrake = pad.buttons[PAD.LT]?.value ?? 0;
       padHand = (pad.buttons[PAD.A]?.pressed ?? false) || (pad.buttons[PAD.B]?.pressed ?? false);
+      const y = pad.axes[1] ?? 0;
+      padPitch = Math.abs(y) > 0.08 ? y : 0; // stick back (down) pulls up
+      padYaw = (pad.buttons[PAD.RB]?.pressed ? 1 : 0) - (pad.buttons[PAD.LB]?.pressed ? 1 : 0);
       for (const [b, action] of PAD_ACTIONS) {
         const pressed = pad.buttons[b]?.pressed ?? false;
         if (pressed && !this.padPrev[b]) this.onAction(action);
@@ -79,5 +94,14 @@ export class Input {
     c.throttle = Math.max(this.keyThrottle, padThrottle, t?.throttle ?? 0);
     c.brake = Math.max(this.keyBrake, padBrake, t?.brake ?? 0);
     c.handbrake = this.down('Space') || padHand;
+
+    const f = c.flight;
+    const clamp1 = (v: number) => Math.max(-1, Math.min(1, v));
+    f.pitch = clamp1(this.keyPitch + padPitch + (t ? t.brake - t.throttle : 0));
+    f.roll = clamp1(this.keyRoll - padSteer - (t?.steer ?? 0));
+    f.yaw = clamp1((this.down('KeyE') ? 1 : 0) - (this.down('KeyQ') ? 1 : 0) + padYaw);
+    const boost = this.down('ShiftLeft', 'ShiftRight') ? 1 : padThrottle;
+    const idle = this.down('ControlLeft', 'ControlRight') || padBrake > 0.5;
+    f.thrust = idle ? 0.1 : CRUISE_THRUST + (1 - CRUISE_THRUST) * boost;
   }
 }

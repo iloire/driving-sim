@@ -10,7 +10,7 @@ import type { Heightmap } from '../sim/terrain';
 /** Metres of road one repeat of the texture covers (one dash and its gap). */
 const REPEAT_M = 12;
 const LIFT = 0.06;
-const MARKED: RoadKind[] = ['highway', 'primary', 'secondary', 'tertiary'];
+const MARKED: RoadKind[] = ['highway', 'primary', 'secondary', 'tertiary', 'runway'];
 
 function asphalt(marked: boolean, anisotropy: number): THREE.CanvasTexture {
   const w = 128, h = 512;

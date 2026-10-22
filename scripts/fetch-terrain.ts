@@ -198,7 +198,7 @@ function toRoads(site: SiteFile, ways: OsmWay[]): RoadsFile {
   const roads: RoadsFile['roads'] = [];
   for (const way of ways) {
     const t = way.tags;
-    const kind = HIGHWAYS[t.highway];
+    const kind: RoadKind | undefined = t.aeroway === 'runway' ? 'runway' : HIGHWAYS[t.highway];
     if (!kind || t.area === 'yes' || t.access === 'private' || t.tunnel === 'yes') continue;
     if (kind === 'service' && SKIP_SERVICE.has(t.service)) continue;
     const p: number[] = [];
@@ -207,7 +207,7 @@ function toRoads(site: SiteFile, ways: OsmWay[]): RoadsFile {
       p.push(Math.round((e - x0) * 10) / 10, Math.round((n - y0) * 10) / 10);
     }
     if (p.length < 4) continue;
-    const name = [t.ref, t.name].filter(Boolean).join(' · ');
+    const name = kind === 'runway' ? `Runway ${t.ref ?? ''}`.trim() : [t.ref, t.name].filter(Boolean).join(' · ');
     roads.push({ k: kind, ...(name && { n: name }), ...(t.bridge === 'yes' && { b: 1 as const }), p });
   }
   return { roads };
@@ -239,7 +239,10 @@ async function main(): Promise<void> {
     console.log('Roads from OpenStreetMap (Overpass) …');
     writeFileSync(osmFile, JSON.stringify(await fetchOsm(site, `["highway"~"^(${Object.keys(HIGHWAYS).join('|')})$"]`)));
   }
-  const roadsFile = toRoads(site, JSON.parse(readFileSync(osmFile, 'utf8')) as OsmWay[]);
+  // The airport's runway is a road too: something to take off from.
+  const runwayFile = join(cache, 'runways-osm.json');
+  if (fresh(runwayFile)) writeFileSync(runwayFile, JSON.stringify(await fetchOsm(site, '["aeroway"="runway"]')));
+  const roadsFile = toRoads(site, [...JSON.parse(readFileSync(osmFile, 'utf8')), ...JSON.parse(readFileSync(runwayFile, 'utf8'))] as OsmWay[]);
   writeFileSync(join(dir, 'roads.json'), JSON.stringify(roadsFile));
   console.log(`${roadsFile.roads.length} roads`);
 

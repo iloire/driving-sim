@@ -8,7 +8,7 @@ const REDLINE_FROM = 0.85;
 const MAP_PX = 200;
 const ROAD_STYLE: Record<RoadKind, [string, number]> = {
   highway: ['#f2efe6', 4], primary: ['#f2efe6', 3.4], secondary: ['#e6e2d6', 3], tertiary: ['#d8d3c6', 2.6],
-  minor: ['#b9b3a6', 1.8], service: ['#9a9488', 1.3], track: ['#c8a27a', 1.2],
+  minor: ['#b9b3a6', 1.8], service: ['#9a9488', 1.3], track: ['#c8a27a', 1.2], runway: ['#f2efe6', 6],
 };
 
 export interface HudFrame {
@@ -19,6 +19,9 @@ export interface HudFrame {
   x: number;
   y: number;
   heading: number;
+  /** Plane mode, and the height above the ground (m). */
+  flying: boolean;
+  agl: number;
 }
 
 /** "LZ-67 · Carretera de Yaiza" → ["LZ-67", "Carretera de Yaiza"]; a name alone has no plate. */
@@ -32,6 +35,7 @@ export class Hud {
   private readonly el = {
     speed: document.getElementById('speed')!,
     gear: document.getElementById('gear')!,
+    alt: document.getElementById('alt')!,
     rpm: document.getElementById('rpm')!,
     plate: document.getElementById('plate')!,
     plateRef: document.getElementById('plate-ref')!,
@@ -76,18 +80,23 @@ export class Hud {
 
   update(dt: number, f: HudFrame): void {
     this.el.speed.textContent = String(Math.round(Math.abs(f.speedKmh)));
-    this.el.gear.textContent = f.gear < 0 ? 'R' : String(f.gear);
+    this.el.gear.textContent = f.flying ? '✈' : f.gear < 0 ? 'R' : String(f.gear);
+    const up = f.flying && f.agl > 3;
+    this.el.alt.hidden = !up;
+    if (up) this.el.alt.textContent = `${Math.round(f.agl)} m up`;
     const lit = Math.round(f.rpmShare * RPM_SEGMENTS);
     this.segs.forEach((s, i) => s.classList.toggle('on', i < lit));
 
-    const key = f.road ? `${f.road.kind}|${f.road.name}` : '';
+    // Above the treetops the road below is not the one you're on.
+    const road = f.flying && f.agl > 15 ? null : f.road;
+    const key = road ? `${road.kind}|${road.name}` : f.flying && f.agl > 15 ? 'air' : '';
     if (key !== this.lastRoad) {
       this.lastRoad = key;
-      const [ref, name] = f.road ? splitRoadName(f.road.name) : ['', ''];
+      const [ref, name] = road ? splitRoadName(road.name) : ['', ''];
       this.el.plateRef.textContent = ref;
       this.el.plateRef.hidden = !ref;
-      this.el.plateName.textContent = !f.road ? 'Off road' : name || (ref ? '' : f.road.kind === 'track' ? 'Dirt track' : 'Unnamed road');
-      this.el.plate.classList.toggle('off', !f.road || !isPaved(f.road.kind));
+      this.el.plateName.textContent = key === 'air' ? 'In the air' : !road ? 'Off road' : name || (ref ? '' : road.kind === 'track' ? 'Dirt track' : 'Unnamed road');
+      this.el.plate.classList.toggle('off', !road || !isPaved(road.kind));
       // Replay the swap-in so a new road reads as an event.
       this.el.plate.classList.remove('swap');
       void this.el.plate.offsetWidth;
@@ -104,7 +113,8 @@ export class Hud {
   /** Heading-up: the car at the centre pointing up, the view widening with speed. */
   private drawMap(f: HudFrame): void {
     const g = this.g, r = MAP_PX / 2, e = this.extent;
-    const mPerPx = 2.5 + Math.min(Math.abs(f.speedKmh), 160) * 0.035;
+    // Wider with speed, and much wider with height.
+    const mPerPx = 2.5 + Math.min(Math.abs(f.speedKmh), 160) * 0.035 + (f.flying ? Math.min(Math.max(f.agl, 0), 1500) * 0.02 : 0);
     const reach = r * mPerPx * 1.45;
     g.save();
     g.clearRect(0, 0, MAP_PX, MAP_PX);
@@ -123,7 +133,7 @@ export class Hud {
       -reach, -reach, 2 * reach, 2 * reach);
     g.globalAlpha = 1;
     g.lineCap = g.lineJoin = 'round';
-    const kinds: RoadKind[] = ['track', 'service', 'minor', 'tertiary', 'secondary', 'primary', 'highway'];
+    const kinds: RoadKind[] = ['runway', 'track', 'service', 'minor', 'tertiary', 'secondary', 'primary', 'highway'];
     for (const kind of kinds) {
       const [color, width] = ROAD_STYLE[kind];
       g.strokeStyle = color;

@@ -3,6 +3,7 @@
 ```
 src/sim/    pure TypeScript, no three.js, no DOM — unit-tested
   car.ts      the car: rigid body, struts, tyres, engine, gearbox
+  wings.ts    its plane half: lift, drag, stability, control surfaces, jet
   roads.ts    road model: profiles, carving, nearest-road index
   buildings.ts  building footprints as obstacles: point-in-polygon, way out, per-tile index
   objects.ts  per-tile objects file, building heights, lamp and edge-post placement
@@ -60,6 +61,33 @@ rotation.
 `src/sim/car.test.ts` pins the envelope: 0–100 km/h in 5–9 s, a top speed of 200–260 km/h,
 100–0 km/h in 35–50 m, under ~1.1 g steady cornering, holding on a 10 % grade, the handbrake
 kicking the tail out, surviving an upside-down landing, stopping against a wall, and noticing the sea.
+
+## Flight (`src/sim/wings.ts`)
+
+The car stays the same rigid body when it transforms. `flying` sends `wings` (0..1) towards fully
+out at 1.1 per second. While they're out, `aero()` adds its force and torque in the same sub-step
+as the struts and tyres, scaled by how far out they are, and the wheel drive switches off
+(Space still locks the rear wheels). The extra inertia of the wings is added in proportion.
+
+- **Lift.** On 12 m²: CL = 0.25 + 5α up to the stall at 15° (CL ≈ 1.55). Over the next 9° it
+  collapses onto a flat plate's 0.9 sin 2α. Drag is 0.035 + 0.06 CL². The lift acts perpendicular to
+  the airflow in the body's plane of symmetry, and there's a side force against sideslip.
+- **Stability and controls.** They're coefficients times dynamic pressure, so the controls go soft
+  as it slows. In pitch, the tail noses it into the airflow (1.2 per rad of α) with a small
+  nose-up trim, plus the elevator and pitch damping. In roll, the ailerons and roll damping. In
+  yaw, a weathervane on sideslip, the rudder and yaw damping. All damping scales with rate × size
+  / airspeed.
+- **Jet.** 9,500 N along the nose: cruise at 60 %, full on Shift, 10 % on Ctrl.
+
+It rotates at about 200 km/h after an 8 s run and climbs at about 22° on full thrust. Hands-off
+at cruise it climbs gently through a slow, well-damped phugoid. Banking turns it, and slowing past
+the stall drops it. `src/sim/wings.test.ts` pins all of that, plus folding the wings in the air
+(it falls). Making the airframe unstable (a negative pitch stiffness) fails the take-off and
+hands-off tests.
+
+The airport's runway (OSM `aeroway=runway`) is a road kind: 45 m wide, carved, marked and tarmac.
+The `airport` spawn sits on its threshold, facing down runway 03 (a spawn with `toward` is placed
+exactly and not snapped to a road).
 
 **Surfaces** come from the road index: on a paved carriageway grip ×1.0 and rolling 0.012, on a
 track ×0.72 and 0.03, anywhere else (picón, lava, sand) ×0.62 and 0.06.

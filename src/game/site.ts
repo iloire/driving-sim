@@ -15,6 +15,8 @@ export interface SpawnSpec {
   name: string;
   lat: number;
   lon: number;
+  /** Start exactly here facing this point (a runway) instead of on the nearest road. */
+  toward?: { lat: number; lon: number };
 }
 
 export interface SiteSpec {
@@ -112,6 +114,10 @@ export async function loadSite(id: string): Promise<Site> {
 
   const spawns = spec.spawns.map((s): Spawn => {
     const [e, n] = proj.forward([s.lon, s.lat]);
+    if (s.toward) {
+      const [te, tn] = proj.forward([s.toward.lon, s.toward.lat]);
+      return { spec: s, x: e - x0, y: n - y0, heading: (Math.atan2(te - e, tn - n) + 2 * Math.PI) % (2 * Math.PI) };
+    }
     const hit = roads.nearest(e - x0, n - y0, 3000, (r) => isPaved(r.kind) && r.kind !== 'service');
     return hit ? { spec: s, x: hit.x, y: hit.y, heading: hit.heading } : { spec: s, x: e - x0, y: n - y0, heading: 0 };
   });

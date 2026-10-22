@@ -7,7 +7,7 @@ const flat: CarEnv = { height: () => 10, surface: () => TARMAC };
 /** A 10 % grade climbing to the north. */
 const hill: CarEnv = { height: (_x, y) => 10 + y * 0.1, surface: () => TARMAC };
 
-const idle = (): Controls => ({ throttle: 0, brake: 0, steer: 0, handbrake: false });
+const idle = (): Controls => ({ throttle: 0, brake: 0, steer: 0, handbrake: false, flight: { pitch: 0, roll: 0, yaw: 0, thrust: 0 } });
 
 function run(s: CarState, c: Controls, seconds: number, env = flat, each?: (t: number) => void): void {
   for (let t = 0; t < seconds; t += STEP) {

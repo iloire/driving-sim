@@ -34,6 +34,7 @@
         </div>
       </div>
       <div id="rpm" aria-hidden="true"></div>
+      <div id="alt" hidden></div>
     </section>
 
     <canvas id="minimap" aria-label="Map of the roads around the car"></canvas>
@@ -43,6 +44,7 @@
 
     <nav id="touch-buttons" aria-label="Game">
       <button type="button" data-action="camera">CAM</button>
+      <button type="button" data-action="transform">FLY</button>
       <button type="button" data-action="reset">RESET</button>
       <button type="button" data-action="spawns">PLACES</button>
       <button type="button" data-action="pause">PAUSE</button>
@@ -61,12 +63,14 @@
         <tr><td>S / ↓</td><td>Brake · reverse when stopped</td></tr>
         <tr><td>A D / ← →</td><td>Steer</td></tr>
         <tr><td>Space</td><td>Handbrake</td></tr>
+        <tr><td>F</td><td>Transform: unfold the wings and fly</td></tr>
+        <tr><td>in the air</td><td>W/S stick · A/D roll · Q/E rudder · Shift full jet · Ctrl idle</td></tr>
         <tr><td>R</td><td>Back on the nearest road</td></tr>
         <tr><td>M · N</td><td>Places · next place</td></tr>
         <tr><td>C · G</td><td>Camera · map</td></tr>
         <tr><td>V · P · H</td><td>Mute · pause · help</td></tr>
       </table>
-      <p>Gamepad: RT throttle, LT brake, stick steers, A handbrake, Y camera.</p>
+      <p>Gamepad: RT throttle, LT brake, stick steers, A handbrake, X transform, Y camera.</p>
     </aside>
 
     <footer id="credits">

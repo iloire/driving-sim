@@ -1,5 +1,7 @@
 // The car's look: a small hatchback built from extruded side profiles, with wheels that steer,
-// spin and ride their struts as the sim says. Built in the sim's body frame turned into three.js
+// spin and ride their struts as the sim says. Its plane half folds away inside it: the wings rise
+// from the roof edges as short stubs and swing out to full span, a fin and tailplane grow from
+// the hatch, and a jet nozzle slides out under the bumper, all driven by the sim's `wings` 0..1. Built in the sim's body frame turned into three.js
 // axes: forward +X, up +Y, left −Z, origin at the centre of mass.
 
 import * as THREE from 'three';
@@ -49,9 +51,21 @@ function wheel(radius: number): { group: THREE.Group; spinner: THREE.Group } {
 
 export interface CarModel {
   group: THREE.Group;
-  /** `extent`: the site's size, whose centre is the scene origin. */
-  update(s: CarState, braking: boolean, extent: number): void;
+  /** `extent`: the site's size, whose centre is the scene origin; `thrust` 0..1 lights the jet. */
+  update(s: CarState, braking: boolean, extent: number, thrust: number): void;
 }
+
+/** One wing, root at the origin, swept, span along +Y before it is laid out. */
+function wingGeometry(span: number): THREE.BufferGeometry {
+  const shape = new THREE.Shape([
+    new THREE.Vector2(0.6, 0), new THREE.Vector2(-1.15, 0), new THREE.Vector2(-1.0, span), new THREE.Vector2(-0.15, span),
+  ]);
+  const g = new THREE.ExtrudeGeometry(shape, { depth: 0.07, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 1 });
+  g.translate(0, 0, -0.035);
+  return g;
+}
+
+const ease = (t: number) => t * t * (3 - 2 * t);
 
 export function createCarModel(spec: CarSpec): CarModel {
   const group = new THREE.Group();
@@ -87,10 +101,35 @@ export function createCarModel(spec: CarSpec): CarModel {
   const wheels = [0, 1, 2, 3].map(() => wheel(spec.wheelRadius));
   for (const w of wheels) group.add(w.group);
 
+  // The plane half: hinged at the roof edges, the hatch and under the bumper.
+  const half = (spec.wings.span - 1.7) / 2;
+  const hinges = [1, -1].map((side) => {
+    const hinge = new THREE.Group();
+    hinge.position.set(-0.35, 0.5, side * 0.84);
+    // The span (+Y in the shape) onto ±Z: right wing towards +Z, left towards −Z.
+    const wing = new THREE.Mesh(wingGeometry(half).rotateX(side * Math.PI / 2), paint);
+    wing.castShadow = true;
+    hinge.add(wing);
+    group.add(hinge);
+    return { hinge, wing, side };
+  });
+  const fin = new THREE.Mesh(slab([[0, 0], [-0.85, 0], [-1.05, 1.0], [-0.6, 1.0]], 0.07, 0.02), paint);
+  fin.position.set(-1.0, 0.84, 0);
+  const tailplane = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.05, 2.8), paint);
+  tailplane.position.set(-1.75, 0.55, 0);
+  const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.5, 18, 1, true).rotateZ(Math.PI / 2), trim);
+  nozzle.position.set(-2.05, -0.12, 0);
+  const flameMat = new THREE.MeshBasicMaterial({ color: 0xffa040, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false });
+  // A cone with its base at the nozzle, pointing back (−X).
+  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.18, 1, 14).rotateZ(Math.PI / 2).translate(-0.5, 0, 0), flameMat);
+  flame.position.set(-2.3, -0.12, 0);
+  for (const m of [fin, tailplane]) m.castShadow = true;
+  group.add(fin, tailplane, nozzle, flame);
+
   const q = new THREE.Quaternion();
   return {
     group,
-    update(s, braking, extent) {
+    update(s, braking, extent, thrust) {
       // Sim quaternion [w, x, y, z] in (east, north, up) → three.js (x, up, −north).
       q.set(s.q[1], s.q[3], -s.q[2], s.q[0]);
       group.quaternion.copy(q);
@@ -102,6 +141,21 @@ export function createCarModel(spec: CarSpec): CarModel {
         m.spinner.rotation.z = -w.spin;
       });
       tailMat.emissiveIntensity = braking ? 2.2 : 0.3;
+
+      // Stubs rise first, then swing down and stretch out to full span.
+      const t = ease(s.wings), out = s.wings > 0.002;
+      for (const { hinge, wing, side } of hinges) {
+        hinge.visible = out;
+        hinge.rotation.x = -side * (Math.PI / 2) * (1 - t);
+        wing.scale.set(1, 1, 0.12 + 0.88 * t);
+      }
+      fin.visible = tailplane.visible = nozzle.visible = out;
+      fin.scale.set(1, Math.max(t, 0.01), 1);
+      tailplane.scale.set(1, 1, Math.max(t, 0.01));
+      nozzle.scale.setScalar(Math.max(t, 0.01));
+      const burn = s.flying ? thrust * t : 0;
+      flame.visible = burn > 0.02;
+      flame.scale.set(0.6 + burn * (1.6 + Math.random() * 0.4), 0.6 + burn * 0.5, 0.6 + burn * 0.5);
     },
   };
 }

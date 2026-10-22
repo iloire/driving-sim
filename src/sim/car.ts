@@ -7,6 +7,7 @@
 // the centre of mass. `q` rotates body vectors into the world.
 
 import { add, cross, dot, integrate, normalize, rotate, scale, sub, unrotate, type Quat, type V3 } from './vec';
+import { aero, WINGS, type FlightControls, type WingSpec } from './wings';
 
 const G = 9.81;
 const RHO = 1.225;
@@ -36,6 +37,8 @@ export interface Controls {
   /** −1..1, positive = left. */
   steer: number;
   handbrake: boolean;
+  /** The stick, used once the wings are out. */
+  flight: FlightControls;
 }
 
 export interface Surface {
@@ -86,6 +89,8 @@ export interface CarSpec {
   cdA: number;
   /** Half-extents of the body box for ground contact, from the centre of mass: [back, front, side, bottom, top]. */
   body: [number, number, number, number, number];
+  /** The wings it unfolds to fly (see wings.ts). */
+  wings: WingSpec;
 }
 
 /** A 1300 kg front-engined hatchback, rear-biased four-wheel drive: forgiving on picón tracks, still slides. */
@@ -111,6 +116,7 @@ export const HATCH: CarSpec = {
   brakeFront: 0.65,
   cdA: 0.72,
   body: [2.0, 2.05, 0.86, 0.32, 0.95],
+  wings: WINGS,
 };
 
 export interface Wheel {
@@ -146,6 +152,13 @@ export interface CarState {
   /** Compass heading of the nose, radians (0 north, clockwise). */
   heading: number;
   inWater: boolean;
+  /** Plane mode: the wings unfold towards fully out, the wheels go undriven, the jet takes over. */
+  flying: boolean;
+  /** How far the wings are out, 0..1, animating towards `flying`. */
+  wings: number;
+  /** Angle of attack (rad) and airspeed (m/s) while the wings are out. */
+  alpha: number;
+  airspeed: number;
 }
 
 /** Strut length at rest under the static load, mount to hub. */
@@ -172,6 +185,7 @@ export function createCar(spec: CarSpec, x: number, y: number, groundZ: number, 
   return {
     pos: [x, y, groundZ + spec.cgHeight], vel: [0, 0, 0], q: [Math.cos(yaw / 2), 0, 0, Math.sin(yaw / 2)], w: [0, 0, 0],
     steer: 0, gear: 1, rpm: spec.engine.idle, shiftTimer: 0, wheels, speed: 0, heading, inWater: false,
+    flying: false, wings: 0, alpha: 0, airspeed: 0,
   };
 }
 
@@ -239,7 +253,11 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
 
   const lock = spec.maxSteer / (1 + Math.abs(s.speed) / spec.steerFalloff);
   s.steer += clamp(c.steer * lock - s.steer, -spec.steerRate * dt, spec.steerRate * dt);
-  const { drive, brake } = powertrain(s, spec, c, dt);
+  const w = spec.wings;
+  s.wings += clamp((s.flying ? 1 : 0) - s.wings, -w.unfoldRate * dt, w.unfoldRate * dt);
+  // In plane mode the jet drives it, so the wheels just roll (Space still brakes the rear ones).
+  const { drive, brake } = s.flying ? { drive: 0, brake: 0 } : powertrain(s, spec, c, dt);
+  if (s.flying) s.rpm += (spec.engine.idle + c.flight.thrust * (spec.engine.redline - spec.engine.idle) - s.rpm) * (1 - Math.exp(-dt * 3));
   const sus = spec.suspension;
 
   for (const wheel of s.wheels) {
@@ -351,11 +369,18 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
 
   const speed = Math.hypot(...s.vel);
   apply(scale(s.vel, -0.5 * RHO * spec.cdA * speed), s.pos);
+  if (s.wings > 0) {
+    const a = aero(w, s.q, s.vel, s.w, c.flight, s.wings);
+    force = add(force, a.force);
+    torque = add(torque, a.torque);
+    s.alpha = a.alpha;
+    s.airspeed = a.airspeed;
+  }
 
   // Newton for the centre of mass, Euler's equations for the rotation (in the body frame).
   s.vel = add(s.vel, scale(force, dt / spec.mass));
   s.pos = add(s.pos, scale(s.vel, dt));
-  const I = spec.inertia;
+  const I: V3 = [0, 1, 2].map((i) => spec.inertia[i] + s.wings * w.inertia[i]) as V3;
   const wb = unrotate(s.q, s.w);
   const tb = unrotate(s.q, torque);
   const gyro = cross(wb, [I[0] * wb[0], I[1] * wb[1], I[2] * wb[2]]);

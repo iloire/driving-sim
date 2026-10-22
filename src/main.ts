@@ -14,9 +14,10 @@ import { TerrainView } from './game/terrain-view';
 import { TouchPad } from './game/touch';
 import { createSurround, Sunlight } from './game/world';
 import { createCar, HATCH, stepCar, type CarEnv, type CarSpec, type CarState, type Surface } from './sim/car';
-import { isPaved, ROAD_WIDTH, type Road } from './sim/roads';
+import { isPaved, MAX_HALF_WIDTH, ROAD_WIDTH, type Road } from './sim/roads';
 import { dayOfYear, daylightHours, sunPosition } from './sim/sun';
 import { rotate } from './sim/vec';
+import { stalled } from './sim/wings';
 
 declare const __COMMIT_SHA__: string;
 
@@ -25,7 +26,7 @@ const SITE = 'lanzarote';
 /** Solar time a drive starts at without ?time=: late afternoon, long shadows over the lava. */
 const DEFAULT_HOUR = 16.5;
 const TOUCH = matchMedia('(pointer: coarse)').matches;
-const KEY = TOUCH ? { reset: 'RESET' } : { reset: 'R' };
+const KEY = TOUCH ? { reset: 'RESET', pull: 'pull the right thumb down' } : { reset: 'R', pull: 'S to pull up' };
 
 const TARMAC: Surface = { grip: 1, rolling: 0.012 };
 const GRAVEL: Surface = { grip: 0.72, rolling: 0.03 };
@@ -36,7 +37,7 @@ const DRIVETRAINS: Record<string, number> = { 'AWD (40/60)': 0.4, RWD: 0, FWD: 1
 
 /** The road under a point, if it is on the carriageway (or a track) rather than beside it. */
 function onRoad(roads: { nearest(x: number, y: number, r: number): { road: Road; dist: number } | undefined }, x: number, y: number, margin: number): Road | null {
-  const hit = roads.nearest(x, y, 10);
+  const hit = roads.nearest(x, y, MAX_HALF_WIDTH + margin);
   return hit && hit.dist < ROAD_WIDTH[hit.road.kind] / 2 + margin ? hit.road : null;
 }
 
@@ -96,13 +97,14 @@ async function boot(): Promise<void> {
   let stuck = 0; // seconds on its roof or side, or in the sea
   let detailTimer = 0;
   let helpFolded = false;
+  let stallWarned = false;
 
   /** Puts the car on the road at (x, y) facing `heading`, once the 5 m ground there has loaded. */
   async function place(x: number, y: number, heading: number): Promise<void> {
     await site.ensureDetail(x, y, 1600);
     car = createCar(spec, x, y, terrain.heightAt(x, y) + 0.05, heading);
     stuck = 0;
-    model.update(car, false, extent);
+    model.update(car, false, extent, 0);
     rig.snap(model.group, heading);
   }
 
@@ -134,6 +136,10 @@ async function boot(): Promise<void> {
     spawns: () => picker.toggle(spawn),
     next: () => void goTo(site.spawns[(site.spawns.indexOf(spawn) + 1) % site.spawns.length]),
     map: () => document.getElementById('minimap')!.classList.toggle('hidden'),
+    transform: () => {
+      car.flying = !car.flying;
+      hud.say(car.flying ? `Wings out — the jet's on. Past 160 km/h, ${KEY.pull}` : 'Wings folded — back to a car', 3);
+    },
   };
   const input = new Input((a) => actions[a]());
   if (TOUCH) {
@@ -188,6 +194,11 @@ async function boot(): Promise<void> {
         stuck += dt;
         if (stuck > 4) void recover();
       }
+      // Past the stall in the air: say so once, until it's flying again.
+      const agl = car.pos[2] - terrain.heightAt(car.pos[0], car.pos[1]);
+      const isStalled = car.wings > 0.5 && agl > 5 && car.airspeed > 5 && stalled(spec.wings, car.alpha);
+      if (isStalled && !stallWarned) hud.say('STALL — push the nose down', 2);
+      stallWarned = isStalled;
     }
     // Keep the 5 m heights under the car whatever the view has loaded.
     if ((detailTimer -= dt) <= 0) {
@@ -201,13 +212,13 @@ async function boot(): Promise<void> {
       document.getElementById('help')!.classList.add('collapsed');
     }
     const braking = car.gear > 0 ? input.controls.brake > 0.1 : input.controls.throttle > 0.1;
-    model.update(car, braking, extent);
+    model.update(car, braking, extent, input.controls.flight.thrust);
     carPos.copy(model.group.position);
     // Follow the way the car is travelling when it slides, its nose when it is slow.
     const moving = Math.hypot(car.vel[0], car.vel[1]);
     const travel = Math.atan2(car.vel[0], car.vel[1]);
-    const followHeading = moving > 4 && car.speed > 0 ? travel : car.heading;
-    rig.update(dt, model.group, followHeading, ground);
+    const followHeading = moving > 4 && (car.speed > 0 || car.flying) ? travel : car.heading;
+    rig.update(dt, model.group, followHeading, ground, car.wings);
     sunlight.follow(carPos);
     const t1 = performance.now();
     terrainView.update(camera.position, camera.position.y - ground(camera.position));
@@ -215,11 +226,13 @@ async function boot(): Promise<void> {
 
     const road = onRoad(site.roads, car.pos[0], car.pos[1], 2);
     hud.update(dt, {
-      speedKmh: car.speed * 3.6, gear: car.gear, rpmShare: car.rpm / spec.engine.redline,
+      speedKmh: (car.flying ? car.airspeed : car.speed) * 3.6, gear: car.gear, rpmShare: car.rpm / spec.engine.redline,
       road, x: car.pos[0], y: car.pos[1], heading: car.heading,
+      flying: car.flying, agl: car.pos[2] - spec.cgHeight - terrain.heightAt(car.pos[0], car.pos[1]),
     });
     const slip = Math.max(...car.wheels.map((w) => (w.contact ? w.slip : 0)));
-    audio.update(car.rpm, car.gear > 0 ? input.controls.throttle : input.controls.brake, slip, Math.abs(car.speed));
+    const pedal = car.flying ? input.controls.flight.thrust : car.gear > 0 ? input.controls.throttle : input.controls.brake;
+    audio.update(car.rpm, pedal, slip, Math.abs(car.speed));
 
     const t2 = performance.now();
     renderer.render(scene, camera);

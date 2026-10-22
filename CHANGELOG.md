@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-22 08:53
+
+- It flies: F unfolds wings from the roof edges, a fin and tailplane from the hatch, and a jet
+  under the bumper. It's then a light plane, with lift and drag from the angle of attack, a stall,
+  pitch and yaw stability, and elevator, ailerons and rudder that go soft as it slows. W/S work
+  the stick, A/D roll, Q/E the rudder, Shift and Ctrl set the jet. Fold the wings in the air and
+  it falls.
+- Lanzarote Airport's runway is a road (carved, marked, tarmac), with a new `airport` spawn on
+  runway 03.
+- The HUD shows height above the ground and "In the air", and the map zooms out with altitude.
+
 ## 2026-10-22 08:31
 
 - Towns: about 27,500 OSM buildings drawn as Lanzarote houses (lime-white walls, flat roofs,

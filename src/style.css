@@ -63,6 +63,8 @@ button:focus-visible { outline: 2px solid var(--cal); outline-offset: 2px; }
   border: 1.5px solid var(--malpais); border-radius: 5px;
 }
 .unit { font-family: var(--mono); font-size: 11px; color: var(--malpais); }
+#alt { margin-top: 8px; font-family: var(--mono); font-weight: 600; font-size: 14px; color: var(--cal); }
+#alt[hidden] { display: none; }
 #rpm { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; margin-top: 10px; height: 8px; }
 #rpm i { background: rgba(244, 243, 238, 0.12); border-radius: 1px; }
 #rpm i.on { background: var(--cal); }
