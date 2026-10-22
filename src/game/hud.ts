@@ -1,9 +1,12 @@
 // The dashboard: the road you're on as a sign plate (top), the speed, gear and revs (bottom left),
 // a heading-up map of the roads around you over the island photo (bottom right), and messages.
 
+import type { Balloon } from '../sim/balloons';
 import { isPaved, type Road, type RoadKind } from '../sim/roads';
 
 const RPM_SEGMENTS = 24;
+/** The balloons' colours on the map, matching their envelopes. */
+const BALLOON_DOT = ['#e8432e', '#f2b705', '#2f9e5b', '#2b7de9', '#d23ea0', '#f4f3ee'];
 const REDLINE_FROM = 0.85;
 const MAP_PX = 200;
 const ROAD_STYLE: Record<RoadKind, [string, number]> = {
@@ -22,6 +25,8 @@ export interface HudFrame {
   /** Plane mode, and the height above the ground (m). */
   flying: boolean;
   boost: boolean;
+  /** Balloons to dot on the map (empty when the game is off). */
+  balloons: readonly Balloon[];
   agl: number;
 }
 
@@ -43,6 +48,11 @@ export class Hud {
     plateRef: document.getElementById('plate-ref')!,
     plateName: document.getElementById('plate-name')!,
     message: document.getElementById('message')!,
+    score: document.getElementById('score')!,
+    scoreValue: document.getElementById('score-value')!,
+    scorePops: document.getElementById('score-pops')!,
+    scoreBest: document.getElementById('score-best')!,
+    popToast: document.getElementById('pop-toast')!,
     map: document.getElementById('minimap') as HTMLCanvasElement,
   };
   private readonly segs: HTMLElement[] = [];
@@ -72,6 +82,24 @@ export class Hud {
       }
       return { road, box: [x0, y0, x1, y1] };
     });
+  }
+
+  /** The balloon game's panel: score, balloons popped, best; hidden when the game is off. */
+  setScore(on: boolean, score: number, popped: number, best: number): void {
+    this.el.score.hidden = !on;
+    this.el.scoreValue.textContent = score.toLocaleString('en');
+    this.el.scorePops.textContent = String(popped);
+    this.el.scoreBest.textContent = best.toLocaleString('en');
+  }
+
+  /** "+340 ×2" rising from the middle of the screen. */
+  pop(points: number, combo: number): void {
+    const t = this.el.popToast;
+    t.textContent = `+${points}${combo > 1 ? `  ×${combo}` : ''}`;
+    t.classList.toggle('big', combo > 2);
+    t.classList.remove('show');
+    void t.offsetWidth;
+    t.classList.add('show');
   }
 
   say(text: string, seconds = 3.5): void {
@@ -151,6 +179,19 @@ export class Hud {
       g.stroke();
     }
     g.restore();
+    // Balloons: dots in their own colours, heading-up like the map; out of range they sit on the rim.
+    const c = Math.cos(f.heading), sn = Math.sin(f.heading);
+    for (const bl of f.balloons) {
+      const px = bl.x - f.x, py = f.y - bl.y;
+      const rx = (px * c + py * sn) / mPerPx, ry = (-px * sn + py * c) / mPerPx;
+      const d = Math.hypot(rx, ry), edge = r - 7, k = d > edge ? edge / d : 1;
+      g.fillStyle = BALLOON_DOT[bl.colour % BALLOON_DOT.length];
+      g.globalAlpha = k < 1 ? 0.6 : 1;
+      g.beginPath();
+      g.arc(r + rx * k, r + ry * k, k < 1 ? 2.5 : 3.5, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.globalAlpha = 1;
     // The car: a rust chevron, always pointing up.
     g.fillStyle = '#e0683a';
     g.strokeStyle = '#16130f';

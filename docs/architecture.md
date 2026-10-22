@@ -82,6 +82,25 @@ boost fails them. On screen, two blue-white jets light under the rear bumper (on
 jet's flame doubles and turns blue). The camera's field of view widens from 60° to 80° with a
 slight shake, the speed readout glows, and a low rocket roar plays.
 
+## Balloon game (`src/sim/balloons.ts`, `src/game/balloons-view.ts`)
+
+- **The field.** `BalloonField` keeps 40 balloons in a ring 300–2,500 m around the car, their centres
+  40–400 m above the ground, and only over the map. A balloon left more than 3.5 km behind is moved
+  on, and every popped one is replaced at once, so there is always something to chase. A new place
+  (M, N) gets a fresh sky. The score carries on until "New balloon round".
+- **Hits.** Each frame tests the segment the car moved along, not just where it ended up, against
+  every balloon (radius 5 m, plus 4 m for the car's reach). A 600 km/h pass covers several metres a
+  frame and still can't step over one. Checking only the end of the step fails the test that pins it.
+- **Score.** 100 a balloon, plus 10 for every 36 km/h, times the combo. The combo goes up by one
+  with each pop that comes within 4 s of the last, to ×5, and drops back to nothing after 4 s
+  without one. The best score lives in `localStorage` (`lanzarote-drive.best`) and degrades quietly
+  when storage is blocked.
+- **Drawing.** All balloons are instances of one glossy mesh (envelope and knot), each with its own
+  colour and a slow bob and sway, plus an instanced mesh for the strings. A pop throws 70 flakes
+  from a pooled, instanced mesh of 900 confetti pieces, with a faint 0.2 s puff, a snap-and-squeak
+  sound pitched up with the combo, and a rising "+points ×combo". The map dots balloons in their
+  colours, pinning those out of range to its rim.
+
 ## Flight (`src/sim/wings.ts`)
 
 The car stays the same rigid body when it transforms. `flying` sends `wings` (0..1) towards fully

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-22 18:22
+
+- Balloon game: about 40 party balloons float over the island around the car. Fly through them to
+  pop them into confetti, for 100 points plus a speed bonus, times a combo of up to ×5 for quick
+  chains. A score panel, a best score kept in the browser, balloon dots on the map, and a pop sound.
+  The settings panel toggles it and starts a new round.
+
 ## 2026-10-22 09:10
 
 - Turbo on Shift (a stick click on a gamepad, BOOST on a phone). On the road a nitro rocket takes

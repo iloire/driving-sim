@@ -40,6 +40,10 @@ It runs in a desktop browser, or on a phone held sideways. Nothing to install.
   from then on: lift and drag from the angle of attack, a stall past about 15°, a tail that keeps
   it pointing into the airflow, and controls that go soft as it slows. Fold the wings in the air
   and it falls like a car.
+- **Balloon game**: about 40 big party balloons float 40–400 m over the island around you. Fly
+  through one to pop it into confetti: 100 points plus a speed bonus, multiplied by a combo of up to
+  ×5 when pops come within 4 s of each other. They show as dots on the map, and your best score is
+  remembered in your browser. The settings panel turns it off or starts a new round.
 - **Surfaces**: tarmac grips, gravel tracks slide, and picón and lava slide more.
 - **The road you're on** as a sign plate, a heading-up map, and sound for the engine and tyres.
 - **Time of day**: from sunrise to sunset, with the sun where it really is over Lanzarote today.
@@ -83,6 +87,9 @@ accelerate, and pull it down to brake or back up.
 
 The settings panel sets the solar time and the drivetrain (4×4 50/50, RWD, FWD).
 
+**Balloons:** take off (from the airport, say), find the coloured dots on the map, and fly
+through them. Chain them for the combo.
+
 A link starts someone at the same place and time: `?spawn=timanfaya&time=17:30`. The places are
 `timanfaya`, `airport`, `mirador`, `famara`, `haria`, `la-geria`, `el-golfo`, `arrecife`, `teguise`,
 `playa-blanca` and `orzola`.
@@ -90,7 +97,7 @@ A link starts someone at the same place and time: `?spawn=timanfaya&time=17:30`.
 ## Check it
 
 ```bash
-npm test           # car physics, flight, road carving, buildings, street furniture, terrain, sun, touch (Vitest)
+npm test           # car physics, flight, balloon game, road carving, buildings, street furniture, terrain, sun, touch (Vitest)
 npm run lint
 npm run build      # typecheck + production bundle
 ```
