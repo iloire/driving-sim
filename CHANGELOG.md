@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-22 18:35
+
+- The balloon game is off by default. B turns it on (a fresh sky around the car) and off again,
+  listed in Controls. Phones get a BALLOONS button, and the settings toggle follows the key.
+
 ## 2026-10-22 18:22
 
 - Balloon game: about 40 party balloons float over the island around the car. Fly through them to

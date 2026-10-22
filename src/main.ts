@@ -95,7 +95,8 @@ async function boot(): Promise<void> {
   });
   scene.add(terrainView.group, createSurround(extent));
 
-  const settings = { drivetrain: '4×4 (50/50)', balloons: true };
+  // The balloon game is off until B (or the settings panel, or the phone's button) turns it on.
+  const settings = { drivetrain: '4×4 (50/50)', balloons: false };
   const spec: CarSpec = { ...TRUCK };
   const model = createCarModel(spec);
   scene.add(model.group);
@@ -103,9 +104,21 @@ async function boot(): Promise<void> {
   const field = new BalloonField((x, y) => terrain.heightAt(x, y), (x, y) => x > 0 && y > 0 && x < extent && y < extent,
     undefined, Date.now() % 1e9);
   const balloonsView = new BalloonsView(extent);
+  balloonsView.visible = false;
   scene.add(balloonsView.group);
   let best = readBest();
   const lastPos: [number, number, number] = [0, 0, 0];
+
+  /** Turns the balloon game on (a fresh sky around the car, the score kept) or off. */
+  function setBalloons(on: boolean): void {
+    settings.balloons = on;
+    balloonsView.visible = on;
+    if (on) {
+      field.fill(car.pos[0], car.pos[1]);
+      lastPos.splice(0, 3, ...car.pos);
+    }
+    hud.say(on ? 'Balloon game on — fly through them, chain them for a combo (B to stop)' : 'Balloon game off', 3);
+  }
   const rig = new CameraRig(camera, canvas);
   const audio = new CarAudio();
   const hud = new Hud(__COMMIT_SHA__, site.roads.roads, ortho.image as HTMLImageElement, extent);
@@ -167,6 +180,7 @@ async function boot(): Promise<void> {
     spawns: () => picker.toggle(spawn),
     next: () => void goTo(site.spawns[(site.spawns.indexOf(spawn) + 1) % site.spawns.length]),
     map: () => document.getElementById('minimap')!.classList.toggle('hidden'),
+    balloons: () => setBalloons(!settings.balloons),
     transform: () => {
       car.flying = !car.flying;
       hud.say(car.flying ? `Wings out — the jet's on. Past 160 km/h, ${KEY.pull}` : 'Wings folded — back to a car', 3);
@@ -197,7 +211,7 @@ async function boot(): Promise<void> {
   applySun();
   const gui = new GUI({ title: 'Settings' });
   gui.add(sky, 'hour', hours.first, hours.last, 0.05).name('Solar time').onChange(applySun);
-  gui.add(settings, 'balloons').name('Balloon game').onChange((on: boolean) => { balloonsView.visible = on; });
+  gui.add(settings, 'balloons').name('Balloon game (B)').listen().onChange((on: boolean) => setBalloons(on));
   gui.add({ restart: () => { field.reset(car.pos[0], car.pos[1]); hud.say('New round — pop them all', 2); } }, 'restart').name('New balloon round');
   gui.add(settings, 'drivetrain', Object.keys(DRIVETRAINS)).name('Drivetrain').onChange((v: string) => { spec.driveFront = DRIVETRAINS[v]; });
   gui.close();

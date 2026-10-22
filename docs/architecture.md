@@ -84,6 +84,9 @@ slight shake, the speed readout glows, and a low rocket roar plays.
 
 ## Balloon game (`src/sim/balloons.ts`, `src/game/balloons-view.ts`)
 
+- **Off by default.** B (a BALLOONS button on phones, or the settings panel) turns it on with a
+  fresh sky around the car, keeping the score, and turns it off again. While it's off, nothing is
+  drawn, scored or dotted on the map.
 - **The field.** `BalloonField` keeps 40 balloons in a ring 300–2,500 m around the car, their centres
   40–400 m above the ground, and only over the map. A balloon left more than 3.5 km behind is moved
   on, and every popped one is replaced at once, so there is always something to chase. A new place

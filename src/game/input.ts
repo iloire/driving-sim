@@ -13,10 +13,10 @@ const PEDAL_RATE = 4;
 const STICK_RATE = 3;
 const CRUISE_THRUST = 0.6;
 
-export type Action = 'reset' | 'camera' | 'mute' | 'pause' | 'help' | 'spawns' | 'next' | 'map' | 'transform';
+export type Action = 'reset' | 'camera' | 'mute' | 'pause' | 'help' | 'spawns' | 'next' | 'map' | 'transform' | 'balloons';
 
 const ACTION_KEYS: Record<string, Action> = {
-  KeyR: 'reset', KeyC: 'camera', KeyV: 'mute', KeyP: 'pause', KeyH: 'help', KeyM: 'spawns', KeyN: 'next', KeyG: 'map', KeyF: 'transform',
+  KeyR: 'reset', KeyC: 'camera', KeyV: 'mute', KeyP: 'pause', KeyH: 'help', KeyM: 'spawns', KeyN: 'next', KeyG: 'map', KeyF: 'transform', KeyB: 'balloons',
 };
 // Standard-mapping gamepad buttons.
 const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, L3: 10, R3: 11 };
