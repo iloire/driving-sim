@@ -97,7 +97,8 @@ it: the IGN heightmap and photo, the 5 m tiles, and the OSM roads from Overpass,
 carves into the tiles. It also writes each tile's OSM buildings, street lamps and edge posts to
 `objects/<col>_<row>.json`. Downloads are cached in `cache/` (git-ignored), so re-carving after a change
 to the road model happens offline. `--refresh` downloads everything again. See
-[docs/architecture.md](docs/architecture.md).
+[docs/architecture.md](docs/architecture.md), and [docs/performance.md](docs/performance.md) for how
+it stays fast.
 
 ## Deploy
 

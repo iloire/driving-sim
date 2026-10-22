@@ -1,5 +1,7 @@
 # Architecture
 
+How it stays fast (merging, instancing, level of detail, streaming, offline work): [performance.md](performance.md).
+
 ```
 src/sim/    pure TypeScript, no three.js, no DOM — unit-tested
   car.ts      the car: rigid body, struts, tyres, engine, gearbox
