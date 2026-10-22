@@ -34,8 +34,9 @@ export interface WingSpec {
   cnBeta: number;
   cnRudder: number;
   cnDamping: number;
-  /** Jet thrust at full throttle (N). */
+  /** Jet thrust at full throttle (N), and what the afterburner adds on top while boosting. */
   thrust: number;
+  afterburner: number;
   /** Extra inertia (kg m², roll / pitch / yaw) with the wings out. */
   inertia: V3;
   /** Wing travel per second while transforming (1 = fully out). */
@@ -62,6 +63,7 @@ export const WINGS: WingSpec = {
   cnRudder: 0.04,
   cnDamping: 0.2,
   thrust: 9500,
+  afterburner: 15000,
   inertia: [1300, 500, 1500],
   unfoldRate: 1.1,
 };

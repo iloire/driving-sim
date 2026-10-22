@@ -57,6 +57,7 @@ npm run dev        # http://localhost:5173
 | **S / ↓** | Brake, and reverse once stopped |
 | **A / D** or **← / →** | Steer |
 | **Space** | Handbrake |
+| **Shift** | Turbo: a nitro rocket on the road (500+ km/h), an afterburner in the air |
 | **F** | Transform: unfold the wings (the jet comes on), or fold them back |
 | **R** | Back on the nearest paved road, facing the way you were going |
 | **M** · **N** | Pick a place to start · next place |
@@ -64,12 +65,12 @@ npm run dev        # http://localhost:5173
 | **G** · **V** · **P** · **H** | Map · mute · pause · help |
 
 **In the air** the same keys fly it. **W / S** push and pull the stick (S pulls the nose up),
-**A / D** roll, and **Q / E** work the rudder. The jet sits at cruise thrust, **Shift** gives full
-thrust and **Ctrl** idles it. To take off, transform, let it run past about 160 km/h, and pull **S**.
+**A / D** roll, and **Q / E** work the rudder. The jet sits at cruise thrust, **Shift** lights the
+full jet and the afterburner, and **Ctrl** idles it. To take off, transform, let it run past about 160 km/h, and pull **S**.
 
 **Gamepad** (standard mapping): RT throttle, LT brake, left stick steers, A/B handbrake, X transform,
-Y camera, Back reset, Start pause. In the air the left stick is the stick, RT boosts, LT idles, and
-LB/RB are the rudder.
+Y camera, either stick click turbo, Back reset, Start pause. In the air the left stick is the
+stick, RT boosts, LT idles, and LB/RB are the rudder. On a phone, hold BOOST.
 
 **Phone**, held sideways: slide the left thumb sideways to steer. Push the right thumb up to
 accelerate, and pull it down to brake or back up.

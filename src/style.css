@@ -63,6 +63,8 @@ button:focus-visible { outline: 2px solid var(--cal); outline-offset: 2px; }
   border: 1.5px solid var(--malpais); border-radius: 5px;
 }
 .unit { font-family: var(--mono); font-size: 11px; color: var(--malpais); }
+#cluster.boost #speed { color: #ff8a4c; text-shadow: 0 0 18px rgba(255, 110, 40, 0.8); }
+#cluster.boost { box-shadow: 0 0 0 1.5px rgba(255, 120, 60, 0.7), 0 0 26px rgba(255, 90, 30, 0.35); }
 #alt { margin-top: 8px; font-family: var(--mono); font-weight: 600; font-size: 14px; color: var(--cal); }
 #alt[hidden] { display: none; }
 #rpm { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; margin-top: 10px; height: 8px; }
@@ -115,7 +117,13 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--malpais
 .lil-gui.root { top: 64px !important; }
 
 /* Touch */
-#touch-buttons, #rotate { display: none; }
+#touch-buttons, #rotate, #boost-btn { display: none; }
+body.touch #boost-btn {
+  display: block; position: fixed; right: calc(var(--edge) + 150px); bottom: 24px; width: 84px; height: 84px; border-radius: 50%;
+  border: 2px solid rgba(255, 138, 76, 0.85); background: rgba(22, 19, 15, 0.6); font-family: var(--display); font-weight: 800;
+  font-size: 18px; letter-spacing: 0.04em; touch-action: none;
+}
+body.touch #boost-btn:active { background: rgba(210, 96, 47, 0.75); }
 body.touch #help { display: none; }
 body.touch #touch-buttons { display: flex; gap: 6px; position: fixed; top: 12px; right: var(--edge); }
 body.touch #touch-buttons button { background: var(--picon-glass); border: 0; border-radius: 6px; padding: 8px 10px; font-family: var(--mono); font-size: 11px; }

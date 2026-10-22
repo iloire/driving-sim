@@ -37,6 +37,8 @@ export interface Controls {
   /** −1..1, positive = left. */
   steer: number;
   handbrake: boolean;
+  /** Turbo: a nitro rocket on the ground, an afterburner in the air. */
+  boost: boolean;
   /** The stick, used once the wings are out. */
   flight: FlightControls;
 }
@@ -89,6 +91,8 @@ export interface CarSpec {
   brakeForce: number;
   brakeFront: number;
   cdA: number;
+  /** Nitro rocket thrust along the nose while boosting as a car (N). */
+  nitro: number;
   /** Half-extents of the body box for ground contact, from the centre of mass: [back, front, side, bottom, top]. */
   body: [number, number, number, number, number];
   /** The wings it unfolds to fly (see wings.ts). */
@@ -123,8 +127,9 @@ export const TRUCK: CarSpec = {
   brakeForce: 21000,
   brakeFront: 0.62,
   cdA: 1.25,
+  nitro: 14000,
   body: [2.35, 2.5, 1.0, 0.2, 1.15],
-  wings: { ...WINGS, area: 15, span: 9.4, thrust: 13000, inertia: [1700, 700, 2000] },
+  wings: { ...WINGS, area: 15, span: 9.4, thrust: 13000, afterburner: 20000, inertia: [1700, 700, 2000] },
 };
 
 export interface Wheel {
@@ -378,6 +383,8 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
 
   const speed = Math.hypot(...s.vel);
   apply(scale(s.vel, -0.5 * RHO * spec.cdA * speed), s.pos);
+  // Turbo: the nitro rocket fades into the afterburner as the wings come out.
+  if (c.boost) force = add(force, scale(nose, spec.nitro * (1 - s.wings) + w.afterburner * s.wings));
   if (s.wings > 0) {
     const a = aero(w, s.q, s.vel, s.w, c.flight, s.wings);
     force = add(force, a.force);

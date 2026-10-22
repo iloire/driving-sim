@@ -75,8 +75,8 @@ function wheel(tyre: THREE.BufferGeometry, rim: THREE.BufferGeometry, rubber: TH
 
 export interface CarModel {
   group: THREE.Group;
-  /** `extent`: the site's size, whose centre is the scene origin; `thrust` 0..1 lights the jet. */
-  update(s: CarState, braking: boolean, extent: number, thrust: number): void;
+  /** `extent`: the site's size, whose centre is the scene origin; `thrust` 0..1 lights the jet; `boost` the turbo. */
+  update(s: CarState, braking: boolean, extent: number, thrust: number, boost: boolean): void;
 }
 
 /** One wing, root at the origin, swept, span along +Y before it is laid out. */
@@ -208,11 +208,20 @@ export function createCarModel(spec: CarSpec): CarModel {
   flame.position.set(-2.78, 0.05 + LIFT, 0);
   for (const m of [fin, tailplane]) m.castShadow = true;
   group.add(fin, tailplane, nozzle, flame);
+  // Nitro: twin blue-white jets from under the rear bumper.
+  const nitroMat = new THREE.MeshBasicMaterial({ color: 0x8fd0ff, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
+  const nitro = [0.55, -0.55].map((z) => {
+    const m = new THREE.Mesh(new THREE.ConeGeometry(0.11, 1, 10).rotateZ(Math.PI / 2).translate(-0.5, 0, 0), nitroMat);
+    m.position.set(-2.42, LIFT - 0.12, z);
+    group.add(m);
+    return m;
+  });
+  const ORANGE = new THREE.Color(0xffa040), BLUE = new THREE.Color(0x9fd4ff);
 
   const q = new THREE.Quaternion();
   return {
     group,
-    update(s, braking, extent, thrust) {
+    update(s, braking, extent, thrust, boost) {
       // Sim quaternion [w, x, y, z] in (east, north, up) → three.js (x, up, −north).
       q.set(s.q[1], s.q[3], -s.q[2], s.q[0]);
       group.quaternion.copy(q);
@@ -242,9 +251,16 @@ export function createCarModel(spec: CarSpec): CarModel {
       fin.scale.set(1, Math.max(t, 0.01), 1);
       tailplane.scale.set(1, 1, Math.max(t, 0.01));
       nozzle.scale.setScalar(Math.max(t, 0.01));
-      const burn = s.flying ? thrust * t : 0;
+      // The afterburner doubles the flame and turns it blue-white.
+      const after = boost && s.flying ? 1 : 0;
+      const burn = s.flying ? thrust * t * (1 + after) : 0;
       flame.visible = burn > 0.02;
       flame.scale.set(0.6 + burn * (1.6 + Math.random() * 0.4), 0.6 + burn * 0.5, 0.6 + burn * 0.5);
+      flameMat.color.copy(ORANGE).lerp(BLUE, after * 0.7);
+      for (const n of nitro) {
+        n.visible = boost && s.wings < 0.5;
+        n.scale.set(1.2 + Math.random() * 0.8, 1, 1);
+      }
     },
   };
 }

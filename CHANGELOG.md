@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-22 09:10
+
+- Turbo on Shift (a stick click on a gamepad, BOOST on a phone). On the road a nitro rocket takes
+  the truck past 450 km/h with twin blue jets under the bumper. In the air, an afterburner on top
+  of the full jet, with a long blue-white flame. The view widens and shakes, the speed glows, and
+  it roars.
+
 ## 2026-10-22 09:01
 
 - The car is now an armoured 4×4 pickup. In matte black and gunmetal it has a ram bar, slatted

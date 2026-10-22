@@ -7,7 +7,7 @@ const flat: CarEnv = { height: () => 10, surface: () => TARMAC };
 /** A 10 % grade climbing to the north. */
 const hill: CarEnv = { height: (_x, y) => 10 + y * 0.1, surface: () => TARMAC };
 
-const idle = (): Controls => ({ throttle: 0, brake: 0, steer: 0, handbrake: false, flight: { pitch: 0, roll: 0, yaw: 0, thrust: 0 } });
+const idle = (): Controls => ({ throttle: 0, brake: 0, steer: 0, handbrake: false, boost: false, flight: { pitch: 0, roll: 0, yaw: 0, thrust: 0 } });
 
 function run(s: CarState, c: Controls, seconds: number, env = flat, each?: (t: number) => void): void {
   for (let t = 0; t < seconds; t += STEP) {
@@ -79,6 +79,26 @@ describe('straight line', () => {
     run(s, { ...idle(), brake: 1 }, 3);
     expect(s.gear).toBe(-1);
     expect(s.pos[1]).toBeLessThan(-2);
+  });
+});
+
+describe('turbo', () => {
+  it('goes crazy fast with the nitro lit, and stays on the road doing it', () => {
+    const lit = createCar(TRUCK, 0, 0, 10, 0), plain = createCar(TRUCK, 0, 0, 10, 0);
+    let at100 = 0;
+    run(lit, { ...idle(), throttle: 1, boost: true }, 40, flat, (t) => { if (!at100 && lit.speed > 100 / 3.6) at100 = t; });
+    run(plain, { ...idle(), throttle: 1 }, 40);
+    expect(at100).toBeLessThan(3.5);
+    expect(lit.speed * 3.6).toBeGreaterThan(450);
+    expect(lit.speed * 3.6).toBeGreaterThan(plain.speed * 3.6 + 200);
+    expect(Math.abs(lit.pos[2] - 10 - TRUCK.cgHeight)).toBeLessThan(0.3); // still on its wheels
+    expect(Math.abs(lit.pos[0])).toBeLessThan(5); // and running straight
+  });
+
+  it('does nothing until it is pressed', () => {
+    const s = createCar(TRUCK, 0, 0, 10, 0);
+    run(s, idle(), 2);
+    expect(Math.hypot(...s.vel)).toBeLessThan(0.05);
   });
 });
 

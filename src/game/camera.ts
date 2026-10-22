@@ -12,6 +12,9 @@ const CHASE_UP = 2.8;
 /** With the wings out the chase camera drops further back, to see the whole span. */
 const FLY_BACK = 18;
 const FLY_UP = 4.5;
+/** Field of view at rest and at full turbo: widening it sells the speed. */
+const FOV = 60;
+const BOOST_FOV = 80;
 
 export class CameraRig {
   mode: CameraMode = 'chase';
@@ -23,6 +26,8 @@ export class CameraRig {
   private heading = 0;
   /** 0 car … 1 plane: how far back the chase camera sits. */
   private wings = 0;
+  /** 0 … 1, easing in and out with the turbo. */
+  private boost = 0;
 
   constructor(readonly camera: THREE.PerspectiveCamera, dom: HTMLElement) {
     this.orbit = new OrbitControls(camera, dom);
@@ -67,9 +72,15 @@ export class CameraRig {
   }
 
   /** `heading`: compass heading to follow (the car's, or its travel when sliding); `groundY` under the camera. */
-  update(dt: number, car: THREE.Object3D, heading: number, groundAt: (p: THREE.Vector3) => number, wings = 0): void {
+  update(dt: number, car: THREE.Object3D, heading: number, groundAt: (p: THREE.Vector3) => number, wings = 0, boosting = false): void {
     const cam = this.camera;
     this.wings = wings;
+    this.boost += ((boosting ? 1 : 0) - this.boost) * (1 - Math.exp(-dt * (boosting ? 3 : 1.5)));
+    const fov = FOV + (BOOST_FOV - FOV) * this.boost;
+    if (Math.abs(cam.fov - fov) > 0.01) {
+      cam.fov = fov;
+      cam.updateProjectionMatrix();
+    }
     if (this.mode === 'orbit') {
       cam.position.add(new THREE.Vector3().subVectors(car.position, this.lastTarget));
       this.orbit.target.copy(car.position);
@@ -80,6 +91,10 @@ export class CameraRig {
       this.heading += d * (1 - Math.exp(-dt * 4));
       this.chaseTarget(car.position);
       cam.position.lerp(this.desired, 1 - Math.exp(-dt * 10));
+      // A little shake on the turbo.
+      const shake = 0.06 * this.boost;
+      cam.position.x += (Math.random() - 0.5) * shake;
+      cam.position.y += (Math.random() - 0.5) * shake;
       cam.position.y = Math.max(cam.position.y, groundAt(cam.position) + 0.8);
       cam.up.set(0, 1, 0);
       cam.lookAt(this.look);

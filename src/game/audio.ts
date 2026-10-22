@@ -1,11 +1,13 @@
 // Engine and tyres, synthesised: a four-cylinder's firing note (two pulses a revolution) through
-// a filter that opens with the throttle, and band-passed noise for the tyres when they slide.
+// a filter that opens with the throttle, band-passed noise for the tyres when they slide, and a
+// low roar of the same noise while the turbo is lit.
 // Browsers only start audio after a user gesture, so it wakes on the first key or touch.
 
 export class CarAudio {
   private ctx: AudioContext | null = null;
   private engine?: { osc: OscillatorNode; sub: OscillatorNode; filter: BiquadFilterNode; gain: GainNode };
   private tyres?: GainNode;
+  private roar?: GainNode;
   private master?: GainNode;
   muted = false;
 
@@ -57,6 +59,18 @@ export class CarAudio {
     this.tyres.gain.value = 0;
     src.connect(band).connect(this.tyres).connect(this.master);
     src.start();
+
+    // The turbo's roar: the same noise, low and loud.
+    const low = ctx.createBiquadFilter();
+    low.type = 'lowpass';
+    low.frequency.value = 520;
+    this.roar = ctx.createGain();
+    this.roar.gain.value = 0;
+    const roarSrc = ctx.createBufferSource();
+    roarSrc.buffer = noise;
+    roarSrc.loop = true;
+    roarSrc.connect(low).connect(this.roar).connect(this.master);
+    roarSrc.start();
   }
 
   setMuted(muted: boolean): void {
@@ -64,9 +78,9 @@ export class CarAudio {
     if (this.master && this.ctx) this.master.gain.setTargetAtTime(muted ? 0 : 0.5, this.ctx.currentTime, 0.05);
   }
 
-  /** `slip` 0..1 across the tyres, `speed` m/s. */
-  update(rpm: number, throttle: number, slip: number, speed: number): void {
-    if (!this.ctx || !this.engine || !this.tyres) return;
+  /** `slip` 0..1 across the tyres, `speed` m/s, `boost` the turbo. */
+  update(rpm: number, throttle: number, slip: number, speed: number, boost: boolean): void {
+    if (!this.ctx || !this.engine || !this.tyres || !this.roar) return;
     const t = this.ctx.currentTime;
     const f = (rpm / 60) * 2;
     this.engine.osc.frequency.setTargetAtTime(f, t, 0.03);
@@ -75,5 +89,6 @@ export class CarAudio {
     this.engine.gain.gain.setTargetAtTime(0.1 + throttle * 0.16, t, 0.05);
     const screech = Math.min(slip * Math.min(speed / 8, 1), 1);
     this.tyres.gain.setTargetAtTime(screech * 0.22, t, 0.04);
+    this.roar.gain.setTargetAtTime(boost ? 0.55 : 0, t, boost ? 0.08 : 0.3);
   }
 }

@@ -104,7 +104,7 @@ async function boot(): Promise<void> {
     await site.ensureDetail(x, y, 1600);
     car = createCar(spec, x, y, terrain.heightAt(x, y) + 0.05, heading);
     stuck = 0;
-    model.update(car, false, extent, 0);
+    model.update(car, false, extent, 0, false);
     rig.snap(model.group, heading);
   }
 
@@ -148,6 +148,10 @@ async function boot(): Promise<void> {
     input.touch = () => pad.read();
     document.querySelectorAll<HTMLButtonElement>('[data-action]').forEach((b) =>
       b.addEventListener('click', () => actions[b.dataset.action as Action]()));
+    // BOOST works while held, not on a click.
+    const boostBtn = document.getElementById('boost-btn')!;
+    boostBtn.addEventListener('pointerdown', () => { input.boostHeld = true; });
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave'] as const) boostBtn.addEventListener(ev, () => { input.boostHeld = false; });
   }
 
   // Time of day and drivetrain, live.
@@ -212,13 +216,14 @@ async function boot(): Promise<void> {
       document.getElementById('help')!.classList.add('collapsed');
     }
     const braking = car.gear > 0 ? input.controls.brake > 0.1 : input.controls.throttle > 0.1;
-    model.update(car, braking, extent, input.controls.flight.thrust);
+    const boosting = input.controls.boost && !paused;
+    model.update(car, braking, extent, input.controls.flight.thrust, boosting);
     carPos.copy(model.group.position);
     // Follow the way the car is travelling when it slides, its nose when it is slow.
     const moving = Math.hypot(car.vel[0], car.vel[1]);
     const travel = Math.atan2(car.vel[0], car.vel[1]);
     const followHeading = moving > 4 && (car.speed > 0 || car.flying) ? travel : car.heading;
-    rig.update(dt, model.group, followHeading, ground, car.wings);
+    rig.update(dt, model.group, followHeading, ground, car.wings, boosting);
     sunlight.follow(carPos);
     const t1 = performance.now();
     terrainView.update(camera.position, camera.position.y - ground(camera.position));
@@ -228,11 +233,11 @@ async function boot(): Promise<void> {
     hud.update(dt, {
       speedKmh: (car.flying ? car.airspeed : car.speed) * 3.6, gear: car.gear, rpmShare: car.rpm / spec.engine.redline,
       road, x: car.pos[0], y: car.pos[1], heading: car.heading,
-      flying: car.flying, agl: car.pos[2] - spec.cgHeight - terrain.heightAt(car.pos[0], car.pos[1]),
+      flying: car.flying, boost: boosting, agl: car.pos[2] - spec.cgHeight - terrain.heightAt(car.pos[0], car.pos[1]),
     });
     const slip = Math.max(...car.wheels.map((w) => (w.contact ? w.slip : 0)));
     const pedal = car.flying ? input.controls.flight.thrust : car.gear > 0 ? input.controls.throttle : input.controls.brake;
-    audio.update(car.rpm, pedal, slip, Math.abs(car.speed));
+    audio.update(car.rpm, pedal, slip, Math.abs(car.speed), boosting);
 
     const t2 = performance.now();
     renderer.render(scene, camera);

@@ -6,7 +6,7 @@ const STEP = 1 / 120;
 const flat: CarEnv = { height: () => 0.5, surface: () => ({ grip: 1, rolling: 0.012 }) };
 
 function controls(pitch = 0, roll = 0, thrust = 0.7): Controls {
-  return { throttle: 0, brake: 0, steer: 0, handbrake: false, flight: { pitch, roll, yaw: 0, thrust } };
+  return { throttle: 0, brake: 0, steer: 0, handbrake: false, boost: false, flight: { pitch, roll, yaw: 0, thrust } };
 }
 
 /** A plane already flying level and north at `speed`, `height` metres up, wings out. */
@@ -62,6 +62,15 @@ describe('flying', () => {
     expect(steepest).toBeLessThan(20);
     expect(slowest).toBeGreaterThan(45); // never near the stall
     expect(s.pos.every(Number.isFinite)).toBe(true);
+  });
+
+  it('flies far faster on the afterburner, and stays in one piece', () => {
+    const burner = airborne(70), jet = airborne(70);
+    fly(burner, { ...controls(0, 0, 1), boost: true }, 25);
+    fly(jet, controls(0, 0, 1), 25);
+    expect(burner.airspeed * 3.6).toBeGreaterThan(jet.airspeed * 3.6 + 150);
+    expect(burner.airspeed * 3.6).toBeGreaterThan(500);
+    expect(burner.pos.every(Number.isFinite)).toBe(true);
   });
 
   it('banks and turns right on right aileron', () => {

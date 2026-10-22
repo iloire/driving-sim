@@ -71,6 +71,17 @@ the shell on a 22 cm lift kit above where the physics puts it, so the wheels and
 100–0 km/h in 35–50 m, under ~1.1 g steady cornering, holding on a 10 % grade, the handbrake
 kicking the tail out, keeping more grip on picón than plain tyres would, surviving an upside-down landing, stopping against a wall, and noticing the sea.
 
+## Turbo
+
+`Controls.boost` (Shift, a stick click, or the BOOST button on a phone) adds a force straight along
+the nose at the centre of mass, whatever the gear: the 14,000 N nitro rocket as a car, blending into
+the wings' 20,000 N afterburner as they come out (on top of a full jet). Drag is the only limit,
+so on the road the truck does 0–100 km/h in under 3.5 s and passes 450 km/h. In the air it gains
+over 150 km/h on the full jet alone and passes 500 km/h. The tests pin both, and zeroing the
+boost fails them. On screen, two blue-white jets light under the rear bumper (on the plane, the
+jet's flame doubles and turns blue). The camera's field of view widens from 60° to 80° with a
+slight shake, the speed readout glows, and a low rocket roar plays.
+
 ## Flight (`src/sim/wings.ts`)
 
 The car stays the same rigid body when it transforms. `flying` sends `wings` (0..1) towards fully

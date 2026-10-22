@@ -21,6 +21,7 @@ export interface HudFrame {
   heading: number;
   /** Plane mode, and the height above the ground (m). */
   flying: boolean;
+  boost: boolean;
   agl: number;
 }
 
@@ -33,6 +34,7 @@ export function splitRoadName(name: string): [string, string] {
 
 export class Hud {
   private readonly el = {
+    cluster: document.getElementById('cluster')!,
     speed: document.getElementById('speed')!,
     gear: document.getElementById('gear')!,
     alt: document.getElementById('alt')!,
@@ -80,6 +82,7 @@ export class Hud {
 
   update(dt: number, f: HudFrame): void {
     this.el.speed.textContent = String(Math.round(Math.abs(f.speedKmh)));
+    this.el.cluster.classList.toggle('boost', f.boost);
     this.el.gear.textContent = f.flying ? '✈' : f.gear < 0 ? 'R' : String(f.gear);
     const up = f.flying && f.agl > 3;
     this.el.alt.hidden = !up;
