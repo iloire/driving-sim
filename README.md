@@ -18,6 +18,10 @@ It runs in a desktop browser, or on a phone held sideways. Nothing to install.
   you drive and freed behind you.
 - **Real roads**: about 13,000 OSM ways. Paved roads are graded and carved flat into the terrain,
   and drawn with Spanish markings. Dirt tracks are left to the photo, and so is everything off-road.
+- **An armoured 4×4**: a matte-black, gunmetal-plated pickup on 1 m tall lug tyres, with a lift
+  kit, solid axles, a ram bar, slatted guards over the glass, a roof light bar and a spare in the
+  bed. It has a 520 N·m V8 and 50/50 four-wheel drive, and its all-terrain tyres keep their grip
+  on picón and gravel.
 - **A car that is a rigid body**: four raycast struts, tyres with a slip-angle curve and a friction
   circle, a torque curve and an automatic six-speed. Weight transfer, power oversteer, handbrake
   turns and rollovers all come out of the physics.
@@ -26,13 +30,15 @@ It runs in a desktop browser, or on a phone held sideways. Nothing to install.
   them. Street lamps line the roads through town, and white-and-black edge posts line the main
   roads in the open.
 - **It flies**: press **F** and wings rise from the roof edges and swing out to an 8.4 m span, a
-  fin and tailplane grow from the hatch, and a jet lights under the bumper. It's a light plane
+  fin and tailplane grow from the bed, and a jet lights under the rear bumper. It's a light plane
   from then on: lift and drag from the angle of attack, a stall past about 15°, a tail that keeps
   it pointing into the airflow, and controls that go soft as it slows. Fold the wings in the air
   and it falls like a car.
 - **Surfaces**: tarmac grips, gravel tracks slide, and picón and lava slide more.
 - **The road you're on** as a sign plate, a heading-up map, and sound for the engine and tyres.
 - **Time of day**: from sunrise to sunset, with the sun where it really is over Lanzarote today.
+
+![The armoured 4×4 on the LZ-203 above the north cliffs: lift kit, solid axles, lug tyres, slatted cab](docs/screenshots/truck.png)
 
 ![Calle Trinidad, Arrecife: the OSM buildings drawn as the island's white houses](docs/screenshots/arrecife.png)
 
@@ -68,7 +74,7 @@ LB/RB are the rudder.
 **Phone**, held sideways: slide the left thumb sideways to steer. Push the right thumb up to
 accelerate, and pull it down to brake or back up.
 
-The settings panel sets the solar time and the drivetrain (AWD 40/60, RWD, FWD).
+The settings panel sets the solar time and the drivetrain (4×4 50/50, RWD, FWD).
 
 A link starts someone at the same place and time: `?spawn=timanfaya&time=17:30`. The places are
 `timanfaya`, `airport`, `mirador`, `famara`, `haria`, `la-geria`, `el-golfo`, `arrecife`, `teguise`,

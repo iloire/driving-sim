@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-22 09:01
+
+- The car is now an armoured 4×4 pickup. In matte black and gunmetal it has a ram bar, slatted
+  guards over the glass, a roof light bar, flared arches and a spare in the bed. It sits on a lift
+  kit over 1 m lug tyres with solid axles that tilt with the suspension. The physics changes with
+  it: 1850 kg, a 520 N·m V8, 50/50 four-wheel drive, long-travel struts, and all-terrain tyres that
+  keep more grip on picón and gravel. The wings and jet are sized up to lift it.
+
 ## 2026-10-22 08:53
 
 - It flies: F unfolds wings from the roof edges, a fin and tailplane from the hatch, and a jet

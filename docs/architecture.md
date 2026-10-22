@@ -27,9 +27,15 @@ bearing in radians (0 = north, clockwise).
 
 ## Car (`src/sim/car.ts`)
 
-One rigid body (1300 kg, principal inertias for roll, pitch and yaw) integrated at 480 Hz (4
+One rigid body, integrated at 480 Hz (4
 sub-steps of each 120 Hz game step). Newton handles the centre of mass and Euler's equations the
 rotation.
+
+The car is `TRUCK`, an armoured 4×4 pickup: 1850 kg, its centre of mass 0.8 m up, a 2.9 m
+wheelbase and 1.86 m track, 0.5 m radius tyres on 45 cm struts with 30 cm of travel, and 50/50
+four-wheel drive. Its `allTerrain` of 0.45 wins back that share of the grip a loose surface takes
+away (picón 0.62 → 0.79, gravel 0.72 → 0.85) and halves the extra rolling drag. The model draws
+the shell on a 22 cm lift kit above where the physics puts it, so the wheels and solid axles show.
 
 - **Struts.** Each wheel casts down its strut from the mount. The strut length is the distance to
   the terrain minus the wheel radius, and the cast is capped at the strut's reach, so a steeply
@@ -44,8 +50,9 @@ rotation.
 - **Brakes and handbrake.** A brake resists rolling like a stiff damper up to its cap, so a car
   stops dead instead of oscillating. The handbrake locks the rear wheels, which then skate with
   kinetic friction against their sliding direction.
-- **Powertrain.** The torque curve is a broad hump (300 N m peak at 4400 rpm, nothing past the
-  6800 redline), feeding six gears, a 3.9 final drive and 90 % efficiency. The clutch slips
+- **Powertrain.** The torque curve is a broad hump (a V8's 520 N m peak at 4000 rpm, nothing past
+  the 6200 redline), feeding six gears, a 4.1 final drive and 90 % efficiency. It does 0–100 km/h
+  in 5.3 s and tops out at about 230 km/h. The clutch slips
   pulling away. It changes up near the redline and down below 2400 rpm. Off the throttle the
   engine brakes a little. When stopped, the brake pedal engages reverse (and the pedals swap).
   With no pedal and under 0.4 m/s, the hill hold keeps it parked.
@@ -60,7 +67,7 @@ rotation.
 
 `src/sim/car.test.ts` pins the envelope: 0–100 km/h in 5–9 s, a top speed of 200–260 km/h,
 100–0 km/h in 35–50 m, under ~1.1 g steady cornering, holding on a 10 % grade, the handbrake
-kicking the tail out, surviving an upside-down landing, stopping against a wall, and noticing the sea.
+kicking the tail out, keeping more grip on picón than plain tyres would, surviving an upside-down landing, stopping against a wall, and noticing the sea.
 
 ## Flight (`src/sim/wings.ts`)
 
@@ -77,9 +84,10 @@ as the struts and tyres, scaled by how far out they are, and the wheel drive swi
   nose-up trim, plus the elevator and pitch damping. In roll, the ailerons and roll damping. In
   yaw, a weathervane on sideslip, the rudder and yaw damping. All damping scales with rate × size
   / airspeed.
-- **Jet.** 9,500 N along the nose: cruise at 60 %, full on Shift, 10 % on Ctrl.
+- **Jet.** Along the nose: cruise at 60 %, full on Shift, 10 % on Ctrl.
 
-It rotates at about 200 km/h after an 8 s run and climbs at about 22° on full thrust. Hands-off
+With the truck's heavier mass its wings are bigger (15 m², 9.4 m span) and its jet stronger
+(13,000 N). It rotates at about 210 km/h after a 9 s run and climbs at about 11° on full thrust. Hands-off
 at cruise it climbs gently through a slow, well-damped phugoid. Banking turns it, and slowing past
 the stall drops it. `src/sim/wings.test.ts` pins all of that, plus folding the wings in the air
 (it falls). Making the airframe unstable (a negative pitch stiffness) fails the take-off and

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createCar, HATCH, stepCar, type CarEnv, type CarState, type Controls } from './car';
+import { createCar, TRUCK, stepCar, type CarEnv, type CarState, type Controls } from './car';
 import { liftCoefficient, WINGS } from './wings';
 
 const STEP = 1 / 120;
@@ -11,7 +11,7 @@ function controls(pitch = 0, roll = 0, thrust = 0.7): Controls {
 
 /** A plane already flying level and north at `speed`, `height` metres up, wings out. */
 function airborne(speed: number, height = 600): CarState {
-  const s = createCar(HATCH, 0, 0, height, 0);
+  const s = createCar(TRUCK, 0, 0, height, 0);
   s.flying = true;
   s.wings = 1;
   s.vel = [0, speed, 0];
@@ -20,7 +20,7 @@ function airborne(speed: number, height = 600): CarState {
 
 function fly(s: CarState, c: Controls | ((t: number) => Controls), seconds: number, each?: (t: number) => void): void {
   for (let t = 0; t < seconds; t += STEP) {
-    stepCar(s, HATCH, typeof c === 'function' ? c(t) : c, flat, STEP);
+    stepCar(s, TRUCK, typeof c === 'function' ? c(t) : c, flat, STEP);
     each?.(t);
   }
 }
@@ -36,12 +36,12 @@ describe('liftCoefficient', () => {
 
 describe('flying', () => {
   it('takes off from a road: unfold, roll, rotate, climb', () => {
-    const s = createCar(HATCH, 0, 0, 0.5, 0);
+    const s = createCar(TRUCK, 0, 0, 0.5, 0);
     s.flying = true;
     let liftOff = 0;
     // Wait for the wings, then full jet; pull up past 160 km/h.
     fly(s, (t) => controls(t > 1 && s.speed > 45 ? 0.6 : 0, 0, t > 1 ? 1 : 0), 25, (t) => {
-      if (!liftOff && s.pos[2] > 0.5 + HATCH.cgHeight + 3) liftOff = t;
+      if (!liftOff && s.pos[2] > 0.5 + TRUCK.cgHeight + 3) liftOff = t;
     });
     expect(s.wings).toBe(1);
     expect(liftOff).toBeGreaterThan(3);

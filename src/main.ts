@@ -13,7 +13,7 @@ import { loadSite, type Spawn } from './game/site';
 import { TerrainView } from './game/terrain-view';
 import { TouchPad } from './game/touch';
 import { createSurround, Sunlight } from './game/world';
-import { createCar, HATCH, stepCar, type CarEnv, type CarSpec, type CarState, type Surface } from './sim/car';
+import { createCar, TRUCK, stepCar, type CarEnv, type CarSpec, type CarState, type Surface } from './sim/car';
 import { isPaved, MAX_HALF_WIDTH, ROAD_WIDTH, type Road } from './sim/roads';
 import { dayOfYear, daylightHours, sunPosition } from './sim/sun';
 import { rotate } from './sim/vec';
@@ -33,7 +33,7 @@ const GRAVEL: Surface = { grip: 0.72, rolling: 0.03 };
 /** Picón and lava fields: loose and rough. */
 const OFFROAD: Surface = { grip: 0.62, rolling: 0.06 };
 
-const DRIVETRAINS: Record<string, number> = { 'AWD (40/60)': 0.4, RWD: 0, FWD: 1 };
+const DRIVETRAINS: Record<string, number> = { '4×4 (50/50)': 0.5, RWD: 0, FWD: 1 };
 
 /** The road under a point, if it is on the carriageway (or a track) rather than beside it. */
 function onRoad(roads: { nearest(x: number, y: number, r: number): { road: Road; dist: number } | undefined }, x: number, y: number, margin: number): Road | null {
@@ -74,8 +74,8 @@ async function boot(): Promise<void> {
   });
   scene.add(terrainView.group, createSurround(extent));
 
-  const settings = { drivetrain: 'AWD (40/60)' };
-  const spec: CarSpec = { ...HATCH };
+  const settings = { drivetrain: '4×4 (50/50)' };
+  const spec: CarSpec = { ...TRUCK };
   const model = createCarModel(spec);
   scene.add(model.group);
   const rig = new CameraRig(camera, canvas);

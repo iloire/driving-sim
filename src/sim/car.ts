@@ -71,6 +71,8 @@ export interface CarSpec {
   suspension: { rest: number; travel: number; k: number; c: number };
   /** Peak tyre friction coefficient on dry tarmac. */
   mu: number;
+  /** 0..1: how much of the grip a loose surface takes away the tyres win back (and of its drag). */
+  allTerrain: number;
   /** Steering lock at a standstill (rad); it shrinks with speed so keys stay drivable at 120 km/h. */
   maxSteer: number;
   /** Speed (m/s) at which the available lock has halved. */
@@ -93,30 +95,36 @@ export interface CarSpec {
   wings: WingSpec;
 }
 
-/** A 1300 kg front-engined hatchback, rear-biased four-wheel drive: forgiving on picón tracks, still slides. */
-export const HATCH: CarSpec = {
-  mass: 1300,
-  inertia: [520, 1900, 2100],
-  wheelbase: 2.55,
-  track: 1.55,
-  frontWeight: 0.57,
-  cgHeight: 0.55,
-  wheelRadius: 0.32,
-  suspension: { rest: 0.32, travel: 0.2, k: 38000, c: 3800 },
-  mu: 1.05,
-  maxSteer: 0.6,
-  steerFalloff: 22,
-  steerRate: 2.5,
-  engine: { idle: 900, peakRpm: 4400, redline: 6800, peakTorque: 300 },
-  gears: [3.5, 2.15, 1.5, 1.16, 0.94, 0.79],
-  reverse: 3.3,
-  finalDrive: 3.9,
-  driveFront: 0.4,
-  brakeForce: 15000,
-  brakeFront: 0.65,
-  cdA: 0.72,
-  body: [2.0, 2.05, 0.86, 0.32, 0.95],
-  wings: WINGS,
+/**
+ * A 1850 kg armoured 4×4 pickup: a 520 N m V8, permanent 50/50 four-wheel drive, 1 m tall
+ * all-terrain tyres and long-travel suspension. It grips picón and gravel far better than a road
+ * car, and its high centre of mass will roll it if it's thrown about. With the bigger mass, its
+ * wings are bigger and its jet stronger too.
+ */
+export const TRUCK: CarSpec = {
+  mass: 1850,
+  inertia: [950, 3300, 3600],
+  wheelbase: 2.9,
+  track: 1.86,
+  frontWeight: 0.55,
+  cgHeight: 0.8,
+  wheelRadius: 0.5,
+  suspension: { rest: 0.45, travel: 0.3, k: 44000, c: 5200 },
+  mu: 1.0,
+  allTerrain: 0.45,
+  maxSteer: 0.58,
+  steerFalloff: 20,
+  steerRate: 2.4,
+  engine: { idle: 800, peakRpm: 4000, redline: 6200, peakTorque: 520 },
+  gears: [3.6, 2.2, 1.52, 1.16, 0.92, 0.76],
+  reverse: 3.4,
+  finalDrive: 4.1,
+  driveFront: 0.5,
+  brakeForce: 21000,
+  brakeFront: 0.62,
+  cdA: 1.25,
+  body: [2.35, 2.5, 1.0, 0.2, 1.15],
+  wings: { ...WINGS, area: 15, span: 9.4, thrust: 13000, inertia: [1700, 700, 2000] },
 };
 
 export interface Wheel {
@@ -299,14 +307,15 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
     const vx = dot(vc, fwd), vy = dot(vc, left);
 
     const surface = env.surface(at[0], at[1]);
-    const grip = spec.mu * surface.grip * load;
+    // Knobbly all-terrain tyres claw back part of what loose ground takes away.
+    const grip = spec.mu * (surface.grip + (1 - surface.grip) * spec.allTerrain) * load;
     const axleDrive = wheel.front ? spec.driveFront : 1 - spec.driveFront;
     const axleBrake = wheel.front ? spec.brakeFront : 1 - spec.brakeFront;
     const locked = c.handbrake && !wheel.front;
     const brakeCap = brake * spec.brakeForce * axleBrake / 2 + (locked ? spec.brakeForce : 0);
     let fx = (drive * axleDrive) / 2
       - clamp(vx * BRAKE_STIFFNESS, -brakeCap, brakeCap)
-      - surface.rolling * load * clamp(vx * 2, -1, 1);
+      - surface.rolling * (1 - 0.5 * spec.allTerrain) * load * clamp(vx * 2, -1, 1);
     const alpha = Math.atan2(vy, Math.max(Math.abs(vx), SLIP_FLOOR));
     let fy = -grip * Math.sin(TYRE_C * Math.atan(TYRE_B * alpha));
     let slip = clamp((Math.abs(alpha) - 0.12) / 0.25, 0, 1);

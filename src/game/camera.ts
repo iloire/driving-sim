@@ -7,10 +7,10 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 export type CameraMode = 'chase' | 'bonnet' | 'orbit';
 const MODES: CameraMode[] = ['chase', 'bonnet', 'orbit'];
 
-const CHASE_BACK = 6.8;
-const CHASE_UP = 2.3;
+const CHASE_BACK = 7.8;
+const CHASE_UP = 2.8;
 /** With the wings out the chase camera drops further back, to see the whole span. */
-const FLY_BACK = 17;
+const FLY_BACK = 18;
 const FLY_UP = 4.5;
 
 export class CameraRig {
@@ -85,7 +85,7 @@ export class CameraRig {
       cam.lookAt(this.look);
     } else {
       // On the bonnet, looking down the road, moving with the body.
-      cam.position.copy(new THREE.Vector3(0.4, 0.75, 0).applyQuaternion(car.quaternion).add(car.position));
+      cam.position.copy(new THREE.Vector3(1.3, 0.95, 0).applyQuaternion(car.quaternion).add(car.position));
       cam.quaternion.copy(car.quaternion).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2));
     }
     this.lastTarget.copy(car.position);
