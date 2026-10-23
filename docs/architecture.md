@@ -82,7 +82,7 @@ them where the car stands.
 The Roadster is electric (`engine.electric`). Its torque is flat at 1,400 N·m from a standstill
 to 5,000 rpm, then falls off at constant power to 20,000 rpm, through one 7:1 gear. With no clutch to
 slip and nothing to shift, 0–100 km/h is grip-limited at about 2 s and it tops out near 390 km/h.
-The sound changes with it: a triangle-wave whine an octave and a half up, with no sub-octave.
+The sound changes with it: a soft triangle-wave hum (about 440 Hz flat out, gently low-passed) with no sub-octave.
 
 ## Hovering (`src/sim/thrusters.ts`)
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-23 10:10
+
+- The Roadster's motor hums instead of shrieking: its note tops out around 440 Hz rather than
+  1 kHz, the filter no longer opens to 3.4 kHz under full throttle, and it is a little quieter.
+
 ## 2026-10-23 10:00
 
 - Removed the El Golfo coast road start (`?spawn=el-golfo`). Old links with it fall back to the
