@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-23 11:00
+
+- The Settings panel sits at the top right, level with the controls panel. It only drops lower
+  while the balloon score is showing (or on a phone, under the touch buttons).
+
 ## 2026-10-23 10:58
 
 - A shared link opens already playing instead of on the pause panel, so whoever follows it lands

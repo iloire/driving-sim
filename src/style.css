@@ -153,7 +153,9 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--malpais
 #credits a { color: inherit; }
 #sha { font-family: var(--mono); margin-left: 6px; }
 
-.lil-gui.autoPlace { top: 76px; }
+.lil-gui.autoPlace { top: 16px; }
+/* Below the balloon score while it shows, and below the touch buttons on a phone. */
+body.touch .lil-gui.autoPlace, body:has(#score:not([hidden])) .lil-gui.autoPlace { top: 76px; }
 
 /* Touch */
 #touch-buttons, #rotate, #boost-btn { display: none; }
