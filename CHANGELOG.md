@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-23 10:45
+
+- Pausing (P, or Start on a gamepad) now pauses the sound too, and so does the spawn picker; it
+  picks up where it left off when the game goes on.
+
 ## 2026-10-23 10:40
 
 - The Roadster's motor is quieter again: a soft sine hum topping out near 260 Hz, at about

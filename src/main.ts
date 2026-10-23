@@ -337,6 +337,7 @@ async function boot(): Promise<void> {
     });
     const slip = Math.max(...car.wheels.map((w) => (w.contact ? w.slip : 0)));
     const pedal = car.flying ? input.controls.flight.thrust : car.gear > 0 ? input.controls.throttle : input.controls.brake;
+    audio.setPaused(paused || picker.open);
     audio.update(car.rpm, pedal, slip, Math.abs(car.speed), boosting, car.lift);
 
     const t2 = performance.now();

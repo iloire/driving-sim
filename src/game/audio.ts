@@ -12,6 +12,7 @@ export class CarAudio {
   private roar?: GainNode;
   private master?: GainNode;
   muted = false;
+  private paused = false;
 
   constructor() {
     const wake = () => {
@@ -26,6 +27,7 @@ export class CarAudio {
   private start(): void {
     if (this.ctx) return;
     const ctx = (this.ctx = new AudioContext());
+    if (this.paused) void ctx.suspend();
     this.master = ctx.createGain();
     this.master.gain.value = this.muted ? 0 : 0.5;
     this.master.connect(ctx.destination);
@@ -110,6 +112,13 @@ export class CarAudio {
   setMuted(muted: boolean): void {
     this.muted = muted;
     if (this.master && this.ctx) this.master.gain.setTargetAtTime(muted ? 0 : 0.5, this.ctx.currentTime, 0.05);
+  }
+
+  /** Freezes every sound while the game is paused (the context stops its clock), and picks up again. */
+  setPaused(paused: boolean): void {
+    if (paused === this.paused) return;
+    this.paused = paused;
+    if (this.ctx) void (paused ? this.ctx.suspend() : this.ctx.resume());
   }
 
   /** `slip` 0..1 across the tyres, `speed` m/s, `boost` the turbo, `hiss` 0..1 the hover thrusters. */
