@@ -17,6 +17,8 @@ const BASE_SEGS = 64;
 const LEVEL_SEGS = [0, 300, 600];
 /** Camera distance (m) under which a tile goes to level 1, level 2. */
 const LEVEL_DIST = [Infinity, 4500, 1500];
+/** Faster than this (m/s) the ground goes by too quickly to see the 5 m mesh: tiles stop at level 1. */
+const FAST = 150;
 /** A tile only drops a level once the camera is this much further than the threshold. */
 const HYSTERESIS = 1.2;
 const SKIRT_M = 80;
@@ -198,8 +200,9 @@ export class TerrainView {
     }
   }
 
-  /** Picks each tile's level for a camera at scene position `cam`, `agl` metres above the ground. */
-  update(cam: THREE.Vector3, agl: number): void {
+  /** Picks each tile's level for a camera at scene position `cam`, `agl` metres above the ground, moving at `speed` m/s. */
+  update(cam: THREE.Vector3, agl: number, speed = 0): void {
+    const top = speed > FAST ? 1 : LEVEL_DIST.length - 1;
     const e = this.terrain.extent;
     const cx = cam.x + e / 2, cy = e / 2 - cam.z;
     let next: { chunk: Chunk; want: number; dist: number } | undefined;
@@ -212,7 +215,7 @@ export class TerrainView {
       const dy = Math.max(y0 - cy, 0, cy - y0 - this.chunkM);
       const dist = Math.hypot(dx, dy, Math.max(agl, 0));
       let want = 0;
-      for (let level = LEVEL_DIST.length - 1; level > 0; level--) {
+      for (let level = top; level > 0; level--) {
         if (dist < LEVEL_DIST[level] * (d.level >= level ? HYSTERESIS : 1)) { want = level; break; }
       }
       if (want > 0 && !d.texture && !d.loading) fetchable.push({ d, dist });

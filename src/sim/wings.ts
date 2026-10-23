@@ -3,11 +3,33 @@
 // into the airflow (pitch and yaw stability); elevator, ailerons and rudder are torques scaled by
 // dynamic pressure, with damping that grows with it, so the controls go soft as it slows. A jet
 // pushes along the nose. All of it scales with how far the wings are out, so a half-unfolded
-// wing half-flies. Body frame as in car.ts: X forward, Y left, Z up.
+// wing half-flies. A fighter adds fly-by-wire on top (`flyByWire`): the stick asks for g and a roll
+// rate, and the computer moves the surfaces to get them, inside an angle-of-attack limit, so the
+// jet handles the same at 300 m/s as at 100. Near the speed of sound the drag climbs steeply.
+// Body frame as in car.ts: X forward, Y left, Z up.
 
 import { cross, length, normalize, rotate, scale, unrotate, type Quat, type V3 } from './vec';
 
 const RHO = 1.225;
+const G = 9.81;
+const SPEED_OF_SOUND = 340;
+
+/** A fighter's flight computer: what the stick asks for, and how hard it chases it. */
+export interface FlyByWire {
+  /** Load factor at full pull, and at full push (negative g). */
+  gMax: number;
+  gMin: number;
+  /** Highest angle of attack it lets the wing fly (rad), kept under the stall. */
+  alphaMax: number;
+  /** Roll rate at full stick (rad/s). */
+  rollRate: number;
+  /** Elevator per rad of angle-of-attack error and per rad/s of pitch-rate error; aileron per rad/s of roll-rate error. */
+  kAlpha: number;
+  kPitch: number;
+  kRoll: number;
+  /** Airspeed (m/s) above which the rudder's travel shrinks, so a full boot doesn't skid it sideways. */
+  rudderFade: number;
+}
 
 export interface WingSpec {
   /** Wing area (m²), span (m), mean chord (m). */
@@ -41,6 +63,10 @@ export interface WingSpec {
   inertia: V3;
   /** Wing travel per second while transforming (1 = fully out). */
   unfoldRate: number;
+  /** A fighter's flight computer, if it has one. */
+  fbw?: FlyByWire;
+  /** Transonic drag rise: past Mach `crit`, the drag coefficient grows by `rise` × (M − crit)². */
+  mach?: { crit: number; rise: number };
 }
 
 export const WINGS: WingSpec = {
@@ -113,7 +139,8 @@ export function aero(w: WingSpec, q: Quat, vel: V3, omega: V3, c: FlightControls
   const qbar = 0.5 * RHO * V * V;
   const S = w.area * out;
   const cl = liftCoefficient(w, alpha);
-  const cd = w.cd0 + w.cdInduced * cl * cl;
+  const over = w.mach ? Math.max(V / SPEED_OF_SOUND - w.mach.crit, 0) : 0;
+  const cd = w.cd0 + w.cdInduced * cl * cl + (w.mach?.rise ?? 0) * over * over;
   const along = scale(vel, 1 / V);
   const left = rotate(q, [0, 1, 0]);
   const liftDir = normalize(cross(along, left));
@@ -133,6 +160,42 @@ export function aero(w: WingSpec, q: Quat, vel: V3, omega: V3, c: FlightControls
   // Yaw about +Z is to the left: sideslip from the left turns it left, right rudder turns it right.
   tb[2] = qbar * S * w.span * (w.cnBeta * beta - w.cnRudder * c.yaw - w.cnDamping * wb[2] * w.span * damp);
   return { force, torque: rotate(q, tb), alpha, airspeed: V };
+}
+
+const clamp1 = (v: number) => Math.min(Math.max(v, -1), 1);
+
+/**
+ * The flight computer: turns the pilot's stick (`c`) into surface deflections for `aero`. Pitch
+ * asks for a load factor (1 g hands-off, `gMax` at full pull), flown as the angle of attack that
+ * gives it, capped at `alphaMax`; roll asks for a roll rate. Each deflection is what holds it
+ * steady plus a correction for the error, clamped to full travel, so at low speed it runs out of
+ * authority the way the bare wing would.
+ */
+export function flyByWire(w: WingSpec, f: FlyByWire, mass: number, q: Quat, vel: V3, omega: V3, c: FlightControls): FlightControls {
+  const V = length(vel);
+  if (V < 1) return c;
+  const vb = unrotate(q, vel);
+  const wb = unrotate(q, omega);
+  const alpha = Math.atan2(-vb[2], vb[0]);
+  const qbar = 0.5 * RHO * V * V;
+
+  const nz = 1 + c.pitch * (c.pitch > 0 ? f.gMax - 1 : 1 - f.gMin);
+  const cl = (nz * mass * G) / (qbar * w.area);
+  const want = Math.min(Math.max((cl - w.cl0) / w.clAlpha, -f.alphaMax), f.alphaMax);
+  // The elevator that holds `want` against the tail's stability, plus the error terms. A steady
+  // pull pitches the nose up at g(n − 1)/V, for the g the wing can give at `want`; wb[1] is
+  // nose-down, so that rate is negative.
+  const trim = (w.cmAlpha * want - w.cm0) / w.cmElevator;
+  const reach = (qbar * w.area * (w.cl0 + w.clAlpha * want)) / (mass * G);
+  const rate = (-G * (Math.min(nz, reach) - 1)) / V;
+  const pitch = clamp1(trim + f.kAlpha * (want - alpha) + f.kPitch * (wb[1] - rate));
+
+  // Aileron that holds the asked-for roll rate against the roll damping, plus the error.
+  const p = c.roll * f.rollRate;
+  const hold = (p * w.clDamping * w.span) / (2 * Math.max(V, 10) * w.clAileron);
+  const roll = clamp1(hold + f.kRoll * (p - wb[0]));
+  const yaw = c.yaw * Math.min(1, (f.rudderFade / V) ** 2);
+  return { ...c, pitch, roll, yaw };
 }
 
 /** True when the airflow is past the wing's stall angle. */

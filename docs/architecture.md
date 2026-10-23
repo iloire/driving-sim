@@ -5,7 +5,7 @@ How it stays fast (merging, instancing, level of detail, streaming, offline work
 ```
 src/sim/    pure TypeScript, no three.js, no DOM — unit-tested
   car.ts      the car: rigid body, struts, tyres, engine, gearbox
-  wings.ts    the 4×4's plane half: lift, drag, stability, control surfaces, jet
+  wings.ts    the 4×4's plane half and the Jet: lift, drag, stability, control surfaces, jet, fly-by-wire
   thrusters.ts  the Roadster's hover: lift on its exhaust, height hold, attitude assists
   roads.ts    road model: profiles, carving, nearest-road index
   buildings.ts  building footprints as obstacles: point-in-polygon, way out, per-tile index
@@ -72,12 +72,13 @@ the shell on a 22 cm lift kit above where the physics puts it, so the wheels and
 100–0 km/h in 35–50 m, under ~1.1 g steady cornering, holding on a 10 % grade, the handbrake
 kicking the tail out, keeping more grip on picón than plain tyres would, surviving an upside-down landing, stopping against a wall, and noticing the sea.
 
-## The two cars
+## The vehicles
 
-`ROADSTER` (the default) and `TRUCK` share everything above. They differ in their numbers, and in
+`ROADSTER` (the default), `TRUCK` and `JET` share everything above. They differ in their numbers, and in
 how `flying` flies: `CarSpec.wings` unfolds into a plane, and `CarSpec.thrusters` hovers. Each has
-its own model (`roadster-model.ts`, `car-model.ts`), and Settings → Car (or `?car=4x4`) swaps
-them where the car stands.
+its own model (`roadster-model.ts`, `car-model.ts`, `jet-model.ts`), and Settings → Car (or
+`?car=4x4`, `?car=jet`) swaps them where the car stands. The Jet is placed 600 m up at 230 m/s
+with its wings already out, and never drives (see [The Jet](#the-jet) below).
 
 The Roadster is electric (`engine.electric`). Its torque is flat at 1,400 N·m from a standstill
 to 5,000 rpm, then falls off at constant power to 20,000 rpm, through one 7:1 gear. With no clutch to
@@ -157,6 +158,32 @@ at cruise it climbs gently through a slow, well-damped phugoid. Banking turns it
 the stall drops it. `src/sim/wings.test.ts` pins all of that, plus folding the wings in the air
 (it falls). Making the airframe unstable (a negative pitch stiffness) fails the take-off and
 hands-off tests.
+
+### The Jet
+
+`JET` is the same rigid body on the same wheels, with a fighter's `WingSpec`: 9 t, 28 m² of
+cropped delta (CL = 0.05 + 3.6α, stall at 24°), drag 0.018 + 0.12 CL², 52 kN dry and 38 kN more on
+the afterburner. Two additions make it a fighter rather than a fast light plane:
+
+- **Fly-by-wire** (`WingSpec.fbw`, `flyByWire()`). The bare surfaces get stronger with V², so at
+  300 m/s the stick would be some 36× as sharp as at 50. Instead the stick asks for a load factor
+  (1 g hands-off, 9 g full pull, −3 g full push) and a roll rate (4.5 rad/s at full stick). The
+  computer flies that load factor as the angle of attack that gives it, capped at 22° (under the
+  stall), and sets each surface to what holds the target steady plus a correction for the error. The
+  pitch-rate target is capped at the g the wing can reach, so a slow pull doesn't overshoot the cap.
+  Deflections clamp at full travel, so below about 150 m/s it runs out of authority as the bare wing would.
+  The rudder's travel shrinks with (120 / V)².
+- **Transonic drag** (`WingSpec.mach`): past Mach 0.85, CD grows by 3 (M − 0.85)².
+
+It cruises at about 820 km/h, does about 1,070 km/h dry and about 1,140 km/h on the afterburner (Mach
+0.93), pulls 9 g above about 180 m/s and mushes downwards below about 60 m/s. `src/sim/jet.test.ts`
+pins those, as well as an equal roll rate at 250 and 300 m/s, and no stall even at full pull at 80 m/s. Taking
+out the fly-by-wire fails eight of them.
+
+`main.ts` checks for a crash each frame: low over the ground while too fast (110 m/s), sinking
+faster than 6 m/s or not upright, or inside a building. A crash puts the jet back in the air over the
+same spot. The terrain view stops at the 10 m level above 150 m/s (`terrainView.update`'s
+`speed`), since the 5 m mesh would be built for a tile you pass in seconds.
 
 The airport's runway (OSM `aeroway=runway`) is a road kind: 45 m wide, carved, marked and tarmac.
 The `airport` spawn sits on its threshold, facing down runway 03 (a spawn with `toward` is placed

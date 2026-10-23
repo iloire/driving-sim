@@ -10,6 +10,7 @@ import { Hud } from './game/hud';
 import { initAnalytics, track } from './game/analytics';
 import { formatHour, readMoment, writeMoment, type Moment } from './game/share';
 import { Input, type Action } from './game/input';
+import { createJetModel } from './game/jet-model';
 import { createRoadsterModel } from './game/roadster-model';
 import { SpawnPicker } from './game/picker';
 import { RoadView } from './game/road-view';
@@ -18,7 +19,7 @@ import { TerrainView } from './game/terrain-view';
 import { TouchPad } from './game/touch';
 import { createSurround, Sunlight } from './game/world';
 import { BalloonField } from './sim/balloons';
-import { createCar, ROADSTER, TRUCK, stepCar, type CarEnv, type CarSpec, type CarState, type Surface } from './sim/car';
+import { createCar, JET, ROADSTER, TRUCK, stepCar, type CarEnv, type CarSpec, type CarState, type Surface } from './sim/car';
 import { isPaved, MAX_HALF_WIDTH, ROAD_WIDTH, type Road } from './sim/roads';
 import { dayOfYear, daylightHours, sunPosition } from './sim/sun';
 import { rotate } from './sim/vec';
@@ -34,12 +35,25 @@ const TOUCH = matchMedia('(pointer: coarse)').matches;
 const KEY = TOUCH
   ? { reset: 'RESET', pull: 'pull the right thumb down', climb: 'push the left thumb up to climb' }
   : { reset: 'R', pull: 'S to pull up', climb: 'Space to climb, Ctrl to sink' };
+/** What to do first, in whatever it is. */
+const START_HINT = (spec: CarSpec) => isJet(spec)
+  ? (TOUCH ? 'right thumb to pull and roll, BOOST for the afterburner' : 'S to pull, A/D to roll, Shift for the afterburner')
+  : (TOUCH ? 'right thumb up to drive' : 'W to drive, A/D to steer');
 
-/** The cars on offer: the default Roadster, which hovers on thrusters, and the 4×4, which unfolds wings. */
+/** The cars on offer: the default Roadster, which hovers on thrusters, the 4×4, which unfolds wings, and the Jet, which only flies. */
 const VEHICLES: Record<string, { name: string; spec: CarSpec; model: (spec: CarSpec) => CarModel }> = {
   roadster: { name: 'Roadster', spec: ROADSTER, model: createRoadsterModel },
   '4x4': { name: 'Armoured 4×4', spec: TRUCK, model: createCarModel },
+  jet: { name: 'Jet', spec: JET, model: createJetModel },
 };
+/** The Jet starts this high above the ground, already at cruise. */
+const JET_START = { agl: 600, speed: 230 };
+/** How far back the chase camera sits behind the Jet (1 = the 4×4's wingspan). */
+const JET_CAMERA = 1.2;
+/** A jet touching down faster than this (m/s), or sinking faster, has crashed rather than landed. */
+const LANDING = { speed: 110, sink: 6 };
+const SPEED_OF_SOUND = 340;
+const isJet = (spec: CarSpec) => !!spec.wings?.fbw;
 
 const TARMAC: Surface = { grip: 1, rolling: 0.012 };
 const GRAVEL: Surface = { grip: 0.72, rolling: 0.03 };
@@ -109,7 +123,7 @@ async function boot(): Promise<void> {
   scene.add(terrainView.group, createSurround(extent));
 
   // The balloon game is off until B (or the settings panel, or the phone's button) turns it on.
-  const vehicleId = query.get('car') === '4x4' ? '4x4' : 'roadster';
+  const vehicleId = VEHICLES[query.get('car') ?? ''] ? query.get('car')! : 'roadster';
   const settings = { vehicle: VEHICLES[vehicleId].name, drivetrain: 'AWD', balloons: false };
   let spec: CarSpec = { ...VEHICLES[vehicleId].spec };
   let model = VEHICLES[vehicleId].model(spec);
@@ -161,11 +175,18 @@ async function boot(): Promise<void> {
   let detailTimer = 0;
   let helpFolded = false;
   let stallWarned = false;
+  let crashing = false;
 
   /** Puts the car on the road at (x, y) facing `heading`, once the 5 m ground there has loaded. */
   async function place(x: number, y: number, heading: number): Promise<void> {
     await site.ensureDetail(x, y, 1600);
     car = createCar(spec, x, y, terrain.heightAt(x, y) + 0.05, heading);
+    if (isJet(spec)) {
+      car.flying = true;
+      car.wings = 1;
+      car.pos[2] += JET_START.agl;
+      car.vel = [Math.sin(heading) * JET_START.speed, Math.cos(heading) * JET_START.speed, 0];
+    }
     stuck = 0;
     model.update(car, false, extent, 0, false, camera, 0);
     rig.snap(model.group, heading);
@@ -221,6 +242,7 @@ async function boot(): Promise<void> {
     map: () => document.getElementById('minimap')!.classList.toggle('hidden'),
     balloons: () => setBalloons(!settings.balloons),
     transform: () => {
+      if (isJet(spec)) { hud.say('The jet only flies — Shift for the afterburner', 2); return; }
       car.flying = !car.flying;
       track('fly', { on: car.flying, car: vehicleKey() });
       if (spec.thrusters) hud.say(car.flying ? `Thrusters lit — ${KEY.climb}, W/S to tilt, A/D to turn` : 'Thrusters off — back to the road', 3);
@@ -301,11 +323,11 @@ async function boot(): Promise<void> {
   if (moment && moment.x > 0 && moment.y > 0 && moment.x < extent && moment.y < extent) {
     await resume(moment);
     track('start', { shared: true, car: vehicleId });
-    hud.say(`A shared drive — ${TOUCH ? 'right thumb up to drive' : 'W to drive, A/D to steer'}`, 5);
+    hud.say(`A shared drive — ${START_HINT(spec)}`, 5);
   } else {
     await place(spawn.x, spawn.y, spawn.heading);
     track('start', { shared: false, spawn: spawn.spec.id, car: vehicleId, touch: TOUCH });
-    hud.say(`${spawn.spec.name} — ${TOUCH ? 'right thumb up to drive' : 'W to drive, A/D to steer'}`, 5);
+    hud.say(`${spawn.spec.name} — ${START_HINT(spec)}`, 5);
   }
 
   // Dev builds expose the live state for poking at from the console.
@@ -352,6 +374,17 @@ async function boot(): Promise<void> {
       const isStalled = !!spec.wings && car.wings > 0.5 && agl > 5 && car.airspeed > 5 && stalled(spec.wings, car.alpha);
       if (isStalled && !stallWarned) hud.say('STALL — push the nose down', 2);
       stallWarned = isStalled;
+      // The jet into the ground or a building: back up in the sky where it went down.
+      if (isJet(spec) && !crashing) {
+        const low = agl < spec.cgHeight + 0.6;
+        const hard = car.airspeed > LANDING.speed || car.vel[2] < -LANDING.sink || !upright;
+        if ((low && hard) || site.buildings.wall(car.pos[0], car.pos[1], car.pos[2])) {
+          crashing = true;
+          track('crash', { speed: Math.round(car.airspeed) });
+          hud.say('Crashed — back in the air', 2.5);
+          void place(car.pos[0], car.pos[1], car.heading).finally(() => { crashing = false; });
+        }
+      }
     }
     // Keep the 5 m heights under the car whatever the view has loaded.
     if ((detailTimer -= dt) <= 0) {
@@ -373,10 +406,10 @@ async function boot(): Promise<void> {
     const travel = Math.atan2(car.vel[0], car.vel[1]);
     const followHeading = moving > 4 && (car.speed > 0 || car.flying) ? travel : car.heading;
     // Hovering, the chase camera only drops back a little: there's no wingspan to fit in.
-    rig.update(dt, model.group, followHeading, ground, car.wings * (spec.wings ? 1 : 0.3), boosting);
+    rig.update(dt, model.group, followHeading, ground, car.wings * (isJet(spec) ? JET_CAMERA : spec.wings ? 1 : 0.3), boosting);
     sunlight.follow(carPos);
     const t1 = performance.now();
-    terrainView.update(camera.position, camera.position.y - ground(camera.position));
+    terrainView.update(camera.position, camera.position.y - ground(camera.position), Math.hypot(...car.vel));
     perf.terrain += performance.now() - t1;
 
     const road = onRoad(site.roads, car.pos[0], car.pos[1], 2);
@@ -386,7 +419,7 @@ async function boot(): Promise<void> {
       speedKmh: (car.flying ? car.airspeed : car.speed) * 3.6, rpmShare: car.rpm / spec.engine.redline,
       gear: car.flying ? '✈' : car.gear < 0 ? 'R' : spec.engine.electric ? 'D' : String(car.gear),
       road, x: car.pos[0], y: car.pos[1], heading: car.heading,
-      flying: car.flying, boost: boosting, balloons: settings.balloons ? field.balloons : [], agl: car.pos[2] - spec.cgHeight - terrain.heightAt(car.pos[0], car.pos[1]),
+      flying: car.flying, boost: boosting, mach: isJet(spec) ? car.airspeed / SPEED_OF_SOUND : undefined, balloons: settings.balloons ? field.balloons : [], agl: car.pos[2] - spec.cgHeight - terrain.heightAt(car.pos[0], car.pos[1]),
     });
     const slip = Math.max(...car.wheels.map((w) => (w.contact ? w.slip : 0)));
     const pedal = car.flying ? input.controls.flight.thrust : car.gear > 0 ? input.controls.throttle : input.controls.brake;

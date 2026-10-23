@@ -24,7 +24,7 @@ export class CameraRig {
   private readonly look = new THREE.Vector3();
   /** The chase camera's own heading, lagging the car's so turns read. */
   private heading = 0;
-  /** 0 car … 1 plane: how far back the chase camera sits. */
+  /** 0 car … 1 plane (more for a longer one): how far back the chase camera sits. */
   private wings = 0;
   /** 0 … 1, easing in and out with the turbo. */
   private boost = 0;

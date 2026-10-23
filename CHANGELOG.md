@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-23 11:31
+
+- A Jet to fly the island fast: Settings → Car or `?car=jet`. It's an original delta fighter that
+  starts 600 m up at cruise and only flies. Fly-by-wire turns the stick into g and a roll rate, capped at 9 g and
+  an angle of attack under the stall, so it handles the same at 300 m/s as at 100. It cruises near 820 km/h
+  and reaches about 1,140 km/h on the afterburner, where the transonic drag holds it off Mach 1.
+  If it crashes it goes back up into the sky over the same spot. The HUD shows its Mach number. Above 150 m/s the ground
+  stops at the 10 m mesh, so it doesn't build 5 m tiles it is past in seconds.
+
 ## 2026-10-23 11:00
 
 - The Settings panel sits at the top right, level with the controls panel. It only drops lower

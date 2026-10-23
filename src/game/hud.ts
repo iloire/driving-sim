@@ -26,6 +26,8 @@ export interface HudFrame {
   /** Plane mode, and the height above the ground (m). */
   flying: boolean;
   boost: boolean;
+  /** The Jet's Mach number, shown with the height. */
+  mach?: number;
   /** Balloons to dot on the map (empty when the game is off). */
   balloons: readonly Balloon[];
   agl: number;
@@ -115,7 +117,7 @@ export class Hud {
     this.el.gear.textContent = f.gear;
     const up = f.flying && f.agl > 3;
     this.el.alt.hidden = !up;
-    if (up) this.el.alt.textContent = `${Math.round(f.agl)} m up`;
+    if (up) this.el.alt.textContent = `${Math.round(f.agl)} m up${f.mach === undefined ? '' : ` · M${f.mach.toFixed(2)}`}`;
     const lit = Math.round(f.rpmShare * RPM_SEGMENTS);
     this.segs.forEach((s, i) => s.classList.toggle('on', i < lit));
 

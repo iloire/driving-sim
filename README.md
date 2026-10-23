@@ -36,6 +36,10 @@ It runs in a desktop browser, or on a phone held sideways. Nothing to install.
   kit, solid axles, a ram bar, slatted guards over the glass, a roof light bar and a spare in the
   bed. It has a 520 N·m V8 and 50/50 four-wheel drive, and its all-terrain tyres keep their grip
   on picón and gravel.
+- **A Jet** (Settings → Car, or `?car=jet`): an original grey delta fighter that starts 600 m up and
+  only flies. Fly-by-wire turns the stick into g (S pulls up to 9 g) and a roll rate (A/D), so it
+  handles the same at any speed. Shift lights the afterburner, which takes it to about 1,140 km/h,
+  Mach 0.93, and puts the island's whole length (about 60 km) under four minutes away.
 - **A car that is a rigid body**: four raycast struts, tyres with a slip-angle curve and a friction
   circle, a torque curve and an automatic six-speed. Weight transfer, power oversteer, handbrake
   turns and rollovers all come out of the physics.
@@ -110,7 +114,7 @@ airport, say), find the coloured dots on the map, and fly through them. Chain th
 Press **B** again to put them away.
 
 A link starts someone at the same place and time: `?spawn=timanfaya&time=17:30` (add `&car=4x4`
-for the truck). The places are
+for the truck, `&car=jet` for the Jet). The places are
 `timanfaya`, `airport`, `mirador`, `famara`, `haria`, `la-geria`, `arrecife`, `teguise`
 and `orzola`.
 

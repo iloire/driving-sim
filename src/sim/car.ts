@@ -8,7 +8,7 @@
 
 import { add, cross, dot, integrate, normalize, rotate, scale, sub, unrotate, type Quat, type V3 } from './vec';
 import { hover, THRUSTERS, type ThrusterSpec } from './thrusters';
-import { aero, WINGS, type FlightControls, type WingSpec } from './wings';
+import { aero, flyByWire, WINGS, type FlightControls, type WingSpec } from './wings';
 
 const G = 9.81;
 const RHO = 1.225;
@@ -169,6 +169,51 @@ export const ROADSTER: CarSpec = {
   nitro: 18000,
   body: [2.25, 2.3, 0.95, 0.25, 0.75],
   thrusters: THRUSTERS,
+};
+
+/**
+ * A single-seat fighter: 9 t, a 28 m² swept wing, 52 kN dry and 90 kN on the afterburner. It
+ * cruises near 820 km/h, tops out near 1,140 km/h where the transonic drag stops it, pulls
+ * 9 g and stalls under about 220 km/h. Fly-by-wire flies it; it never drives, and only lands on its
+ * wheels if you put it down gently.
+ */
+export const JET: CarSpec = {
+  mass: 9000,
+  inertia: [9000, 50000, 56000],
+  wheelbase: 5.2,
+  track: 2.8,
+  frontWeight: 0.15,
+  cgHeight: 1.6,
+  wheelRadius: 0.35,
+  suspension: { rest: 0.6, travel: 0.3, k: 260000, c: 30000 },
+  mu: 1.0,
+  allTerrain: 0,
+  maxSteer: 0.3,
+  steerFalloff: 20,
+  steerRate: 2,
+  engine: { idle: 2500, peakRpm: 6000, redline: 9000, peakTorque: 100 },
+  gears: [1],
+  reverse: 1,
+  finalDrive: 1,
+  driveFront: 0,
+  brakeForce: 60000,
+  brakeFront: 0.2,
+  cdA: 0.4,
+  nitro: 0,
+  body: [7.5, 7.5, 1.0, 1.1, 1.4],
+  wings: {
+    area: 28, span: 9.8, chord: 3.2,
+    cl0: 0.05, clAlpha: 3.6, stall: 0.42,
+    cd0: 0.018, cdInduced: 0.12, sideArea: 12,
+    cmAlpha: 0.5, cm0: 0, cmElevator: 0.3, cmDamping: 10,
+    clAileron: 0.06, clDamping: 0.45,
+    cnBeta: 0.1, cnRudder: 0.03, cnDamping: 0.25,
+    thrust: 52000, afterburner: 38000,
+    inertia: [0, 0, 0],
+    unfoldRate: 10,
+    fbw: { gMax: 9, gMin: -3, alphaMax: 0.38, rollRate: 4.5, kAlpha: 3, kPitch: 0.5, kRoll: 0.4, rudderFade: 120 },
+    mach: { crit: 0.85, rise: 3 },
+  },
 };
 
 export interface Wheel {
@@ -431,7 +476,8 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
   const airBoost = w?.afterburner ?? th?.boost ?? 0;
   if (c.boost) force = add(force, scale(nose, spec.nitro * (1 - s.wings) + airBoost * s.wings));
   if (s.wings > 0 && w) {
-    const a = aero(w, s.q, s.vel, s.w, c.flight, s.wings);
+    const stick = w.fbw ? flyByWire(w, w.fbw, spec.mass, s.q, s.vel, s.w, c.flight) : c.flight;
+    const a = aero(w, s.q, s.vel, s.w, stick, s.wings);
     force = add(force, a.force);
     torque = add(torque, a.torque);
     s.alpha = a.alpha;
