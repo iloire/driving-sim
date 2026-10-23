@@ -152,6 +152,7 @@ async function boot(): Promise<void> {
   const rig = new CameraRig(camera, canvas);
   const audio = new CarAudio();
   audio.electric = !!spec.engine.electric;
+  audio.jet = isJet(spec);
   const hud = new Hud(__COMMIT_SHA__, site.roads.roads, ortho.image as HTMLImageElement, extent);
 
   const env: CarEnv = {
@@ -293,6 +294,7 @@ async function boot(): Promise<void> {
     scene.add(model.group);
     if (model.world) scene.add(model.world);
     audio.electric = !!spec.engine.electric;
+    audio.jet = isJet(spec);
     const q = new URLSearchParams(location.search);
     if (id === 'roadster') q.delete('car'); else q.set('car', id);
     history.replaceState(null, '', `?${q}`);

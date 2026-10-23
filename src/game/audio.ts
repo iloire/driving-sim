@@ -1,6 +1,6 @@
 // Engine and tyres, synthesised: a four-cylinder's firing note (two pulses a revolution) through
 // a filter that opens with the throttle, band-passed noise for the tyres when they slide, and a
-// low roar of the same noise while the turbo is lit.
+// low roar of the same noise while the turbo is lit. The Jet has its own turbine instead (`jet`).
 // Browsers only start audio after a user gesture, so it wakes on the first key or touch.
 
 export class CarAudio {
@@ -8,6 +8,9 @@ export class CarAudio {
   private engine?: { osc: OscillatorNode; sub: OscillatorNode; subGain: GainNode; filter: BiquadFilterNode; gain: GainNode };
   /** An electric motor hums instead of firing: a purer note, no sub-octave. */
   electric = false;
+  /** A turbine instead of a piston engine: roar, whine, afterburner rumble and wind. */
+  jet = false;
+  private turbine?: { roar: GainNode; roarFilter: BiquadFilterNode; whine: OscillatorNode[]; whineGain: GainNode; burner: GainNode; wind: GainNode; windFilter: BiquadFilterNode };
   private tyres?: GainNode;
   private roar?: GainNode;
   private master?: GainNode;
@@ -75,6 +78,63 @@ export class CarAudio {
     roarSrc.loop = true;
     roarSrc.connect(low).connect(this.roar).connect(this.master);
     roarSrc.start();
+    this.turbine = this.buildTurbine(ctx, noise, this.master);
+  }
+
+  /**
+   * The Jet: the same noise three ways (a roar that opens with the thrust, a deep afterburner
+   * rumble that crackles, wind that rises with airspeed) and two slightly detuned sines for the
+   * turbine's whine, which beat against each other the way a real one wavers.
+   */
+  private buildTurbine(ctx: AudioContext, noise: AudioBuffer, out: AudioNode): NonNullable<CarAudio['turbine']> {
+    const loop = (buffer: AudioBuffer) => {
+      const s = ctx.createBufferSource();
+      s.buffer = buffer;
+      s.loop = true;
+      s.start();
+      return s;
+    };
+    const silent = () => {
+      const g = ctx.createGain();
+      g.gain.value = 0;
+      g.connect(out);
+      return g;
+    };
+    const roar = silent(), burner = silent(), wind = silent(), whineGain = silent();
+    const roarFilter = ctx.createBiquadFilter();
+    roarFilter.type = 'lowpass';
+    roarFilter.Q.value = 0.8;
+    loop(noise).connect(roarFilter).connect(roar);
+
+    // The afterburner: sparse pops over a low rumble, in a 2 s loop so the crackle never repeats audibly.
+    const n = ctx.sampleRate * 2;
+    const crackle = ctx.createBuffer(1, n, ctx.sampleRate);
+    const d = crackle.getChannelData(0);
+    let level = 0;
+    for (let i = 0; i < n; i++) {
+      if (Math.random() < 0.0015) level = 0.6 + Math.random() * 0.8;
+      level *= 0.9985;
+      d[i] = (Math.random() * 2 - 1) * (0.45 + level);
+    }
+    const rumble = ctx.createBiquadFilter();
+    rumble.type = 'lowpass';
+    rumble.frequency.value = 260;
+    loop(crackle).connect(rumble).connect(burner);
+
+    const windFilter = ctx.createBiquadFilter();
+    windFilter.type = 'bandpass';
+    windFilter.Q.value = 0.6;
+    loop(noise).connect(windFilter).connect(wind);
+
+    const whine = [0, 7].map((detune) => {
+      const o = ctx.createOscillator();
+      o.type = 'sine';
+      o.detune.value = detune;
+      o.connect(whineGain);
+      o.start();
+      return o;
+    });
+    return { roar, roarFilter, whine, whineGain, burner, wind, windFilter };
   }
 
   /** A balloon going: a bright snap, then a falling squeak; higher on a bigger combo. */
@@ -126,6 +186,13 @@ export class CarAudio {
     if (!this.ctx || !this.engine || !this.tyres || !this.roar) return;
     const t = this.ctx.currentTime;
     const e = this.engine;
+    if (this.turbine) this.updateTurbine(t, throttle, speed, boost);
+    if (this.jet) {
+      e.gain.gain.setTargetAtTime(0, t, 0.05);
+      this.roar.gain.setTargetAtTime(0, t, 0.05);
+      this.tyres.gain.setTargetAtTime(0, t, 0.04);
+      return;
+    }
     if (e.osc.type !== (this.electric ? 'sine' : 'sawtooth')) e.osc.type = this.electric ? 'sine' : 'sawtooth';
     e.subGain.gain.setTargetAtTime(this.electric ? 0 : 0.35, t, 0.05);
     // A four-cylinder fires twice a revolution. The motor is a quiet sine hum, about 260 Hz flat
@@ -140,5 +207,22 @@ export class CarAudio {
     this.tyres.gain.setTargetAtTime(screech * 0.22, t, 0.04);
     // The turbo roars; the hover thrusters hiss with their lift.
     this.roar.gain.setTargetAtTime(Math.max(boost ? 0.55 : 0, hiss * 0.4), t, boost ? 0.08 : 0.3);
+  }
+
+  /** The turbine follows the throttle slowly, as a real one spools; silent unless `jet`. */
+  private updateTurbine(t: number, throttle: number, speed: number, boost: boolean): void {
+    const j = this.turbine!;
+    const on = this.jet ? 1 : 0;
+    const spool = 1.2; // seconds: how lazily the turbine chases the throttle
+    j.roar.gain.setTargetAtTime(on * (0.08 + throttle * 0.32), t, spool);
+    j.roarFilter.frequency.setTargetAtTime(250 + throttle * 1500, t, spool);
+    // The whine climbs from about 1.4 kHz at idle to 3.6 kHz flat out, quiet under the roar.
+    for (const o of j.whine) o.frequency.setTargetAtTime(1400 + throttle * 2200, t, spool);
+    j.whineGain.gain.setTargetAtTime(on * (0.012 + throttle * 0.025), t, spool);
+    j.burner.gain.setTargetAtTime(on * (boost ? 0.7 : 0), t, boost ? 0.25 : 0.5);
+    // Wind: nothing at a crawl, a loud hiss rising in pitch towards the speed of sound.
+    const air = Math.min(speed / 300, 1.1);
+    j.wind.gain.setTargetAtTime(on * air * air * 0.22, t, 0.3);
+    j.windFilter.frequency.setTargetAtTime(400 + air * 1800, t, 0.3);
   }
 }
