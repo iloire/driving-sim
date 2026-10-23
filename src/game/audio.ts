@@ -117,16 +117,16 @@ export class CarAudio {
     if (!this.ctx || !this.engine || !this.tyres || !this.roar) return;
     const t = this.ctx.currentTime;
     const e = this.engine;
-    if (e.osc.type !== (this.electric ? 'triangle' : 'sawtooth')) e.osc.type = this.electric ? 'triangle' : 'sawtooth';
+    if (e.osc.type !== (this.electric ? 'sine' : 'sawtooth')) e.osc.type = this.electric ? 'sine' : 'sawtooth';
     e.subGain.gain.setTargetAtTime(this.electric ? 0 : 0.35, t, 0.05);
-    // A four-cylinder fires twice a revolution. The motor's hum stays low (about 440 Hz flat out)
-    // and soft-filtered, so it reads as electric without turning shrill under full throttle.
-    const f = this.electric ? (rpm / 60) * 1.2 + 40 : (rpm / 60) * 2;
+    // A four-cylinder fires twice a revolution. The motor is a quiet sine hum, about 260 Hz flat
+    // out, that sits under the tyres and wind rather than over them.
+    const f = this.electric ? (rpm / 60) * 0.65 + 45 : (rpm / 60) * 2;
     this.engine.osc.frequency.setTargetAtTime(f, t, 0.03);
     this.engine.sub.frequency.setTargetAtTime(f / 2, t, 0.03);
-    this.engine.filter.frequency.setTargetAtTime(this.electric ? 500 + throttle * 700 : 300 + throttle * 1400 + rpm * 0.15, t, 0.05);
+    this.engine.filter.frequency.setTargetAtTime(this.electric ? 600 : 300 + throttle * 1400 + rpm * 0.15, t, 0.05);
     this.engine.filter.Q.setTargetAtTime(this.electric ? 0.7 : 3, t, 0.05);
-    this.engine.gain.gain.setTargetAtTime(this.electric ? 0.08 + throttle * 0.08 : 0.1 + throttle * 0.16, t, 0.05);
+    this.engine.gain.gain.setTargetAtTime(this.electric ? 0.05 + throttle * 0.05 : 0.1 + throttle * 0.16, t, 0.05);
     const screech = Math.min(slip * Math.min(speed / 8, 1), 1);
     this.tyres.gain.setTargetAtTime(screech * 0.22, t, 0.04);
     // The turbo roars; the hover thrusters hiss with their lift.

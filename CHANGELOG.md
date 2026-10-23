@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-23 10:40
+
+- The Roadster's motor is quieter again: a soft sine hum topping out near 260 Hz, at about
+  two-thirds of the previous volume.
+
 ## 2026-10-23 10:10
 
 - The Roadster's motor hums instead of shrieking: its note tops out around 440 Hz rather than
