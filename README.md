@@ -111,8 +111,8 @@ Press **B** again to put them away.
 
 A link starts someone at the same place and time: `?spawn=timanfaya&time=17:30` (add `&car=4x4`
 for the truck). The places are
-`timanfaya`, `airport`, `mirador`, `famara`, `haria`, `la-geria`, `arrecife`, `teguise`,
-`playa-blanca` and `orzola`.
+`timanfaya`, `airport`, `mirador`, `famara`, `haria`, `la-geria`, `arrecife`, `teguise`
+and `orzola`.
 
 **Share a moment:** pause (**P**) and press **Share this moment**. That copies a link that starts the
 car exactly there, with the same heading and speed, at the same time of day and in the same car,

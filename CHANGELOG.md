@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-23 11:40
+
+- Removed the Playa Blanca start (`?spawn=playa-blanca`). Old links with it fall back to the
+  first start, Timanfaya.
+
 ## 2026-10-23 11:30
 
 - Share a moment: pausing now shows a panel with a **Share this moment** button. It copies a link
