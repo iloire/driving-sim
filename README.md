@@ -32,11 +32,11 @@ It runs in a desktop browser, or on a phone held sideways. Nothing to install.
 - **It hovers on thrusters**: press **F** and four nozzles drop out of the floor and blast gas
   straight down. Flight assists hold your height, so it flies like a drone. Space climbs, Ctrl
   sinks, W/S tilt it to fly forwards or back, A/D turn, and Shift fires the tail nozzles.
-- **An armoured 4×4** (choose it under Settings → Car, or `?car=4x4`): a matte-black, gunmetal-plated pickup on 1 m tall lug tyres, with a lift
+- **An armoured 4×4** (choose it under Settings → Vehicle, or `?car=4x4`): a matte-black, gunmetal-plated pickup on 1 m tall lug tyres, with a lift
   kit, solid axles, a ram bar, slatted guards over the glass, a roof light bar and a spare in the
   bed. It has a 520 N·m V8 and 50/50 four-wheel drive, and its all-terrain tyres keep their grip
   on picón and gravel.
-- **A Jet** (Settings → Car, or `?car=jet`): an original grey delta fighter that starts 600 m up and
+- **A Jet** (Settings → Vehicle, or `?car=jet`): an original grey delta fighter that starts 600 m up and
   only flies. Fly-by-wire turns the stick into g (S pulls up to 9 g) and a roll rate (A/D), so it
   handles the same at any speed. Shift lights the afterburner, which takes it to about 1,140 km/h,
   Mach 0.93, and puts the island's whole length (about 60 km) under four minutes away.
@@ -106,7 +106,7 @@ stick, RT boosts, LT idles, and LB/RB are the rudder. On a phone, hold BOOST.
 **Phone**, held sideways: slide the left thumb sideways to steer. Push the right thumb up to
 accelerate, and pull it down to brake or back up.
 
-The settings panel swaps the car (Roadster or armoured 4×4) and sets the solar time and the
+The settings panel swaps the vehicle (Roadster, armoured 4×4 or Jet) and sets the solar time and the
 drivetrain (AWD, RWD, FWD).
 
 **Balloons:** press **B** (BALLOONS on a phone) to fill the sky with them, take off (from the

@@ -300,7 +300,7 @@ async function boot(): Promise<void> {
     history.replaceState(null, '', `?${q}`);
     void place(car.pos[0], car.pos[1], car.heading).then(() => hud.say(VEHICLES[id].name, 2));
   };
-  gui.add(settings, 'vehicle', Object.values(VEHICLES).map((v) => v.name)).name('Car').onChange(switchVehicle);
+  gui.add(settings, 'vehicle', Object.values(VEHICLES).map((v) => v.name)).name('Vehicle').onChange(switchVehicle);
   gui.add(settings, 'drivetrain', Object.keys(DRIVETRAINS)).name('Drivetrain').onChange(applyDrivetrain);
   gui.close();
 

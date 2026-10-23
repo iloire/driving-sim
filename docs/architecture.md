@@ -76,7 +76,7 @@ kicking the tail out, keeping more grip on picón than plain tyres would, surviv
 
 `ROADSTER` (the default), `TRUCK` and `JET` share everything above. They differ in their numbers, and in
 how `flying` flies: `CarSpec.wings` unfolds into a plane, and `CarSpec.thrusters` hovers. Each has
-its own model (`roadster-model.ts`, `car-model.ts`, `jet-model.ts`), and Settings → Car (or
+its own model (`roadster-model.ts`, `car-model.ts`, `jet-model.ts`), and Settings → Vehicle (or
 `?car=4x4`, `?car=jet`) swaps them where the car stands. The Jet is placed 600 m up at 230 m/s
 with its wings already out, and never drives (see [The Jet](#the-jet) below).
 
