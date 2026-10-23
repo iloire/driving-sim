@@ -179,3 +179,13 @@ body.touch #cluster { min-width: 0; }
   #pop-toast.show { animation: pop-fade 1.1s forwards; }
   #loading { transition: none; }
 }
+
+#stats-chip {
+  position: fixed; right: var(--edge); bottom: 30px; z-index: 8; font-size: 11px; color: rgba(244, 243, 238, 0.8);
+  background: var(--picon-glass); border-radius: 6px; padding: 4px 6px 4px 10px; backdrop-filter: blur(6px);
+}
+#stats-chip button {
+  margin-left: 6px; border: 1px solid var(--malpais); border-radius: 4px; background: none; color: var(--cal);
+  font: inherit; padding: 1px 8px; cursor: pointer;
+}
+#stats-chip button[data-on] { background: var(--shutter); border-color: var(--shutter); }

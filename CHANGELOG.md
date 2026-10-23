@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-23 12:40
+
+- Google Analytics 4 on the live site, to see how people play: `start` (spawn, car, touch, or a
+  shared link), `place`, `fly`, `balloons` (with the score when turned off), `car`, `share` and
+  `reset`. Consent Mode starts with all storage denied; a one-line "Anonymous play stats? OK / No"
+  chip in the corner asks once. The ID comes from the `GA_MEASUREMENT_ID` repo variable at build
+  time, so local and dev builds load nothing.
+
 ## 2026-10-23 11:50
 
 - Fixed flying over towns: a building's walls stopped the car at any height, so hovering over a

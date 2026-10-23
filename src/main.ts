@@ -7,6 +7,7 @@ import { CameraRig } from './game/camera';
 import { createCarModel, type CarModel } from './game/car-model';
 import { TileDresser } from './game/dress';
 import { Hud } from './game/hud';
+import { initAnalytics, track } from './game/analytics';
 import { formatHour, readMoment, writeMoment, type Moment } from './game/share';
 import { Input, type Action } from './game/input';
 import { createRoadsterModel } from './game/roadster-model';
@@ -79,6 +80,7 @@ function parseHour(q: URLSearchParams): number | undefined {
 }
 
 async function boot(): Promise<void> {
+  initAnalytics();
   const query = new URLSearchParams(location.search);
   const site = await loadSite(SITE);
   const terrain = site.terrain;
@@ -126,6 +128,7 @@ async function boot(): Promise<void> {
   function setBalloons(on: boolean): void {
     settings.balloons = on;
     balloonsView.visible = on;
+    track('balloons', { on, score: field.score });
     if (on) {
       field.fill(car.pos[0], car.pos[1]);
       lastPos.splice(0, 3, ...car.pos);
@@ -180,6 +183,7 @@ async function boot(): Promise<void> {
     history.replaceState(null, '', `?${q}`);
     await place(s.x, s.y, s.heading);
     hud.say(s.spec.name);
+    track('place', { spawn: s.spec.id });
   }
 
   /** Puts the car back into a shared moment: there, pointing that way, at that speed, in the air if it was. */
@@ -207,7 +211,7 @@ async function boot(): Promise<void> {
 
   const picker = new SpawnPicker(site.spawns, (s) => void goTo(s));
   const actions: Record<Action, () => void> = {
-    reset: () => void recover(),
+    reset: () => { track('reset'); void recover(); },
     camera: () => hud.say(`Camera: ${rig.next()}`, 1.5),
     mute: () => { audio.setMuted(!audio.muted); hud.say(audio.muted ? 'Sound off' : 'Sound on', 1.5); },
     pause: () => { setPaused(!paused); if (!paused) hud.say('Go', 1.5); },
@@ -218,6 +222,7 @@ async function boot(): Promise<void> {
     balloons: () => setBalloons(!settings.balloons),
     transform: () => {
       car.flying = !car.flying;
+      track('fly', { on: car.flying, car: vehicleKey() });
       if (spec.thrusters) hud.say(car.flying ? `Thrusters lit — ${KEY.climb}, W/S to tilt, A/D to turn` : 'Thrusters off — back to the road', 3);
       else hud.say(car.flying ? `Wings out — the jet's on. Past 160 km/h, ${KEY.pull}` : 'Wings folded — back to a car', 3);
     },
@@ -257,6 +262,7 @@ async function boot(): Promise<void> {
   /** Swaps the car where it stands: new body, new physics, the same place and heading. */
   const switchVehicle = () => {
     const id = vehicleKey();
+    track('car', { car: id });
     scene.remove(model.group);
     if (model.world) scene.remove(model.world);
     spec = { ...VEHICLES[id].spec };
@@ -281,6 +287,7 @@ async function boot(): Promise<void> {
     writeMoment({ x: car.pos[0], y: car.pos[1], z: car.pos[2], heading: car.heading, speed: car.speed, flying: car.flying }, q);
     q.set('time', formatHour(sky.hour));
     const url = `${location.origin}${location.pathname}?${q.toString().replace(/%2C/g, ',').replace(/%3A/g, ':')}`;
+    track('share', { flying: car.flying });
     shareLink.value = url;
     shareLink.hidden = false;
     shareLink.select();
@@ -293,10 +300,12 @@ async function boot(): Promise<void> {
   const moment = readMoment(query);
   if (moment && moment.x > 0 && moment.y > 0 && moment.x < extent && moment.y < extent) {
     await resume(moment);
+    track('start', { shared: true, car: vehicleId });
     setPaused(true);
     hud.say(`A shared drive — ${TOUCH ? 'PAUSE' : 'P'} to go on`, 5);
   } else {
     await place(spawn.x, spawn.y, spawn.heading);
+    track('start', { shared: false, spawn: spawn.spec.id, car: vehicleId, touch: TOUCH });
     hud.say(`${spawn.spec.name} — ${TOUCH ? 'right thumb up to drive' : 'W to drive, A/D to steer'}`, 5);
   }
 

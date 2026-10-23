@@ -146,6 +146,11 @@ GitHub Pages, from CI. Every push to `main` that passes the tests is built with 
 `/driving-sim/` base path and deployed. The deploy job then fetches the live page, the site file and
 a detail photo, so a green badge means that commit is live.
 
+Analytics: Google Analytics 4, only when the build gets a measurement ID. CI passes the repo
+variable `GA_MEASUREMENT_ID` as `VITE_GA_ID` (`gh variable set GA_MEASUREMENT_ID --body G-XXXX`);
+without it nothing loads. Storage stays denied until the player taps OK on the one-line chip.
+Gameplay events live in `src/game/analytics.ts` and the `track(...)` calls in `src/main.ts`.
+
 ## Licence
 
 The code is free for non-commercial use under a [custom licence](LICENSE); commercial use (selling it,
