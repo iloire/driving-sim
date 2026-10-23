@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-23 11:30
+
+- Share a moment: pausing now shows a panel with a **Share this moment** button. It copies a link
+  (`?at=x,y,z,heading,speed`, plus `fly=1`, the time of day and the car) that opens the game
+  paused in exactly that place, heading and speed.
+
 ## 2026-10-23 11:10
 
 - Houses are one or two storeys, as on the real island: tagged heights are capped at two storeys

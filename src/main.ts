@@ -7,6 +7,7 @@ import { CameraRig } from './game/camera';
 import { createCarModel, type CarModel } from './game/car-model';
 import { TileDresser } from './game/dress';
 import { Hud } from './game/hud';
+import { formatHour, readMoment, writeMoment, type Moment } from './game/share';
 import { Input, type Action } from './game/input';
 import { createRoadsterModel } from './game/roadster-model';
 import { SpawnPicker } from './game/picker';
@@ -148,6 +149,11 @@ async function boot(): Promise<void> {
   let spawn: Spawn = site.spawns.find((s) => s.spec.id === query.get('spawn')) ?? site.spawns[0];
   let car: CarState = createCar(spec, spawn.x, spawn.y, terrain.heightAt(spawn.x, spawn.y), spawn.heading);
   let paused = false;
+  const pausePanel = document.getElementById('paused')!;
+  function setPaused(p: boolean): void {
+    paused = p;
+    pausePanel.hidden = !p;
+  }
   let stuck = 0; // seconds on its roof or side, or in the sea
   let detailTimer = 0;
   let helpFolded = false;
@@ -169,9 +175,25 @@ async function boot(): Promise<void> {
     spawn = s;
     const q = new URLSearchParams(location.search);
     q.set('spawn', s.spec.id);
+    q.delete('at');
+    q.delete('fly');
     history.replaceState(null, '', `?${q}`);
     await place(s.x, s.y, s.heading);
     hud.say(s.spec.name);
+  }
+
+  /** Puts the car back into a shared moment: there, pointing that way, at that speed, in the air if it was. */
+  async function resume(m: Moment): Promise<void> {
+    await place(m.x, m.y, m.heading);
+    car.vel = [Math.sin(m.heading) * m.speed, Math.cos(m.heading) * m.speed, 0];
+    car.speed = m.speed;
+    if (m.flying) {
+      car.flying = true;
+      car.wings = 1;
+      car.pos[2] = Math.max(m.z, car.pos[2]);
+    }
+    model.update(car, false, extent, 0, false, camera, 0);
+    rig.snap(model.group, m.heading);
   }
 
   /** Back on the nearest paved road, facing the way the car was going; else back to the spawn. */
@@ -188,7 +210,7 @@ async function boot(): Promise<void> {
     reset: () => void recover(),
     camera: () => hud.say(`Camera: ${rig.next()}`, 1.5),
     mute: () => { audio.setMuted(!audio.muted); hud.say(audio.muted ? 'Sound off' : 'Sound on', 1.5); },
-    pause: () => { paused = !paused; hud.say(paused ? 'Paused' : 'Go', 1.5); },
+    pause: () => { setPaused(!paused); if (!paused) hud.say('Go', 1.5); },
     help: () => document.getElementById('help')!.classList.toggle('collapsed'),
     spawns: () => picker.toggle(spawn),
     next: () => void goTo(site.spawns[(site.spawns.indexOf(spawn) + 1) % site.spawns.length]),
@@ -252,8 +274,31 @@ async function boot(): Promise<void> {
   gui.add(settings, 'drivetrain', Object.keys(DRIVETRAINS)).name('Drivetrain').onChange(applyDrivetrain);
   gui.close();
 
-  await place(spawn.x, spawn.y, spawn.heading);
-  hud.say(`${spawn.spec.name} — ${TOUCH ? 'right thumb up to drive' : 'W to drive, A/D to steer'}`, 5);
+  // Paused, a link to this moment: here, this way, this fast, at this time of day, in this car.
+  const shareLink = document.getElementById('share-link') as HTMLInputElement;
+  document.getElementById('share-btn')!.addEventListener('click', () => {
+    const q = new URLSearchParams(location.search);
+    writeMoment({ x: car.pos[0], y: car.pos[1], z: car.pos[2], heading: car.heading, speed: car.speed, flying: car.flying }, q);
+    q.set('time', formatHour(sky.hour));
+    const url = `${location.origin}${location.pathname}?${q.toString().replace(/%2C/g, ',').replace(/%3A/g, ':')}`;
+    shareLink.value = url;
+    shareLink.hidden = false;
+    shareLink.select();
+    navigator.clipboard.writeText(url).then(
+      () => hud.say('Link copied — it starts right here, paused', 3),
+      () => hud.say('Copy the link to share it', 3),
+    );
+  });
+
+  const moment = readMoment(query);
+  if (moment && moment.x > 0 && moment.y > 0 && moment.x < extent && moment.y < extent) {
+    await resume(moment);
+    setPaused(true);
+    hud.say(`A shared drive — ${TOUCH ? 'PAUSE' : 'P'} to go on`, 5);
+  } else {
+    await place(spawn.x, spawn.y, spawn.heading);
+    hud.say(`${spawn.spec.name} — ${TOUCH ? 'right thumb up to drive' : 'W to drive, A/D to steer'}`, 5);
+  }
 
   // Dev builds expose the live state for poking at from the console.
   const perf = { physics: 0, terrain: 0, render: 0, frames: 0, worst: 0 };

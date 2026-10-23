@@ -114,6 +114,12 @@ for the truck). The places are
 `timanfaya`, `airport`, `mirador`, `famara`, `haria`, `la-geria`, `arrecife`, `teguise`,
 `playa-blanca` and `orzola`.
 
+**Share a moment:** pause (**P**) and press **Share this moment**. That copies a link that starts the
+car exactly there, with the same heading and speed, at the same time of day and in the same car,
+in the air if you were flying. It opens paused, so whoever opens it can get ready before pressing
+**P**. The link looks like `?at=25256.0,11616.1,2.7,308,31` (x, y and z in site metres, heading in
+degrees, km/h) plus `&fly=1` in the air.
+
 ## Check it
 
 ```bash

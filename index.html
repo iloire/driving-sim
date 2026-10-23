@@ -64,6 +64,13 @@
       <p>↑ ↓ to choose · Esc to close</p>
     </div>
 
+    <div id="paused" hidden>
+      <h2>Paused</h2>
+      <button type="button" id="share-btn">Share this moment</button>
+      <input id="share-link" readonly hidden aria-label="Link to this moment" />
+      <p>A link that starts here: this place, heading, speed and time of day. P to go on.</p>
+    </div>
+
     <aside id="help">
       <h2><button type="button" onclick="this.closest('#help').classList.toggle('collapsed')">Controls <kbd>H</kbd></button></h2>
       <table>

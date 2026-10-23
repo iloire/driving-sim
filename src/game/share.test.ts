@@ -1,0 +1,37 @@
+import { describe, expect, it } from 'vitest';
+import { formatHour, readMoment, writeMoment } from './share';
+
+describe('shared moments', () => {
+  it('round-trips a car in the air, replacing the spawn', () => {
+    const q = new URLSearchParams('spawn=haria&car=4x4');
+    writeMoment({ x: 12345.678, y: 2345.61, z: 412.04, heading: -Math.PI / 2, speed: 25, flying: true }, q);
+    expect(q.get('spawn')).toBeNull();
+    expect(q.get('car')).toBe('4x4');
+    expect(q.get('at')).toBe('12345.7,2345.6,412.0,270,90');
+    const m = readMoment(q)!;
+    expect(m.x).toBeCloseTo(12345.7);
+    expect(m.y).toBeCloseTo(2345.6);
+    expect(m.z).toBeCloseTo(412);
+    expect(m.heading).toBeCloseTo((3 * Math.PI) / 2);
+    expect(m.speed).toBeCloseTo(25);
+    expect(m.flying).toBe(true);
+  });
+
+  it('drops ?fly on the ground and keeps reversing negative', () => {
+    const q = new URLSearchParams('fly=1');
+    writeMoment({ x: 1, y: 2, z: 3, heading: 0, speed: -5, flying: false }, q);
+    expect(q.get('fly')).toBeNull();
+    expect(readMoment(q)!.speed).toBeCloseTo(-5, 0);
+  });
+
+  it('ignores a missing or broken moment', () => {
+    expect(readMoment(new URLSearchParams())).toBeNull();
+    expect(readMoment(new URLSearchParams('at=1,2,3'))).toBeNull();
+    expect(readMoment(new URLSearchParams('at=1,2,x,4,5'))).toBeNull();
+  });
+
+  it('writes the time as HH:MM', () => {
+    expect(formatHour(17.5)).toBe('17:30');
+    expect(formatHour(9.999)).toBe('10:00');
+  });
+});
