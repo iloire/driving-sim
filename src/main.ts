@@ -292,7 +292,7 @@ async function boot(): Promise<void> {
     shareLink.hidden = false;
     shareLink.select();
     navigator.clipboard.writeText(url).then(
-      () => hud.say('Link copied — it starts right here, paused', 3),
+      () => hud.say('Link copied — it starts right here', 3),
       () => hud.say('Copy the link to share it', 3),
     );
   });
@@ -301,8 +301,7 @@ async function boot(): Promise<void> {
   if (moment && moment.x > 0 && moment.y > 0 && moment.x < extent && moment.y < extent) {
     await resume(moment);
     track('start', { shared: true, car: vehicleId });
-    setPaused(true);
-    hud.say(`A shared drive — ${TOUCH ? 'PAUSE' : 'P'} to go on`, 5);
+    hud.say(`A shared drive — ${TOUCH ? 'right thumb up to drive' : 'W to drive, A/D to steer'}`, 5);
   } else {
     await place(spawn.x, spawn.y, spawn.heading);
     track('start', { shared: false, spawn: spawn.spec.id, car: vehicleId, touch: TOUCH });

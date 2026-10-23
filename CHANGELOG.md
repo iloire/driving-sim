@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-23 10:58
+
+- A shared link opens already playing instead of on the pause panel, so whoever follows it lands
+  in the drive and sees what's going on, rather than a paused screen with a Share button.
+
 ## 2026-10-23 12:40
 
 - Google Analytics 4 on the live site, to see how people play: `start` (spawn, car, touch, or a
