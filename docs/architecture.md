@@ -187,17 +187,23 @@ track ×0.72 and 0.03, anywhere else (picón, lava, sand) ×0.62 and 0.06.
 
 - **Buildings.** OSM `building=*` ways (about 27,500 on the island; OSM is incomplete outside the
   towns). Construction sites, ruins and footprints under 8 m² are dropped. The height comes from
-  `height` or `building:levels` when tagged. Otherwise it is one to three 3.2 m storeys, picked from
-  the OSM id so it never changes, with bigger footprints likelier to be taller. Each building is
+  `height` or `building:levels` when tagged, capped at two 3.2 m storeys as the island's planning
+  rules have it (churches get 11 m for their towers). Otherwise it is one or two storeys, picked
+  from the OSM id so it never changes, with bigger footprints likelier to be taller. Each building is
   filed under the tile holding its centroid in `objects/<col>_<row>.json`.
 - **Furniture**, placed offline from the roads and buildings. A road with a building within 30 m
   is in town and gets street lamps every 28 m, alternating sides, 1.4 m past the kerb, with their
   arms over the road. Main roads in the open get edge posts (*hitos*) every 50 m on both sides,
   1 m past the edge. Nothing is placed inside a building or on another road's carriageway.
-- **Drawing.** Walls sit on the lowest ground under the footprint and rise to the highest plus
-  the building's height. They use a canvas texture of one window bay per 3.2 m × 3.2 m: lime
-  wall, dark glass, a painted frame and shutters in one of three woodwork colours. The roofs are
-  flat. A tile's buildings merge into four meshes (three wall colours and the roofs), and its
+- **Drawing.** Walls sit on the lowest ground under the footprint and rise the building's height
+  above it (at least 2.6 m clear on the high side), so a slope doesn't add a storey. Only the real
+  storeys get windows; where the ground falls away below them the wall is plain. The walls are
+  always lime white, with a canvas texture of one window bay per storey in one of four styles
+  (shuttered, small square, arched, a narrow pair) and three woodwork colours. Each house is varied
+  from a seed of where it stands: most have a low parapet round the flat roof, some two-storey
+  houses have the upper floor over only one end with a terrace over the rest, and roofs carry the
+  island's capped white chimney or a small stair room. A tile's buildings merge into thirteen
+  meshes (twelve wall textures and the white roofs and roof furniture), and its
   lamps and posts are instanced, so a town costs a handful of draw calls. A tile is dressed once
   it is within 4.5 km (about 20 ms for Arrecife's busiest tile) and freed with its heights.
 - **Collisions.** `BuildingIndex` buckets the loaded tiles' footprints in a 25 m grid, and

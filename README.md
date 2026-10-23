@@ -39,8 +39,9 @@ It runs in a desktop browser, or on a phone held sideways. Nothing to install.
 - **A car that is a rigid body**: four raycast struts, tyres with a slip-angle curve and a friction
   circle, a torque curve and an automatic six-speed. Weight transfer, power oversteer, handbrake
   turns and rollovers all come out of the physics.
-- **Towns**: about 27,500 OSM buildings, extruded with flat roofs, lime-white walls and green, blue
-  or brown woodwork, as the island's building rules have it. They are solid, so you can crash into
+- **Towns**: about 27,500 OSM buildings, one or two storeys with flat roofs, lime-white walls and
+  green, blue or brown woodwork, as the island's building rules have it. Window styles, parapets,
+  stepped upper floors, chimneys and roof rooms vary from house to house. They are solid, so you can crash into
   them. Street lamps line the roads through town, and white-and-black edge posts line the main
   roads in the open.
 - **The 4×4 flies too**: press **F** and wings rise from the roof edges and swing out to an 8.4 m span, a

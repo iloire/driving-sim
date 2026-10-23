@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-23 11:10
+
+- Houses are one or two storeys, as on the real island: tagged heights are capped at two storeys
+  (churches keep their towers), untagged ones no longer roll a third, and a house on a slope no
+  longer shows an extra row of windows down its low side.
+- More variety, all still white: four window styles (shuttered, small square, arched, a narrow
+  pair), low parapets, upper floors over only part of some houses with a terrace beside them, the
+  island's capped chimneys and small rooftop stair rooms.
+
 ## 2026-10-23 10:45
 
 - Pausing (P, or Start on a gamepad) now pauses the sound too, and so does the spawn picker; it

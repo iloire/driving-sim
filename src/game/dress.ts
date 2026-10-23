@@ -1,24 +1,36 @@
 // What stands on a detail tile once it is close: its buildings and street furniture (from
 // objects/<col>_<row>.json, see src/sim/objects.ts) and, at the finest level, the road surfaces.
 // Buildings follow the island's own rules: lime-white walls and flat roofs, the woodwork green,
-// blue or brown. Each tile's buildings are merged into a few meshes (one per material), and the
+// blue or brown, varied in window style, massing and what stands on the roof. Each tile's
+// buildings are merged into a few meshes (one per material), and the
 // furniture is instanced, so a town costs a handful of draw calls.
 
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { area, type Building } from '../sim/buildings';
+import { area, inside, type Building } from '../sim/buildings';
 import type { TileObjects } from '../sim/objects';
 import type { Heightmap } from '../sim/terrain';
 import type { RoadView } from './road-view';
 import type { DetailTile } from './site';
 
-/** One window bay of the wall texture: width and storey height (m). */
-const BAY_W = 3.2;
+/** Storey height (m): one window bay of the wall texture is a storey tall. */
 const BAY_H = 3.2;
 const WOODWORK = ['#2f6b4f', '#24527d', '#6e4a2c'];
+/** Window styles, with the width (m) of one bay of each: the white walls stay, the openings vary. */
+const WINDOWS = [
+  { style: 'shutters', bay: 3.2 },
+  { style: 'small', bay: 2.6 },
+  { style: 'arched', bay: 3.6 },
+  { style: 'pair', bay: 3.8 },
+] as const;
+type WindowStyle = (typeof WINDOWS)[number]['style'];
+/** Below this height a building is a garage, shed or the like: a plain box. */
+const HOUSE_MIN = 3.5;
+/** Above it, a church: a plain box too, the towers being taller than any house. */
+const HOUSE_MAX = 8;
 
-/** Lime-washed wall with one window per bay: dark glass behind painted frame and shutters. */
-function wallTexture(wood: string, anisotropy: number): THREE.CanvasTexture {
+/** Lime-washed wall with one window per bay, in one of the island's window styles. */
+function wallTexture(wood: string, style: WindowStyle, anisotropy: number): THREE.CanvasTexture {
   const S = 128;
   const c = document.createElement('canvas');
   c.width = c.height = S;
@@ -29,16 +41,59 @@ function wallTexture(wood: string, anisotropy: number): THREE.CanvasTexture {
     g.fillStyle = `rgba(120, 110, 95, ${Math.random() * 0.06})`;
     g.fillRect(Math.random() * S, Math.random() * S, 2, 2);
   }
+  const glass = '#1d2326';
   // The texture's top is the top of a storey (v runs down from the roofline).
-  const wx = S * 0.36, ww = S * 0.28, wy = S * 0.28, wh = S * 0.4;
-  g.fillStyle = wood;
-  g.fillRect(wx - S * 0.1, wy - 2, S * 0.1, wh + 4); // shutters either side
-  g.fillRect(wx + ww, wy - 2, S * 0.1, wh + 4);
-  g.fillRect(wx - 3, wy - 3, ww + 6, wh + 6); // frame
-  g.fillStyle = '#1d2326';
-  g.fillRect(wx, wy, ww, wh);
-  g.fillStyle = wood;
-  g.fillRect(wx + ww / 2 - 1.5, wy, 3, wh); // mullion
+  if (style === 'shutters') {
+    const wx = S * 0.36, ww = S * 0.28, wy = S * 0.28, wh = S * 0.4;
+    g.fillStyle = wood;
+    g.fillRect(wx - S * 0.1, wy - 2, S * 0.1, wh + 4); // shutters either side
+    g.fillRect(wx + ww, wy - 2, S * 0.1, wh + 4);
+    g.fillRect(wx - 3, wy - 3, ww + 6, wh + 6); // frame
+    g.fillStyle = glass;
+    g.fillRect(wx, wy, ww, wh);
+    g.fillStyle = wood;
+    g.fillRect(wx + ww / 2 - 1.5, wy, 3, wh); // mullion
+  } else if (style === 'small') {
+    // A deep-set square window, its frame and sill thick with paint.
+    const wx = S * 0.36, ww = S * 0.28, wy = S * 0.32, wh = S * 0.3;
+    g.fillStyle = wood;
+    g.fillRect(wx - 5, wy - 5, ww + 10, wh + 10);
+    g.fillStyle = glass;
+    g.fillRect(wx, wy, ww, wh);
+    g.fillStyle = wood;
+    g.fillRect(wx, wy + wh / 2 - 1.5, ww, 3);
+    g.fillStyle = 'rgba(0, 0, 0, 0.12)';
+    g.fillRect(wx - 8, wy + wh + 5, ww + 16, 4); // sill shadow
+  } else if (style === 'arched') {
+    // A tall window under a round arch, the kind on older town houses.
+    const cx = S * 0.5, r = S * 0.15, wy = S * 0.36, bottom = S * 0.74;
+    const arch = (grow: number) => {
+      g.beginPath();
+      g.moveTo(cx - r - grow, bottom + grow);
+      g.lineTo(cx - r - grow, wy);
+      g.arc(cx, wy, r + grow, Math.PI, 0);
+      g.lineTo(cx + r + grow, bottom + grow);
+      g.closePath();
+      g.fill();
+    };
+    g.fillStyle = wood;
+    arch(4);
+    g.fillStyle = glass;
+    arch(0);
+    g.fillStyle = wood;
+    g.fillRect(cx - 1.5, wy - r, 3, bottom - wy + r);
+  } else {
+    // Two narrow windows side by side, each with its pair of shutters folded back.
+    for (const wx of [S * 0.2, S * 0.62]) {
+      const ww = S * 0.18, wy = S * 0.28, wh = S * 0.42;
+      g.fillStyle = wood;
+      g.fillRect(wx - 3, wy - 3, ww + 6, wh + 6);
+      g.fillStyle = glass;
+      g.fillRect(wx, wy, ww, wh);
+      g.fillStyle = wood;
+      g.fillRect(wx, wy + wh * 0.35, ww, 3);
+    }
+  }
   g.fillStyle = 'rgba(0, 0, 0, 0.08)';
   g.fillRect(0, S - 6, S, 6); // a little grime at the floor line
   const t = new THREE.CanvasTexture(c);
@@ -49,20 +104,43 @@ function wallTexture(wood: string, anisotropy: number): THREE.CanvasTexture {
   return t;
 }
 
-/** Walls and flat roof of one building, seated on the lowest ground under it. */
-function buildingGeometry(b: Building, terrain: Heightmap, e: number): { walls: THREE.BufferGeometry; roof: THREE.BufferGeometry } {
-  const p = b.pts, n = p.length / 2;
-  let low = Infinity, high = -Infinity;
-  for (let i = 0; i < n; i++) {
-    const z = terrain.heightAt(p[2 * i], p[2 * i + 1]);
-    low = Math.min(low, z);
-    high = Math.max(high, z);
-  }
-  const base = low - 0.5;
-  const top = high + b.height;
-  // Walls face out whichever way the ring runs.
-  const ccw = area(p) > 0;
-  const pos: number[] = [], uv: number[] = [], nor: number[] = [];
+/** A stable 0..1 sequence per building, from where it stands, so it looks the same on every load. */
+function seeded(p: number[]): () => number {
+  let a = (Math.round(p[0] * 10) * 73856093) ^ (Math.round(p[1] * 10) * 19349663);
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 2 ** 32;
+  };
+}
+
+/** Geometry being gathered: positions, normals and texture coordinates, three vertices a triangle. */
+interface Mesh {
+  pos: number[];
+  nor: number[];
+  uv: number[];
+}
+
+const mesh = (): Mesh => ({ pos: [], nor: [], uv: [] });
+
+function toGeometry(m: Mesh): THREE.BufferGeometry {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(m.pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(m.nor, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(m.uv, 2));
+  return g;
+}
+
+/**
+ * The walls of a ring from `base` to `top`, facing out (or in, for a parapet's inner face) whichever
+ * way the ring runs. The texture's top sits at `top`, one bay every `bay` metres along, and only
+ * `rows` storeys get windows: below them, where the ground falls away, the wall is plain.
+ */
+function walls(out: Mesh, p: number[], base: number, top: number, e: number, bay: number, rows: number, inward = false): void {
+  const sill = Math.max(base, top - rows * BAY_H);
+  const n = p.length / 2;
+  const ccw = area(p) > 0 !== inward;
   let run = 0;
   for (let i = 0; i < n; i++) {
     const j = (i + 1) % n;
@@ -71,34 +149,136 @@ function buildingGeometry(b: Building, terrain: Heightmap, e: number): { walls: 
     if (len < 0.05) continue;
     // Outward normal of an anticlockwise ring is to the right of the edge.
     const nx = (by - ay) / len, ny = -(bx - ax) / len;
-    const u0 = run / BAY_W, u1 = (run + len) / BAY_W, vb = (top - base) / BAY_H;
+    const u0 = run / bay, u1 = (run + len) / bay;
     run += len;
     const A = [ax - e / 2, e / 2 - ay], B = [bx - e / 2, e / 2 - by];
-    // Counter-clockwise seen from outside.
-    pos.push(A[0], top, A[1], A[0], base, A[1], B[0], top, B[1], B[0], top, B[1], A[0], base, A[1], B[0], base, B[1]);
-    uv.push(u0, 0, u0, vb, u1, 0, u1, 0, u0, vb, u1, vb);
-    for (let k = 0; k < 6; k++) nor.push(nx, 0, -ny);
+    // Counter-clockwise seen from outside: the storeys, then the plain wall below (a strip of the
+    // texture above the windows, stretched).
+    const quad = (hi: number, lo: number, v0: number, v1: number) => {
+      out.pos.push(A[0], hi, A[1], A[0], lo, A[1], B[0], hi, B[1], B[0], hi, B[1], A[0], lo, A[1], B[0], lo, B[1]);
+      out.uv.push(u0, v0, u0, v1, u1, v0, u1, v0, u0, v1, u1, v1);
+      for (let k = 0; k < 6; k++) out.nor.push(nx, 0, -ny);
+    };
+    quad(top, sill, 0, (top - sill) / BAY_H);
+    if (sill - base > 0.05) quad(sill, base, 0.04, 0.2);
   }
-  const walls = new THREE.BufferGeometry();
-  walls.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  walls.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
-  walls.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+}
 
+/** A flat roof over a ring at height `z`. */
+function slab(out: Mesh, p: number[], z: number, e: number): void {
   const contour = [];
-  for (let i = 0; i < n; i++) contour.push(new THREE.Vector2(p[2 * i], p[2 * i + 1]));
-  const tris = THREE.ShapeUtils.triangulateShape(contour, []);
-  const rpos: number[] = [];
-  for (const [a, b2, c] of tris) {
+  for (let i = 0; i < p.length; i += 2) contour.push(new THREE.Vector2(p[i], p[i + 1]));
+  for (const [a, b, c] of THREE.ShapeUtils.triangulateShape(contour, [])) {
     // Anticlockwise in the site frame (seen from above) is what faces up in three.js.
-    const A = contour[a], B = contour[b2], C = contour[c];
+    const A = contour[a], B = contour[b], C = contour[c];
     const order = (B.x - A.x) * (C.y - A.y) - (B.y - A.y) * (C.x - A.x) > 0 ? [A, B, C] : [A, C, B];
-    for (const v of order) rpos.push(v.x - e / 2, top, e / 2 - v.y);
+    for (const v of order) {
+      out.pos.push(v.x - e / 2, z, e / 2 - v.y);
+      out.nor.push(0, 1, 0);
+      out.uv.push(0, 0);
+    }
   }
-  const roof = new THREE.BufferGeometry();
-  roof.setAttribute('position', new THREE.Float32BufferAttribute(rpos, 3));
-  roof.setAttribute('normal', new THREE.Float32BufferAttribute(rpos.map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
-  roof.setAttribute('uv', new THREE.Float32BufferAttribute(new Array((rpos.length / 3) * 2).fill(0), 2));
-  return { walls, roof };
+}
+
+/** A box `w` × `d` (along and across `angle`, radians from site east) standing on `z0` at (x, y). */
+function box(out: Mesh, x: number, y: number, angle: number, w: number, d: number, z0: number, h: number, e: number): void {
+  const g = new THREE.BoxGeometry(w, h, d).rotateY(angle).translate(x - e / 2, z0 + h / 2, e / 2 - y).toNonIndexed();
+  out.pos.push(...g.attributes.position.array);
+  out.nor.push(...g.attributes.normal.array);
+  out.uv.push(...new Array(g.attributes.position.count * 2).fill(0));
+  g.dispose();
+}
+
+/** The footprint in the frame of its longest wall: that wall's direction, and the extents along and across it. */
+function frame(p: number[]) {
+  const n = p.length / 2;
+  let best = 0, ux = 1, uy = 0;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n, dx = p[2 * j] - p[2 * i], dy = p[2 * j + 1] - p[2 * i + 1], len = Math.hypot(dx, dy);
+    if (len > best) [best, ux, uy] = [len, dx / len, dy / len];
+  }
+  let s0 = Infinity, s1 = -Infinity, t0 = Infinity, t1 = -Infinity;
+  for (let i = 0; i < n; i++) {
+    const s = p[2 * i] * ux + p[2 * i + 1] * uy, t = -p[2 * i] * uy + p[2 * i + 1] * ux;
+    s0 = Math.min(s0, s); s1 = Math.max(s1, s); t0 = Math.min(t0, t); t1 = Math.max(t1, t);
+  }
+  /** A point given along and across the longest wall, back in the site frame. */
+  const at = (s: number, t: number): [number, number] => [s * ux - t * uy, s * uy + t * ux];
+  return { angle: Math.atan2(uy, ux), s0, s1, t0, t1, at };
+}
+
+/**
+ * One house: walls and roof seated on the lowest ground under it, varied the way the island's are.
+ * Most have a low parapet round the roof; some two-storey ones have the upper floor over only part
+ * of the plan, the rest a roof terrace; and roofs carry a chimney or a little stair room.
+ */
+function buildingGeometry(b: Building, terrain: Heightmap, e: number, bay: number): { walls: THREE.BufferGeometry; roof: THREE.BufferGeometry } {
+  const p = b.pts, n = p.length / 2;
+  let low = Infinity, high = -Infinity;
+  for (let i = 0; i < n; i++) {
+    const z = terrain.heightAt(p[2 * i], p[2 * i + 1]);
+    low = Math.min(low, z);
+    high = Math.max(high, z);
+  }
+  const base = low - 0.5;
+  // Measured from the low side, so a house on a slope doesn't gain a storey; at least a door's
+  // height stands clear on the high side.
+  const top = Math.max(low + b.height, high + 2.6);
+  const w = mesh(), r = mesh();
+  const house = b.height > HOUSE_MIN && b.height < HOUSE_MAX;
+  const rows = Math.max(1, Math.round((b.height - 0.6) / BAY_H));
+  if (!house) {
+    walls(w, p, base, top, e, bay, rows);
+    slab(r, p, top, e);
+    return { walls: toGeometry(w), roof: toGeometry(r) };
+  }
+
+  const rand = seeded(p);
+  const parapet = rand() < 0.75 ? 0.3 + rand() * 0.5 : 0;
+  const f = frame(p);
+  const len = f.s1 - f.s0, wide = f.t1 - f.t0;
+  /** Walls and a parapeted roof over a ring, its roof surface returned. */
+  const block = (ring: number[], from: number, to: number, storeys: number) => {
+    walls(w, ring, from, to, e, bay, storeys);
+    if (parapet) walls(r, ring, to - parapet, to, e, bay, 1, true);
+    slab(r, ring, to - parapet, e);
+    return to - parapet;
+  };
+
+  // Two storeys over part of the plan: the upper floor at one end, a terrace over the rest.
+  const ground = Math.max(low + BAY_H + 0.6, high + 2.6);
+  let roof: number, upper: number[] | null = null;
+  if (b.height > BAY_H * 1.5 && top - ground > 2.6 && Math.abs(area(p)) > 50 && rand() < 0.55) {
+    const share = 0.45 + rand() * 0.2, inset = Math.min(0.8, wide * 0.1);
+    const [sa, sb] = rand() < 0.5 ? [f.s0 + 0.4, f.s0 + len * share] : [f.s1 - len * share, f.s1 - 0.4];
+    const ring = [f.at(sa, f.t0 + inset), f.at(sb, f.t0 + inset), f.at(sb, f.t1 - inset), f.at(sa, f.t1 - inset)];
+    const mid = f.at((sa + sb) / 2, (f.t0 + f.t1) / 2);
+    if ([...ring, mid].every(([x, y]) => inside(p, x, y))) upper = ring.flat();
+  }
+  if (upper) {
+    block(p, base, ground, 1);
+    roof = block(upper, ground - parapet, top, 1);
+  } else {
+    roof = block(p, base, top, rows);
+  }
+
+  // On the roof: a chimney, the island's white one with a little cap; or a stair room on a
+  // single-storey house; set in from a corner of the plan, and only where the roof is.
+  const onRoof = upper ?? p;
+  const extra = rand();
+  if (extra < 0.45) {
+    const [x, y] = f.at(f.s0 + Math.min(1.2, len * 0.2), f.t1 - Math.min(1, wide * 0.2));
+    if (inside(onRoof, x, y)) {
+      const h = 0.9 + rand() * 0.6;
+      box(r, x, y, f.angle, 0.55, 0.55, roof, h, e);
+      box(r, x, y, f.angle, 0.8, 0.8, roof + h, 0.1, e);
+      box(r, x, y, f.angle, 0.3, 0.3, roof + h + 0.1, 0.25, e);
+    }
+  } else if (extra < 0.7 && !upper && b.height < BAY_H * 1.5 && len > 6 && wide > 5) {
+    const [x, y] = f.at(f.s1 - 1.8, f.t0 + 1.6);
+    if (inside(p, x, y)) box(r, x, y, f.angle, 2.4, 2.2, roof, 2.3, e);
+  }
+  return { walls: toGeometry(w), roof: toGeometry(r) };
 }
 
 /** A street lamp, arm along +X: a galvanised pole, the arm, and the lantern. */
@@ -133,7 +313,9 @@ export class TileDresser {
   private readonly cache = new Map<DetailTile, { objects: THREE.Group; full?: THREE.Group }>();
 
   constructor(private readonly terrain: Heightmap, private readonly roads: RoadView, private readonly tileM: number, anisotropy: number) {
-    this.walls = WOODWORK.map((wood) => new THREE.MeshStandardMaterial({ map: wallTexture(wood, anisotropy), roughness: 0.92 }));
+    this.walls = WINDOWS.flatMap(({ style }) =>
+      WOODWORK.map((wood) => new THREE.MeshStandardMaterial({ map: wallTexture(wood, style, anisotropy), roughness: 0.92 })),
+    );
   }
 
   dress(tile: DetailTile, level: number): THREE.Object3D | null {
@@ -166,8 +348,9 @@ export class TileDresser {
     const walls: THREE.BufferGeometry[][] = this.walls.map(() => []);
     const roofs: THREE.BufferGeometry[] = [];
     o.buildings.forEach((b, i) => {
-      const { walls: w, roof } = buildingGeometry(b, this.terrain, e);
-      walls[(b.pts.length * 7 + i) % walls.length].push(w); // a stable mix of woodwork colours
+      const k = (b.pts.length * 7 + i * 13) % walls.length; // a stable mix of window styles and woodwork
+      const { walls: w, roof } = buildingGeometry(b, this.terrain, e, WINDOWS[Math.floor(k / WOODWORK.length)].bay);
+      walls[k].push(w);
       roofs.push(roof);
     });
     const add = (parts: THREE.BufferGeometry[], material: THREE.Material) => {

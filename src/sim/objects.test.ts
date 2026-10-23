@@ -6,18 +6,22 @@ import { ROAD_WIDTH, type Road } from './roads';
 const main = (pts: number[]): Road => ({ kind: 'secondary', name: 'LZ-1', bridge: false, pts });
 
 describe('buildingHeight', () => {
-  it('trusts the tags', () => {
-    expect(buildingHeight({ height: '12' }, 1, 100)).toBe(12);
-    expect(buildingHeight({ 'building:levels': '3' }, 1, 100)).toBeCloseTo(10.2);
+  it('trusts the tags up to two storeys', () => {
+    expect(buildingHeight({ height: '5' }, 1, 100)).toBe(5);
+    expect(buildingHeight({ height: '12' }, 1, 100)).toBeCloseTo(7);
+    expect(buildingHeight({ 'building:levels': '1' }, 1, 100)).toBeCloseTo(3.8);
+    expect(buildingHeight({ 'building:levels': '8' }, 1, 100)).toBeCloseTo(7);
+    expect(buildingHeight({ building: 'church', height: '20' }, 1, 100)).toBe(11);
   });
 
-  it('gives an untagged house one to three storeys, the same every time', () => {
+  it('gives an untagged house one or two storeys, the same every time', () => {
+    const seen = new Set<number>();
     for (let id = 1; id < 200; id++) {
       const h = buildingHeight({ building: 'house' }, id, 90);
-      expect(h).toBeGreaterThan(3);
-      expect(h).toBeLessThan(11);
+      seen.add(h);
       expect(buildingHeight({ building: 'house' }, id, 90)).toBe(h);
     }
+    expect([...seen].map((h) => Math.round(h * 10) / 10).sort()).toEqual([3.8, 7]);
   });
 });
 
