@@ -16,7 +16,8 @@ const ROAD_STYLE: Record<RoadKind, [string, number]> = {
 
 export interface HudFrame {
   speedKmh: number;
-  gear: number;
+  /** What the gear box shows: 1–6, D, R, or ✈ in the air. */
+  gear: string;
   rpmShare: number;
   road: Road | null;
   x: number;
@@ -111,7 +112,7 @@ export class Hud {
   update(dt: number, f: HudFrame): void {
     this.el.speed.textContent = String(Math.round(Math.abs(f.speedKmh)));
     this.el.cluster.classList.toggle('boost', f.boost);
-    this.el.gear.textContent = f.flying ? '✈' : f.gear < 0 ? 'R' : String(f.gear);
+    this.el.gear.textContent = f.gear;
     const up = f.flying && f.agl > 3;
     this.el.alt.hidden = !up;
     if (up) this.el.alt.textContent = `${Math.round(f.agl)} m up`;

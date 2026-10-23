@@ -5,7 +5,9 @@
 
 export class CarAudio {
   private ctx: AudioContext | null = null;
-  private engine?: { osc: OscillatorNode; sub: OscillatorNode; filter: BiquadFilterNode; gain: GainNode };
+  private engine?: { osc: OscillatorNode; sub: OscillatorNode; subGain: GainNode; filter: BiquadFilterNode; gain: GainNode };
+  /** An electric motor whines instead of firing: a purer, higher note, no sub-octave. */
+  electric = false;
   private tyres?: GainNode;
   private roar?: GainNode;
   private master?: GainNode;
@@ -43,7 +45,7 @@ export class CarAudio {
     filter.connect(gain).connect(this.master);
     osc.start();
     sub.start();
-    this.engine = { osc, sub, filter, gain };
+    this.engine = { osc, sub, subGain, filter, gain };
 
     const noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const data = noise.getChannelData(0);
@@ -110,17 +112,22 @@ export class CarAudio {
     if (this.master && this.ctx) this.master.gain.setTargetAtTime(muted ? 0 : 0.5, this.ctx.currentTime, 0.05);
   }
 
-  /** `slip` 0..1 across the tyres, `speed` m/s, `boost` the turbo. */
-  update(rpm: number, throttle: number, slip: number, speed: number, boost: boolean): void {
+  /** `slip` 0..1 across the tyres, `speed` m/s, `boost` the turbo, `hiss` 0..1 the hover thrusters. */
+  update(rpm: number, throttle: number, slip: number, speed: number, boost: boolean, hiss = 0): void {
     if (!this.ctx || !this.engine || !this.tyres || !this.roar) return;
     const t = this.ctx.currentTime;
-    const f = (rpm / 60) * 2;
+    const e = this.engine;
+    if (e.osc.type !== (this.electric ? 'triangle' : 'sawtooth')) e.osc.type = this.electric ? 'triangle' : 'sawtooth';
+    e.subGain.gain.setTargetAtTime(this.electric ? 0 : 0.35, t, 0.05);
+    // A four-cylinder fires twice a revolution; a motor's whine rides higher, with its poles.
+    const f = (rpm / 60) * (this.electric ? 3 : 2) + (this.electric ? 60 : 0);
     this.engine.osc.frequency.setTargetAtTime(f, t, 0.03);
     this.engine.sub.frequency.setTargetAtTime(f / 2, t, 0.03);
-    this.engine.filter.frequency.setTargetAtTime(300 + throttle * 1400 + rpm * 0.15, t, 0.05);
+    this.engine.filter.frequency.setTargetAtTime(this.electric ? 900 + throttle * 2500 : 300 + throttle * 1400 + rpm * 0.15, t, 0.05);
     this.engine.gain.gain.setTargetAtTime(0.1 + throttle * 0.16, t, 0.05);
     const screech = Math.min(slip * Math.min(speed / 8, 1), 1);
     this.tyres.gain.setTargetAtTime(screech * 0.22, t, 0.04);
-    this.roar.gain.setTargetAtTime(boost ? 0.55 : 0, t, boost ? 0.08 : 0.3);
+    // The turbo roars; the hover thrusters hiss with their lift.
+    this.roar.gain.setTargetAtTime(Math.max(boost ? 0.55 : 0, hiss * 0.4), t, boost ? 0.08 : 0.3);
   }
 }

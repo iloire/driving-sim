@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-23 08:51
+
+- The Roadster, the new default car: an original white wedge hypercar with a glass canopy, front
+  and tail light bars and a four-nozzle diffuser. It's electric, with 1,400 N·m from a standstill
+  and one gear, 0–100 km/h in about 2 s and close to 390 km/h, and it whines rather than roars.
+- F lights its gas thrusters: four nozzles drop out of the floor and it hovers on plumes of smoke,
+  with assists that hold its height and tilt it to the stick (Space up, Ctrl down, W/S tilt, A/D
+  turn, Shift tail boost). On a phone the left thumb climbs and sinks.
+- The armoured 4×4 (with wings) stays under Settings → Car, or `?car=4x4`. The gear box shows D
+  for the electric car.
+
 ## 2026-10-22 18:35
 
 - The balloon game is off by default. B turns it on (a fresh sky around the car) and off again,

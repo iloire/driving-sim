@@ -5,7 +5,8 @@ How it stays fast (merging, instancing, level of detail, streaming, offline work
 ```
 src/sim/    pure TypeScript, no three.js, no DOM — unit-tested
   car.ts      the car: rigid body, struts, tyres, engine, gearbox
-  wings.ts    its plane half: lift, drag, stability, control surfaces, jet
+  wings.ts    the 4×4's plane half: lift, drag, stability, control surfaces, jet
+  thrusters.ts  the Roadster's hover: lift on its exhaust, height hold, attitude assists
   roads.ts    road model: profiles, carving, nearest-road index
   buildings.ts  building footprints as obstacles: point-in-polygon, way out, per-tile index
   objects.ts  per-tile objects file, building heights, lamp and edge-post placement
@@ -70,6 +71,35 @@ the shell on a 22 cm lift kit above where the physics puts it, so the wheels and
 `src/sim/car.test.ts` pins the envelope: 0–100 km/h in 5–9 s, a top speed of 200–260 km/h,
 100–0 km/h in 35–50 m, under ~1.1 g steady cornering, holding on a 10 % grade, the handbrake
 kicking the tail out, keeping more grip on picón than plain tyres would, surviving an upside-down landing, stopping against a wall, and noticing the sea.
+
+## The two cars
+
+`ROADSTER` (the default) and `TRUCK` share everything above. They differ in their numbers, and in
+how `flying` flies: `CarSpec.wings` unfolds into a plane, and `CarSpec.thrusters` hovers. Each has
+its own model (`roadster-model.ts`, `car-model.ts`), and Settings → Car (or `?car=4x4`) swaps
+them where the car stands.
+
+The Roadster is electric (`engine.electric`). Its torque is flat at 1,400 N·m from a standstill
+to 5,000 rpm, then falls off at constant power to 20,000 rpm, through one 7:1 gear. With no clutch to
+slip and nothing to shift, 0–100 km/h is grip-limited at about 2 s and it tops out near 390 km/h.
+The sound changes with it: a triangle-wave whine an octave and a half up, with no sub-octave.
+
+## Hovering (`src/sim/thrusters.ts`)
+
+Lit, the thrusters push along the body's up axis. The lift is whatever holds the asked-for climb
+rate (Space +14 m/s, Ctrl −14 m/s, nothing pressed is 0, which holds your height), divided by
+how upright the car is and capped at 2.2× its weight. Two assists do the flying. The attitude
+assist is a spring and damper (14/s², 7/s) that tilts the body to the stick: up to 0.55 rad nose
+down or up on W/S, and 0.4 rad of bank on A/D, with a yaw rate of up to 1.3 rad/s. The thrust,
+tilted with the body, is what moves it across the ground. The wash of the thrusters drags it
+horizontally (6 % of its momentum a second), so it settles at a cruise near 290 km/h instead of
+running away. Shift fires the tail nozzles (24,000 N). `src/sim/roadster.test.ts` pins lifting off,
+holding height within 2 m, flying forwards, turning, and dropping when the thrusters go out. An
+unstable assist fails the hold and cruise tests.
+
+On screen, four nozzles drop out of the floor as the thrusters spool. Their flames and smoke scale
+with the lift: pooled, camera-facing puffs in the scene (`smoke.ts`), blown down at up to 38 m/s,
+spreading and fading behind the car. The hiss of the thrusters rides on the turbo's roar.
 
 ## Turbo
 

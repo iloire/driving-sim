@@ -9,7 +9,12 @@ describe('thumb', () => {
   });
 
   it('accelerates when the right thumb pushes up and brakes when it pulls down', () => {
-    expect(thumb('right', 0, -70)).toEqual({ steer: 0, throttle: 1, brake: 0 });
-    expect(thumb('right', 0, 35)).toEqual({ steer: 0, throttle: 0, brake: 0.5 });
+    expect(thumb('right', 0, -70)).toEqual({ steer: 0, throttle: 1, brake: 0, lift: 0 });
+    expect(thumb('right', 0, 35)).toEqual({ steer: 0, throttle: 0, brake: 0.5, lift: 0 });
+  });
+
+  it('climbs when the left thumb pushes up, sinks when it pulls down', () => {
+    expect(thumb('left', 0, -70).lift).toBe(1);
+    expect(thumb('left', 0, 35).lift).toBeCloseTo(-0.5);
   });
 });

@@ -77,6 +77,8 @@ export interface FlightControls {
   yaw: number;
   /** 0..1 jet throttle. */
   thrust: number;
+  /** −1..1, hovering only: sink or climb (Space up, Ctrl down). */
+  lift: number;
 }
 
 /** Lift coefficient: linear to the stall, then the flat-plate fall-off. */

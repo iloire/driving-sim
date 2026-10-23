@@ -6,7 +6,7 @@ const STEP = 1 / 120;
 const flat: CarEnv = { height: () => 0.5, surface: () => ({ grip: 1, rolling: 0.012 }) };
 
 function controls(pitch = 0, roll = 0, thrust = 0.7): Controls {
-  return { throttle: 0, brake: 0, steer: 0, handbrake: false, boost: false, flight: { pitch, roll, yaw: 0, thrust } };
+  return { throttle: 0, brake: 0, steer: 0, handbrake: false, boost: false, flight: { pitch, roll, yaw: 0, thrust, lift: 0 } };
 }
 
 /** A plane already flying level and north at `speed`, `height` metres up, wings out. */

@@ -1,8 +1,8 @@
 // Keyboard + gamepad + touch → Controls. Keys are digital, so steering and pedals ramp towards
 // their targets instead of snapping; the pad's stick and triggers are analog and used as they are.
 // The same keys fly the plane: W/S push and pull the stick, A/D roll, Q/E rudder; the jet sits at
-// cruise thrust, Ctrl for idle. Shift is the turbo either way: nitro on the road, full jet plus
-// afterburner in the air.
+// cruise thrust, Ctrl for idle. Hovering on thrusters, W/S tilt, A/D turn, Space climbs and Ctrl
+// sinks. Shift is the turbo every way: nitro on the road, afterburner or tail thrusters in the air.
 
 import type { Controls } from '../sim/car';
 
@@ -27,11 +27,13 @@ export interface TouchControls {
   steer: number;
   throttle: number;
   brake: number;
+  /** −1..1: sink or climb while hovering. */
+  lift: number;
 }
 
 export class Input {
   readonly controls: Controls = {
-    throttle: 0, brake: 0, steer: 0, handbrake: false, boost: false, flight: { pitch: 0, roll: 0, yaw: 0, thrust: CRUISE_THRUST },
+    throttle: 0, brake: 0, steer: 0, handbrake: false, boost: false, flight: { pitch: 0, roll: 0, yaw: 0, thrust: CRUISE_THRUST, lift: 0 },
   };
   private keys = new Set<string>();
   private padPrev: boolean[] = [];
@@ -108,5 +110,8 @@ export class Input {
     const boost = c.boost ? 1 : padThrottle;
     const idle = this.down('ControlLeft', 'ControlRight') || padBrake > 0.5;
     f.thrust = idle ? 0.1 : CRUISE_THRUST + (1 - CRUISE_THRUST) * boost;
+    // Hovering: Space climbs, Ctrl sinks; on a pad the triggers, on a phone the left thumb up or down.
+    f.lift = clamp1((this.down('Space') ? 1 : 0) - (this.down('ControlLeft', 'ControlRight') ? 1 : 0)
+      + padThrottle - padBrake + (t?.lift ?? 0));
   }
 }

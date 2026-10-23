@@ -7,6 +7,7 @@
 // the centre of mass. `q` rotates body vectors into the world.
 
 import { add, cross, dot, integrate, normalize, rotate, scale, sub, unrotate, type Quat, type V3 } from './vec';
+import { hover, THRUSTERS, type ThrusterSpec } from './thrusters';
 import { aero, WINGS, type FlightControls, type WingSpec } from './wings';
 
 const G = 9.81;
@@ -81,7 +82,11 @@ export interface CarSpec {
   steerFalloff: number;
   /** Rad per second the front wheels can turn. */
   steerRate: number;
-  engine: { idle: number; peakRpm: number; redline: number; peakTorque: number };
+  /**
+   * A combustion engine's torque is a hump peaking at `peakRpm`; an electric motor's (`electric`)
+   * is flat up to `peakRpm`, then falls off at constant power to `redline`, from a standstill.
+   */
+  engine: { idle: number; peakRpm: number; redline: number; peakTorque: number; electric?: boolean };
   gears: number[];
   reverse: number;
   finalDrive: number;
@@ -95,8 +100,9 @@ export interface CarSpec {
   nitro: number;
   /** Half-extents of the body box for ground contact, from the centre of mass: [back, front, side, bottom, top]. */
   body: [number, number, number, number, number];
-  /** The wings it unfolds to fly (see wings.ts). */
-  wings: WingSpec;
+  /** How it flies when `flying`: wings it unfolds into a plane (wings.ts), or gas thrusters it hovers on (thrusters.ts). */
+  wings?: WingSpec;
+  thrusters?: ThrusterSpec;
 }
 
 /**
@@ -132,6 +138,39 @@ export const TRUCK: CarSpec = {
   wings: { ...WINGS, area: 15, span: 9.4, thrust: 13000, afterburner: 20000, inertia: [1700, 700, 2000] },
 };
 
+/**
+ * A white wedge hypercar: a low glass canopy, 1,950 kg on a battery floor, three motors with 1,400 N m
+ * from a standstill through a single 7:1 gear, so 0–100 km/h is down to the tyres' grip (about
+ * 2 s) and it tops out near 390 km/h. Sticky tyres, stiff short-travel suspension, and gas
+ * thrusters in the floor and the tail: on F it hovers like a rocket on its exhaust.
+ */
+export const ROADSTER: CarSpec = {
+  mass: 1950,
+  inertia: [620, 2700, 3000],
+  wheelbase: 2.72,
+  track: 1.7,
+  frontWeight: 0.45,
+  cgHeight: 0.45,
+  wheelRadius: 0.36,
+  suspension: { rest: 0.24, travel: 0.12, k: 72000, c: 6400 },
+  mu: 1.25,
+  allTerrain: 0.1,
+  maxSteer: 0.55,
+  steerFalloff: 26,
+  steerRate: 3,
+  engine: { idle: 0, peakRpm: 5000, redline: 20000, peakTorque: 1400, electric: true },
+  gears: [1],
+  reverse: 1,
+  finalDrive: 7,
+  driveFront: 0.35,
+  brakeForce: 28000,
+  brakeFront: 0.6,
+  cdA: 0.55,
+  nitro: 18000,
+  body: [2.25, 2.3, 0.95, 0.25, 0.75],
+  thrusters: THRUSTERS,
+};
+
 export interface Wheel {
   /** Strut mount in the body frame. */
   mount: V3;
@@ -165,10 +204,12 @@ export interface CarState {
   /** Compass heading of the nose, radians (0 north, clockwise). */
   heading: number;
   inWater: boolean;
-  /** Plane mode: the wings unfold towards fully out, the wheels go undriven, the jet takes over. */
+  /** Flight mode: the wings unfold (or the thrusters light) towards fully out, the wheels go undriven. */
   flying: boolean;
-  /** How far the wings are out, 0..1, animating towards `flying`. */
+  /** How far the wings are out, or the thrusters spooled up, 0..1, animating towards `flying`. */
   wings: number;
+  /** Hovering: the thrusters' lift as a share of the most they give, 0..1. */
+  lift: number;
   /** Angle of attack (rad) and airspeed (m/s) while the wings are out. */
   alpha: number;
   airspeed: number;
@@ -198,7 +239,7 @@ export function createCar(spec: CarSpec, x: number, y: number, groundZ: number, 
   return {
     pos: [x, y, groundZ + spec.cgHeight], vel: [0, 0, 0], q: [Math.cos(yaw / 2), 0, 0, Math.sin(yaw / 2)], w: [0, 0, 0],
     steer: 0, gear: 1, rpm: spec.engine.idle, shiftTimer: 0, wheels, speed: 0, heading, inWater: false,
-    flying: false, wings: 0, alpha: 0, airspeed: 0,
+    flying: false, wings: 0, lift: 0, alpha: 0, airspeed: 0,
   };
 }
 
@@ -206,6 +247,8 @@ export function createCar(spec: CarSpec, x: number, y: number, groundZ: number, 
 export function torqueAt(spec: CarSpec, rpm: number): number {
   const e = spec.engine;
   if (rpm > e.redline) return 0;
+  // A motor: full torque from rest, then constant power.
+  if (e.electric) return rpm <= e.peakRpm ? e.peakTorque : (e.peakTorque * e.peakRpm) / rpm;
   const x = (rpm - e.peakRpm) / (e.redline - e.idle);
   return e.peakTorque * Math.max(1 - 1.6 * x * x, 0.45);
 }
@@ -234,7 +277,7 @@ function powertrain(s: CarState, spec: CarSpec, c: Controls, dt: number): { driv
   const ratio = (s.gear > 0 ? spec.gears[s.gear - 1] : spec.reverse) * spec.finalDrive;
   const wheelRpm = (Math.abs(s.speed) / spec.wheelRadius) * (60 / (2 * Math.PI)) * ratio;
   // Pulling away, the clutch slips: the engine runs above what the wheels say.
-  const slipping = Math.abs(s.gear) === 1 && wheelRpm < 2200;
+  const slipping = !e.electric && Math.abs(s.gear) === 1 && wheelRpm < 2200;
   const target = Math.max(wheelRpm, e.idle, slipping ? e.idle + throttle * 2600 : 0);
   s.rpm += (target - s.rpm) * (1 - Math.exp(-dt * 12));
 
@@ -266,8 +309,9 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
 
   const lock = spec.maxSteer / (1 + Math.abs(s.speed) / spec.steerFalloff);
   s.steer += clamp(c.steer * lock - s.steer, -spec.steerRate * dt, spec.steerRate * dt);
-  const w = spec.wings;
-  s.wings += clamp((s.flying ? 1 : 0) - s.wings, -w.unfoldRate * dt, w.unfoldRate * dt);
+  const w = spec.wings, th = spec.thrusters;
+  const deploy = w?.unfoldRate ?? th?.spool ?? 0;
+  s.wings += clamp((s.flying && deploy ? 1 : 0) - s.wings, -deploy * dt, deploy * dt);
   // In plane mode the jet drives it, so the wheels just roll (Space still brakes the rear ones).
   const { drive, brake } = s.flying ? { drive: 0, brake: 0 } : powertrain(s, spec, c, dt);
   if (s.flying) s.rpm += (spec.engine.idle + c.flight.thrust * (spec.engine.redline - spec.engine.idle) - s.rpm) * (1 - Math.exp(-dt * 3));
@@ -384,19 +428,28 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
   const speed = Math.hypot(...s.vel);
   apply(scale(s.vel, -0.5 * RHO * spec.cdA * speed), s.pos);
   // Turbo: the nitro rocket fades into the afterburner as the wings come out.
-  if (c.boost) force = add(force, scale(nose, spec.nitro * (1 - s.wings) + w.afterburner * s.wings));
-  if (s.wings > 0) {
+  const airBoost = w?.afterburner ?? th?.boost ?? 0;
+  if (c.boost) force = add(force, scale(nose, spec.nitro * (1 - s.wings) + airBoost * s.wings));
+  if (s.wings > 0 && w) {
     const a = aero(w, s.q, s.vel, s.w, c.flight, s.wings);
     force = add(force, a.force);
     torque = add(torque, a.torque);
     s.alpha = a.alpha;
     s.airspeed = a.airspeed;
+  } else if (s.wings > 0 && th) {
+    const h = hover(th, spec.mass, spec.inertia, s.q, s.vel, s.w, c.flight, s.wings);
+    force = add(force, h.force);
+    torque = add(torque, h.torque);
+    s.lift = h.lift;
+    s.airspeed = speed;
+  } else {
+    s.lift = 0;
   }
 
   // Newton for the centre of mass, Euler's equations for the rotation (in the body frame).
   s.vel = add(s.vel, scale(force, dt / spec.mass));
   s.pos = add(s.pos, scale(s.vel, dt));
-  const I: V3 = [0, 1, 2].map((i) => spec.inertia[i] + s.wings * w.inertia[i]) as V3;
+  const I: V3 = [0, 1, 2].map((i) => spec.inertia[i] + (w ? s.wings * w.inertia[i] : 0)) as V3;
   const wb = unrotate(s.q, s.w);
   const tb = unrotate(s.q, torque);
   const gyro = cross(wb, [I[0] * wb[0], I[1] * wb[1], I[2] * wb[2]]);

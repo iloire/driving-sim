@@ -4,10 +4,11 @@ import * as THREE from 'three';
 import { CarAudio } from './game/audio';
 import { BalloonsView } from './game/balloons-view';
 import { CameraRig } from './game/camera';
-import { createCarModel } from './game/car-model';
+import { createCarModel, type CarModel } from './game/car-model';
 import { TileDresser } from './game/dress';
 import { Hud } from './game/hud';
 import { Input, type Action } from './game/input';
+import { createRoadsterModel } from './game/roadster-model';
 import { SpawnPicker } from './game/picker';
 import { RoadView } from './game/road-view';
 import { loadSite, type Spawn } from './game/site';
@@ -15,7 +16,7 @@ import { TerrainView } from './game/terrain-view';
 import { TouchPad } from './game/touch';
 import { createSurround, Sunlight } from './game/world';
 import { BalloonField } from './sim/balloons';
-import { createCar, TRUCK, stepCar, type CarEnv, type CarSpec, type CarState, type Surface } from './sim/car';
+import { createCar, ROADSTER, TRUCK, stepCar, type CarEnv, type CarSpec, type CarState, type Surface } from './sim/car';
 import { isPaved, MAX_HALF_WIDTH, ROAD_WIDTH, type Road } from './sim/roads';
 import { dayOfYear, daylightHours, sunPosition } from './sim/sun';
 import { rotate } from './sim/vec';
@@ -28,7 +29,15 @@ const SITE = 'lanzarote';
 /** Solar time a drive starts at without ?time=: late afternoon, long shadows over the lava. */
 const DEFAULT_HOUR = 16.5;
 const TOUCH = matchMedia('(pointer: coarse)').matches;
-const KEY = TOUCH ? { reset: 'RESET', pull: 'pull the right thumb down' } : { reset: 'R', pull: 'S to pull up' };
+const KEY = TOUCH
+  ? { reset: 'RESET', pull: 'pull the right thumb down', climb: 'push the left thumb up to climb' }
+  : { reset: 'R', pull: 'S to pull up', climb: 'Space to climb, Ctrl to sink' };
+
+/** The cars on offer: the default Roadster, which hovers on thrusters, and the 4×4, which unfolds wings. */
+const VEHICLES: Record<string, { name: string; spec: CarSpec; model: (spec: CarSpec) => CarModel }> = {
+  roadster: { name: 'Roadster', spec: ROADSTER, model: createRoadsterModel },
+  '4x4': { name: 'Armoured 4×4', spec: TRUCK, model: createCarModel },
+};
 
 const TARMAC: Surface = { grip: 1, rolling: 0.012 };
 const GRAVEL: Surface = { grip: 0.72, rolling: 0.03 };
@@ -54,7 +63,8 @@ function saveBest(score: number): void {
   }
 }
 
-const DRIVETRAINS: Record<string, number> = { '4×4 (50/50)': 0.5, RWD: 0, FWD: 1 };
+/** AWD keeps the car's own front/rear split. */
+const DRIVETRAINS: Record<string, number | null> = { AWD: null, RWD: 0, FWD: 1 };
 
 /** The road under a point, if it is on the carriageway (or a track) rather than beside it. */
 function onRoad(roads: { nearest(x: number, y: number, r: number): { road: Road; dist: number } | undefined }, x: number, y: number, margin: number): Road | null {
@@ -96,10 +106,12 @@ async function boot(): Promise<void> {
   scene.add(terrainView.group, createSurround(extent));
 
   // The balloon game is off until B (or the settings panel, or the phone's button) turns it on.
-  const settings = { drivetrain: '4×4 (50/50)', balloons: false };
-  const spec: CarSpec = { ...TRUCK };
-  const model = createCarModel(spec);
+  const vehicleId = query.get('car') === '4x4' ? '4x4' : 'roadster';
+  const settings = { vehicle: VEHICLES[vehicleId].name, drivetrain: 'AWD', balloons: false };
+  let spec: CarSpec = { ...VEHICLES[vehicleId].spec };
+  let model = VEHICLES[vehicleId].model(spec);
   scene.add(model.group);
+  if (model.world) scene.add(model.world);
   // The balloon game: a field kept full around the car, scored as you pop them.
   const field = new BalloonField((x, y) => terrain.heightAt(x, y), (x, y) => x > 0 && y > 0 && x < extent && y < extent,
     undefined, Date.now() % 1e9);
@@ -121,6 +133,7 @@ async function boot(): Promise<void> {
   }
   const rig = new CameraRig(camera, canvas);
   const audio = new CarAudio();
+  audio.electric = !!spec.engine.electric;
   const hud = new Hud(__COMMIT_SHA__, site.roads.roads, ortho.image as HTMLImageElement, extent);
 
   const env: CarEnv = {
@@ -145,7 +158,7 @@ async function boot(): Promise<void> {
     await site.ensureDetail(x, y, 1600);
     car = createCar(spec, x, y, terrain.heightAt(x, y) + 0.05, heading);
     stuck = 0;
-    model.update(car, false, extent, 0, false);
+    model.update(car, false, extent, 0, false, camera, 0);
     rig.snap(model.group, heading);
     lastPos.splice(0, 3, ...car.pos);
     // A new place gets a fresh sky of balloons (the score carries on).
@@ -183,7 +196,8 @@ async function boot(): Promise<void> {
     balloons: () => setBalloons(!settings.balloons),
     transform: () => {
       car.flying = !car.flying;
-      hud.say(car.flying ? `Wings out — the jet's on. Past 160 km/h, ${KEY.pull}` : 'Wings folded — back to a car', 3);
+      if (spec.thrusters) hud.say(car.flying ? `Thrusters lit — ${KEY.climb}, W/S to tilt, A/D to turn` : 'Thrusters off — back to the road', 3);
+      else hud.say(car.flying ? `Wings out — the jet's on. Past 160 km/h, ${KEY.pull}` : 'Wings folded — back to a car', 3);
     },
   };
   const input = new Input((a) => actions[a]());
@@ -213,7 +227,29 @@ async function boot(): Promise<void> {
   gui.add(sky, 'hour', hours.first, hours.last, 0.05).name('Solar time').onChange(applySun);
   gui.add(settings, 'balloons').name('Balloon game (B)').listen().onChange((on: boolean) => setBalloons(on));
   gui.add({ restart: () => { field.reset(car.pos[0], car.pos[1]); hud.say('New round — pop them all', 2); } }, 'restart').name('New balloon round');
-  gui.add(settings, 'drivetrain', Object.keys(DRIVETRAINS)).name('Drivetrain').onChange((v: string) => { spec.driveFront = DRIVETRAINS[v]; });
+  const applyDrivetrain = () => {
+    const split = DRIVETRAINS[settings.drivetrain];
+    spec.driveFront = split ?? VEHICLES[vehicleKey()].spec.driveFront;
+  };
+  const vehicleKey = () => Object.keys(VEHICLES).find((k) => VEHICLES[k].name === settings.vehicle) ?? 'roadster';
+  /** Swaps the car where it stands: new body, new physics, the same place and heading. */
+  const switchVehicle = () => {
+    const id = vehicleKey();
+    scene.remove(model.group);
+    if (model.world) scene.remove(model.world);
+    spec = { ...VEHICLES[id].spec };
+    applyDrivetrain();
+    model = VEHICLES[id].model(spec);
+    scene.add(model.group);
+    if (model.world) scene.add(model.world);
+    audio.electric = !!spec.engine.electric;
+    const q = new URLSearchParams(location.search);
+    if (id === 'roadster') q.delete('car'); else q.set('car', id);
+    history.replaceState(null, '', `?${q}`);
+    void place(car.pos[0], car.pos[1], car.heading).then(() => hud.say(VEHICLES[id].name, 2));
+  };
+  gui.add(settings, 'vehicle', Object.values(VEHICLES).map((v) => v.name)).name('Car').onChange(switchVehicle);
+  gui.add(settings, 'drivetrain', Object.keys(DRIVETRAINS)).name('Drivetrain').onChange(applyDrivetrain);
   gui.close();
 
   await place(spawn.x, spawn.y, spawn.heading);
@@ -260,7 +296,7 @@ async function boot(): Promise<void> {
       }
       // Past the stall in the air: say so once, until it's flying again.
       const agl = car.pos[2] - terrain.heightAt(car.pos[0], car.pos[1]);
-      const isStalled = car.wings > 0.5 && agl > 5 && car.airspeed > 5 && stalled(spec.wings, car.alpha);
+      const isStalled = !!spec.wings && car.wings > 0.5 && agl > 5 && car.airspeed > 5 && stalled(spec.wings, car.alpha);
       if (isStalled && !stallWarned) hud.say('STALL — push the nose down', 2);
       stallWarned = isStalled;
     }
@@ -277,13 +313,14 @@ async function boot(): Promise<void> {
     }
     const braking = car.gear > 0 ? input.controls.brake > 0.1 : input.controls.throttle > 0.1;
     const boosting = input.controls.boost && !paused;
-    model.update(car, braking, extent, input.controls.flight.thrust, boosting);
+    model.update(car, braking, extent, input.controls.flight.thrust, boosting, camera, dt);
     carPos.copy(model.group.position);
     // Follow the way the car is travelling when it slides, its nose when it is slow.
     const moving = Math.hypot(car.vel[0], car.vel[1]);
     const travel = Math.atan2(car.vel[0], car.vel[1]);
     const followHeading = moving > 4 && (car.speed > 0 || car.flying) ? travel : car.heading;
-    rig.update(dt, model.group, followHeading, ground, car.wings, boosting);
+    // Hovering, the chase camera only drops back a little: there's no wingspan to fit in.
+    rig.update(dt, model.group, followHeading, ground, car.wings * (spec.wings ? 1 : 0.3), boosting);
     sunlight.follow(carPos);
     const t1 = performance.now();
     terrainView.update(camera.position, camera.position.y - ground(camera.position));
@@ -293,13 +330,14 @@ async function boot(): Promise<void> {
     balloonsView.update(dt, field.balloons);
     hud.setScore(settings.balloons, field.score, field.popped, best);
     hud.update(dt, {
-      speedKmh: (car.flying ? car.airspeed : car.speed) * 3.6, gear: car.gear, rpmShare: car.rpm / spec.engine.redline,
+      speedKmh: (car.flying ? car.airspeed : car.speed) * 3.6, rpmShare: car.rpm / spec.engine.redline,
+      gear: car.flying ? '✈' : car.gear < 0 ? 'R' : spec.engine.electric ? 'D' : String(car.gear),
       road, x: car.pos[0], y: car.pos[1], heading: car.heading,
       flying: car.flying, boost: boosting, balloons: settings.balloons ? field.balloons : [], agl: car.pos[2] - spec.cgHeight - terrain.heightAt(car.pos[0], car.pos[1]),
     });
     const slip = Math.max(...car.wheels.map((w) => (w.contact ? w.slip : 0)));
     const pedal = car.flying ? input.controls.flight.thrust : car.gear > 0 ? input.controls.throttle : input.controls.brake;
-    audio.update(car.rpm, pedal, slip, Math.abs(car.speed), boosting);
+    audio.update(car.rpm, pedal, slip, Math.abs(car.speed), boosting, car.lift);
 
     const t2 = performance.now();
     renderer.render(scene, camera);
