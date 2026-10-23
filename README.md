@@ -110,7 +110,7 @@ Press **B** again to put them away.
 
 A link starts someone at the same place and time: `?spawn=timanfaya&time=17:30` (add `&car=4x4`
 for the truck). The places are
-`timanfaya`, `airport`, `mirador`, `famara`, `haria`, `la-geria`, `el-golfo`, `arrecife`, `teguise`,
+`timanfaya`, `airport`, `mirador`, `famara`, `haria`, `la-geria`, `arrecife`, `teguise`,
 `playa-blanca` and `orzola`.
 
 ## Check it

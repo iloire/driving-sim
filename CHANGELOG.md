@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-23 10:00
+
+- Removed the El Golfo coast road start (`?spawn=el-golfo`). Old links with it fall back to the
+  first start, Timanfaya.
+
 ## 2026-10-23 08:51
 
 - The Roadster, the new default car: an original white wedge hypercar with a glass canopy, front
