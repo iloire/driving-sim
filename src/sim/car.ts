@@ -56,7 +56,7 @@ export interface CarEnv {
   height(x: number, y: number): number;
   surface(x: number, y: number): Surface;
   /** The way out of a building a point is inside (horizontal outward normal, depth in m), or null. */
-  wall?(x: number, y: number): { nx: number; ny: number; depth: number } | null;
+  wall?(x: number, y: number, z: number): { nx: number; ny: number; depth: number } | null;
 }
 
 export interface CarSpec {
@@ -412,7 +412,7 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
   if (env.wall) {
     for (const [bx, by] of [[front, side], [front, 0], [front, -side], [0, side], [0, -side], [-back, side], [-back, 0], [-back, -side]]) {
       const p = add(s.pos, rotate(s.q, [bx, by, 0.1]));
-      const hit = env.wall(p[0], p[1]);
+      const hit = env.wall(p[0], p[1], p[2]);
       if (!hit) continue;
       const n: V3 = [hit.nx, hit.ny, 0];
       const v = add(s.vel, cross(s.w, sub(p, s.pos)));

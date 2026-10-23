@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-23 11:50
+
+- Fixed flying over towns: a building's walls stopped the car at any height, so hovering over a
+  roof shoved the car sideways out of the footprint, flipped it on its side and pinned it there.
+  Walls now end at the roofline the game draws.
+
 ## 2026-10-23 11:40
 
 - Removed the Playa Blanca start (`?spawn=playa-blanca`). Old links with it fall back to the

@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { area, inside, type Building } from '../sim/buildings';
+import { area, inside, roofline, type Building } from '../sim/buildings';
 import type { TileObjects } from '../sim/objects';
 import type { Heightmap } from '../sim/terrain';
 import type { RoadView } from './road-view';
@@ -213,17 +213,10 @@ function frame(p: number[]) {
  * of the plan, the rest a roof terrace; and roofs carry a chimney or a little stair room.
  */
 function buildingGeometry(b: Building, terrain: Heightmap, e: number, bay: number): { walls: THREE.BufferGeometry; roof: THREE.BufferGeometry } {
-  const p = b.pts, n = p.length / 2;
-  let low = Infinity, high = -Infinity;
-  for (let i = 0; i < n; i++) {
-    const z = terrain.heightAt(p[2 * i], p[2 * i + 1]);
-    low = Math.min(low, z);
-    high = Math.max(high, z);
-  }
+  const p = b.pts;
+  // Measured from the low side, so a house on a slope doesn't gain a storey.
+  const { low, high, top } = roofline(b, (x, y) => terrain.heightAt(x, y));
   const base = low - 0.5;
-  // Measured from the low side, so a house on a slope doesn't gain a storey; at least a door's
-  // height stands clear on the high side.
-  const top = Math.max(low + b.height, high + 2.6);
   const w = mesh(), r = mesh();
   const house = b.height > HOUSE_MIN && b.height < HOUSE_MAX;
   const rows = Math.max(1, Math.round((b.height - 0.6) / BAY_H));

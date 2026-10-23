@@ -63,8 +63,8 @@ the shell on a 22 cm lift kit above where the physics puts it, so the wheels and
   bottomed landing, the roof). The friction is capped at what would stop the corner's slide in one
   sub-step, which keeps it stable at rest.
 
-- **Walls.** Eight points round the body's waist are pushed back out of any building footprint
-  they enter, along the nearest wall's outward normal. The push is stiff (1 MN/m) and close to
+- **Walls.** Eight points round the body's waist are pushed back out of any building they enter
+  below its roofline, along the nearest wall's outward normal. The push is stiff (1 MN/m) and close to
   critically damped (40 kN·s/m), so a crash stops the car without bouncing it back, and the rub
   along the wall is capped like the ground friction.
 
@@ -207,7 +207,10 @@ track ×0.72 and 0.03, anywhere else (picón, lava, sand) ×0.62 and 0.06.
   lamps and posts are instanced, so a town costs a handful of draw calls. A tile is dressed once
   it is within 4.5 km (about 20 ms for Arrecife's busiest tile) and freed with its heights.
 - **Collisions.** `BuildingIndex` buckets the loaded tiles' footprints in a 25 m grid, and
-  `env.wall` asks it for the way out. Lamps and posts aren't solid.
+  `env.wall` asks it for the way out. Each building's roofline (`roofline`, the same one the
+  renderer draws) is set once its tile's ground loads, and above it there is no wall, so a car
+  flying over a roof isn't shoved sideways. Roofs aren't solid to land on, and lamps and posts
+  aren't solid.
 
 ## Terrain loading (`src/game/site.ts`, `terrain-view.ts`)
 

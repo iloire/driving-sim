@@ -61,7 +61,7 @@ const POSTED: RoadKind[] = ['highway', 'primary', 'secondary', 'tertiary'];
 export function placeFurniture(roads: Road[], buildings: BuildingIndex): Pick<TileObjects, 'lamps' | 'posts'> {
   const index = new RoadIndex(roads);
   const clear = (x: number, y: number) => {
-    if (buildings.wall(x, y)) return false;
+    if (buildings.wall(x, y, 0)) return false;
     const hit = index.nearest(x, y, 10);
     return !hit || hit.dist > ROAD_WIDTH[hit.road.kind] / 2 + 0.4;
   };

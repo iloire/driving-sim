@@ -5,7 +5,7 @@
 // tiles around a point.
 
 import proj4 from 'proj4';
-import { BuildingIndex } from '../sim/buildings';
+import { BuildingIndex, roofline } from '../sim/buildings';
 import { parseObjects, type TileObjects, type TileObjectsFile } from '../sim/objects';
 import { isPaved, parseRoads, RoadIndex, type RoadsFile } from '../sim/roads';
 import { Heightmap } from '../sim/terrain';
@@ -105,6 +105,7 @@ export async function loadSite(id: string): Promise<Site> {
       ]).then(([buf, objects]) => {
         terrain.addDetail(tileM, t.col, t.row, Heightmap.fromInt16(buf, index.size, tileM, unitM, t.col * tileM, t.row * tileM));
         t.objects = parseObjects(objects);
+        for (const b of t.objects.buildings) b.top = roofline(b, (x, y) => terrain.heightAt(x, y)).top;
         buildings.add(`${t.col}_${t.row}`, t.objects.buildings);
       }).finally(() => pending.delete(t));
       pending.set(t, p);

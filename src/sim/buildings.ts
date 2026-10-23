@@ -7,6 +7,22 @@ export interface Building {
   pts: number[];
   /** Height above the ground (m). */
   height: number;
+  /** World height of the roofline, once the ground under it has loaded (see `roofline`); unset, the walls are endless. */
+  top?: number;
+}
+
+/**
+ * Where a building stands in the world: the lowest and highest ground under its corners, and its
+ * roofline, its height above the low side but at least a door's height clear of the high side.
+ */
+export function roofline(b: Building, heightAt: (x: number, y: number) => number): { low: number; high: number; top: number } {
+  let low = Infinity, high = -Infinity;
+  for (let i = 0; i < b.pts.length; i += 2) {
+    const z = heightAt(b.pts[i], b.pts[i + 1]);
+    low = Math.min(low, z);
+    high = Math.max(high, z);
+  }
+  return { low, high, top: Math.max(low + b.height, high + 2.6) };
 }
 
 /** Where a point is inside a footprint: the outward wall normal and how deep it is. */
@@ -79,12 +95,12 @@ export class BuildingIndex {
     }
   }
 
-  /** The way out of whatever footprint contains (x, y), or null in the open. */
-  wall(x: number, y: number): WallHit | null {
+  /** The way out of whatever building (x, y, z) is in, or null in the open or above the roofs. */
+  wall(x: number, y: number, z: number): WallHit | null {
     const C = BuildingIndex.CELL;
     const list = this.cells.get(Math.floor(y / C) * 100000 + Math.floor(x / C));
     if (!list) return null;
-    for (const b of list) if (inside(b.pts, x, y)) return wayOut(b.pts, x, y);
+    for (const b of list) if (!(z > (b.top ?? Infinity)) && inside(b.pts, x, y)) return wayOut(b.pts, x, y);
     return null;
   }
 

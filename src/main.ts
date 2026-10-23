@@ -143,7 +143,7 @@ async function boot(): Promise<void> {
       const road = onRoad(site.roads, x, y, 0.75);
       return !road ? OFFROAD : isPaved(road.kind) ? TARMAC : GRAVEL;
     },
-    wall: (x, y) => site.buildings.wall(x, y),
+    wall: (x, y, z) => site.buildings.wall(x, y, z),
   };
 
   let spawn: Spawn = site.spawns.find((s) => s.spec.id === query.get('spawn')) ?? site.spawns[0];
