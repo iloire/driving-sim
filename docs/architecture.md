@@ -305,7 +305,7 @@ line runs under it, and the status line follows the boot (terrain, photo, a road
   and it swaps in whenever you turn onto a different road.
 - **Speed and revs.** A segmented rev strip with the redline in rust.
 - **The map.** Heading-up and redrawn at 15 Hz: the site photo under the road vectors, zooming out
-  with speed.
+  with speed (to Jet speeds, so the rim stays about 12 s of travel ahead) and with height.
 
 The palette is black picón, lime-wash white, Manrique's shutter green and Timanfaya rust.
 

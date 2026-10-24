@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-24 15:58
+
+- The minimap keeps zooming out at Jet speeds. The speed zoom used to stop at 160 km/h, so at
+  900 km/h low down the rim was barely 3 s away; it now keeps widening to Mach 1.3, holding the rim
+  about 12 s of travel ahead. Road driving zooms exactly as before.
+
 ## 2026-10-24 14:52
 
 - The Jet's airbrake shows. A panel on the spine behind the canopy swings up over half a second

@@ -43,6 +43,14 @@ export function splitRoadName(name: string): [string, string] {
   return ['', name];
 }
 
+/**
+ * Map metres per pixel: wider with speed, so the rim stays about 12 s of travel ahead (on the road
+ * and in a Jet at Mach 1.2 alike), and much wider with height.
+ */
+export function mapScale(speedKmh: number, flying: boolean, agl: number): number {
+  return 2.5 + Math.min(Math.abs(speedKmh), 1600) * 0.035 + (flying ? Math.min(Math.max(agl, 0), 1500) * 0.02 : 0);
+}
+
 export class Hud {
   private readonly el = {
     cluster: document.getElementById('cluster')!,
@@ -171,8 +179,7 @@ export class Hud {
   /** Heading-up: the car at the centre pointing up, the view widening with speed. */
   private drawMap(f: HudFrame): void {
     const g = this.g, r = MAP_PX / 2, e = this.extent;
-    // Wider with speed, and much wider with height.
-    const mPerPx = 2.5 + Math.min(Math.abs(f.speedKmh), 160) * 0.035 + (f.flying ? Math.min(Math.max(f.agl, 0), 1500) * 0.02 : 0);
+    const mPerPx = mapScale(f.speedKmh, f.flying, f.agl);
     const reach = r * mPerPx * 1.45;
     g.save();
     g.clearRect(0, 0, MAP_PX, MAP_PX);
