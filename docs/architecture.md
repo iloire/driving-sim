@@ -167,7 +167,8 @@ hands-off tests.
 ### The Jet
 
 `JET` is the same rigid body on the same wheels, with a fighter's `WingSpec`: 9 t, 28 m² of
-cropped delta (CL = 0.05 + 3.6α, stall at 24°), drag 0.018 + 0.12 CL², 52 kN dry and 38 kN more on
+cropped delta (CL = 0.05 + 3.6α, stall at 24°), drag 0.022 + 0.12 CL² (the body's own `cdA` is
+only 0.1 m², since the wing's 0.022 already counts the airframe), 52 kN dry and 45 kN more on
 the afterburner. Two additions make it a fighter rather than a fast light plane:
 
 - **Fly-by-wire** (`WingSpec.fbw`, `flyByWire()`). The bare surfaces get stronger with V², so at
@@ -178,12 +179,18 @@ the afterburner. Two additions make it a fighter rather than a fast light plane:
   pitch-rate target is capped at the g the wing can reach, so a slow pull doesn't overshoot the cap.
   Deflections clamp at full travel, so below about 150 m/s it runs out of authority as the bare wing would.
   The rudder's travel shrinks with (120 / V)².
-- **Transonic drag** (`WingSpec.mach`): past Mach 0.85, CD grows by 3 (M − 0.85)².
+- **Wave drag** (`WingSpec.mach`, `waveDrag()`): from Mach 0.85, CD climbs as the square to a
+  0.015 hump at Mach 1.05, then eases off towards 0.005 past it. Full dry thrust can't push through
+  the hump. The afterburner beats it by a few kN, so the run to Mach 1 is slow and dramatic, and once
+  through, the falling drag lets it run on to Mach 1.2.
 - **Airbrake** (`WingSpec.airbrake`, Space): adds 0.08 to CD while it's out. At idle from 830 km/h it
   sheds about 260 km/h in 10 s where the clean jet sheds 90.
 
-It cruises at about 820 km/h, does about 1,070 km/h dry and about 1,140 km/h on the afterburner (Mach
-0.93), pulls 9 g above about 180 m/s and mushes downwards below about 60 m/s. `src/sim/jet.test.ts`
+It cruises at about 920 km/h, does Mach 0.94 dry, and on the afterburner passes Mach 1 about 18 s
+from cruise and tops out at Mach 1.2 (about 1,470 km/h). It pulls 9 g above about 180 m/s and mushes downwards below about 60 m/s.
+Crossing Mach 1 plays a sonic boom (`CarAudio.boom`, the N-wave's two cracks 0.11 s apart) and says
+so; it re-arms below Mach 0.97. The model wraps a vapour cone round the fuselage between about
+Mach 0.95 and 1.03, thickest at 0.99 and flickering as the shock moves. `src/sim/jet.test.ts`
 pins those, as well as an equal roll rate at 250 and 300 m/s, no stall even at full pull at 80 m/s, and the airbrake. Taking
 out the fly-by-wire fails eight of them.
 

@@ -1,7 +1,8 @@
 // The Jet's look: an original single-seat delta in two-tone grey. A long fuselage with a pointed
 // nose and a bubble canopy, a cropped delta wing, small tailplanes, twin fins canted outwards, and
 // one round nozzle whose flame grows with the throttle and turns blue-white on the afterburner.
-// The landing gear only shows when it is slow enough to need it.
+// The landing gear only shows when it is slow enough to need it. Around Mach 1 a vapour cone
+// wraps the fuselage from the canopy back, thickest right at the sound barrier.
 // Built in the sim's body frame turned into three.js axes: forward +X, up +Y, left −Z, origin at
 // the centre of mass.
 
@@ -12,6 +13,29 @@ import { slab } from './shapes';
 
 /** Below this airspeed (m/s) the gear is down. */
 const GEAR_DOWN = 110;
+const SPEED_OF_SOUND = 340;
+/** The vapour cone: Mach number where it's thickest, and how far either side it fades out. */
+const VAPOUR = { mach: 0.99, width: 0.035 };
+
+/**
+ * A cone of condensation, apex at the canopy opening back over the wings: clear at the tip, densest
+ * a third of the way back, feathered at the rim (alpha in the vertex colours).
+ */
+function vapourCone(): THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial> {
+  const length = 7, radius = 4.2;
+  const g = new THREE.CylinderGeometry(radius, 0.4, length, 40, 12, true).rotateZ(Math.PI / 2);
+  const pos = g.getAttribute('position');
+  const colours = new Float32Array(pos.count * 4);
+  for (let i = 0; i < pos.count; i++) {
+    const t = 0.5 - pos.getX(i) / length; // 0 at the apex (front), 1 at the rim
+    colours.set([1, 1, 1, Math.sin(Math.PI * Math.min(t * 1.5, 1)) * (1 - t * 0.6)], i * 4);
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(colours, 4));
+  const m = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false });
+  const cone = new THREE.Mesh(g, m);
+  cone.position.set(2.5 - length / 2, 0.1, 0);
+  return cone;
+}
 
 /** A flat plan-form (x forward, `y` out along the span) laid in the wing plane, span towards +Z (right) or −Z (left). */
 function planform(points: [number, number][], thickness: number, side: 1 | -1): THREE.BufferGeometry {
@@ -58,7 +82,8 @@ export function createJetModel(spec: CarSpec): CarModel {
   const flame = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1, 16).rotateZ(Math.PI / 2).translate(-0.5, 0, 0), flameMat);
   flame.position.set(-7.9, 0.05, 0);
   for (const m of [fuselage, canopy, intakes]) group.add(m);
-  group.add(nozzle, flame);
+  const vapour = vapourCone();
+  group.add(nozzle, flame, vapour);
 
   // Landing gear: a leg and a wheel at each of the sim's wheel mounts.
   const gear = new THREE.Group();
@@ -74,7 +99,7 @@ export function createJetModel(spec: CarSpec): CarModel {
   }
   gear.add(legs);
   group.add(gear);
-  group.traverse((o) => { if (o instanceof THREE.Mesh && o !== flame) o.castShadow = true; });
+  group.traverse((o) => { if (o instanceof THREE.Mesh && o !== flame && o !== vapour) o.castShadow = true; });
 
   const ORANGE = new THREE.Color(0xffa040), BLUE = new THREE.Color(0x9fd4ff);
   const q = new THREE.Quaternion();
@@ -103,6 +128,12 @@ export function createJetModel(spec: CarSpec): CarModel {
       flame.visible = burn > 0.05;
       flame.scale.set(0.8 + burn * (2.2 + Math.random() * 0.5), 0.7 + burn * 0.3, 0.7 + burn * 0.3);
       flameMat.color.copy(ORANGE).lerp(BLUE, after * 0.7);
+
+      // The cone flickers as the shock shifts.
+      const near = Math.exp(-(((s.airspeed / SPEED_OF_SOUND - VAPOUR.mach) / VAPOUR.width) ** 2));
+      vapour.visible = near > 0.02;
+      vapour.material.opacity = near * (0.55 + Math.random() * 0.2);
+      vapour.scale.set(1, 0.95 + Math.random() * 0.1, 0.95 + Math.random() * 0.1);
     },
   };
 }

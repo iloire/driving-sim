@@ -39,14 +39,18 @@ function gauge(s: CarState): () => number {
 }
 
 describe('the jet', () => {
-  it('cruises near 850 km/h and tops out past 1,100 km/h on the afterburner, held off Mach 1', () => {
-    const cruise = airborne(200), burner = airborne(200);
+  it('cruises near 900 km/h; full dry thrust stops under the sound barrier, the afterburner breaks it', () => {
+    const cruise = airborne(200), dry = airborne(200), burner = airborne(230);
     fly(cruise, controls(), 120);
-    fly(burner, controls(0, 0, 1, true), 120);
-    expect(cruise.airspeed * 3.6).toBeGreaterThan(750);
-    expect(cruise.airspeed * 3.6).toBeLessThan(950);
-    expect(burner.airspeed * 3.6).toBeGreaterThan(1050);
-    expect(burner.airspeed).toBeLessThan(340);
+    fly(dry, controls(0, 0, 1), 120);
+    let mach1 = Infinity;
+    fly(burner, controls(0, 0, 1, true), 90, () => { if (burner.airspeed > 340) mach1 = Math.min(mach1, burner.airspeed); });
+    expect(cruise.airspeed * 3.6).toBeGreaterThan(800);
+    expect(cruise.airspeed * 3.6).toBeLessThan(1000);
+    expect(dry.airspeed / 340).toBeGreaterThan(0.9);
+    expect(dry.airspeed / 340).toBeLessThan(0.97);
+    expect(mach1).toBeLessThan(Infinity);
+    expect(burner.airspeed / 340).toBeGreaterThan(1.15);
   });
 
   it('flies hands-off: holds its height within a gentle climb', () => {

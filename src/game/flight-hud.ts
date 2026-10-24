@@ -149,8 +149,8 @@ export class FlightHud {
   /** One ladder rung: solid above the horizon, dashed below, its tips pointing at the horizon. */
   private rung(deg: number, dir: THREE.Vector3, above: THREE.Vector3, right: THREE.Vector3): void {
     const f = this.frame(dir, above, right);
-    // Clear of the heading tape along the bottom.
-    if (!f || f.p[1] > this.h - 120) return;
+    // Clear of the road plate at the top and the heading tape along the bottom.
+    if (!f || f.p[1] < 70 || f.p[1] > this.h - 120) return;
     const c = this.ctx;
     const { p, u, n } = f;
     const horizon = deg === 0;

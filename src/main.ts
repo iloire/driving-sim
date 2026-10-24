@@ -186,6 +186,8 @@ async function boot(): Promise<void> {
   let detailTimer = 0;
   let helpFolded = false;
   let stallWarned = false;
+  /** Past Mach 1; it re-arms the boom once back under Mach 0.97. */
+  let supersonic = false;
   let crashing = false;
 
   /** Puts the car on the road at (x, y) facing `heading`, once the 5 m ground there has loaded. */
@@ -467,6 +469,14 @@ async function boot(): Promise<void> {
       const isStalled = !!spec.wings && car.wings > 0.5 && agl > 5 && car.airspeed > 5 && stalled(spec.wings, car.alpha);
       if (isStalled && !stallWarned) hud.say('STALL — push the nose down', 2);
       stallWarned = isStalled;
+      // Through the sound barrier: the boom, once a crossing.
+      const mach = car.airspeed / SPEED_OF_SOUND;
+      if (isJet(spec) && !supersonic && mach > 1) {
+        audio.boom();
+        hud.say('Mach 1 — supersonic', 2);
+        track('supersonic');
+      }
+      supersonic = mach > 1 || (supersonic && mach > 0.97);
       // The jet into the ground or a building: back up in the sky where it went down.
       if (isJet(spec) && !crashing) {
         const low = agl < spec.cgHeight + 0.6;

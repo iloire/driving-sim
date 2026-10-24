@@ -5,7 +5,8 @@
 // pushes along the nose. All of it scales with how far the wings are out, so a half-unfolded
 // wing half-flies. A fighter adds fly-by-wire on top (`flyByWire`): the stick asks for g and a roll
 // rate, and the computer moves the surfaces to get them, inside an angle-of-attack limit, so the
-// jet handles the same at 300 m/s as at 100. Near the speed of sound the drag climbs steeply. An
+// jet handles the same at 300 m/s as at 100. Near the speed of sound wave drag climbs to a hump
+// just past Mach 1 that the dry jet can't push through and the afterburner can. An
 // airbrake, where fitted, adds drag while it's out.
 // Body frame as in car.ts: X forward, Y left, Z up.
 
@@ -66,8 +67,8 @@ export interface WingSpec {
   unfoldRate: number;
   /** A fighter's flight computer, if it has one. */
   fbw?: FlyByWire;
-  /** Transonic drag rise: past Mach `crit`, the drag coefficient grows by `rise` × (M − crit)². */
-  mach?: { crit: number; rise: number };
+  /** Transonic wave drag (`waveDrag`): from Mach `crit` up to `peak` just past Mach 1, then down to `plateau`. */
+  mach?: { crit: number; peak: number; plateau: number };
   /** Drag coefficient the airbrake adds while it's out. */
   airbrake?: number;
 }
@@ -144,8 +145,8 @@ export function aero(w: WingSpec, q: Quat, vel: V3, omega: V3, c: FlightControls
   const qbar = 0.5 * RHO * V * V;
   const S = w.area * out;
   const cl = liftCoefficient(w, alpha);
-  const over = w.mach ? Math.max(V / SPEED_OF_SOUND - w.mach.crit, 0) : 0;
-  const cd = w.cd0 + w.cdInduced * cl * cl + (w.mach?.rise ?? 0) * over * over + (c.airbrake ? w.airbrake ?? 0 : 0);
+  const wave = w.mach ? waveDrag(w.mach, V / SPEED_OF_SOUND) : 0;
+  const cd = w.cd0 + w.cdInduced * cl * cl + wave + (c.airbrake ? w.airbrake ?? 0 : 0);
   const along = scale(vel, 1 / V);
   const left = rotate(q, [0, 1, 0]);
   const liftDir = normalize(cross(along, left));
@@ -165,6 +166,20 @@ export function aero(w: WingSpec, q: Quat, vel: V3, omega: V3, c: FlightControls
   // Yaw about +Z is to the left: sideslip from the left turns it left, right rudder turns it right.
   tb[2] = qbar * S * w.span * (w.cnBeta * beta - w.cnRudder * c.yaw - w.cnDamping * wb[2] * w.span * damp);
   return { force, torque: rotate(q, tb), alpha, airspeed: V };
+}
+
+/** Mach number where the wave drag peaks, and how fast it eases off beyond. */
+const WAVE_PEAK = 1.05;
+const WAVE_FALL = 0.15;
+
+/**
+ * Wave drag coefficient at Mach `M`: nothing below `crit`, then climbing as the square to `peak`
+ * at Mach 1.05 (the sound barrier), then falling away towards `plateau` as the shock settles.
+ */
+export function waveDrag(m: NonNullable<WingSpec['mach']>, M: number): number {
+  if (M <= m.crit) return 0;
+  if (M <= WAVE_PEAK) return m.peak * ((M - m.crit) / (WAVE_PEAK - m.crit)) ** 2;
+  return m.plateau + (m.peak - m.plateau) * Math.exp(-(M - WAVE_PEAK) / WAVE_FALL);
 }
 
 const clamp1 = (v: number) => Math.min(Math.max(v, -1), 1);

@@ -44,9 +44,9 @@ A shared link skips the menu and puts you straight into the moment someone share
   on picón and gravel.
 - **A Jet** (Settings → Vehicle, or `?car=jet`): an original grey delta fighter that starts 600 m up and
   only flies. Fly-by-wire turns the stick into g (S pulls up to 9 g) and a roll rate (A/D), so it
-  handles the same at any speed. Shift and Ctrl work a throttle lever; hold Shift at full and the afterburner
-  takes it to about 1,140 km/h, Mach 0.93, and puts the island's whole length (about 60 km) under
-  four minutes away. Space puts out the airbrake. A fighter HUD (flight path marker, pitch ladder,
+  handles the same at any speed. Shift and Ctrl work a throttle lever. Dry, it tops out just under the sound barrier. Hold Shift at full and the
+  afterburner pushes it through, with a vapour cone and a boom, on to about 1,470 km/h (Mach 1.2), which puts the
+  island's whole length (about 60 km) under three minutes away. Space puts out the airbrake. A fighter HUD (flight path marker, pitch ladder,
   heading tape, g, PULL UP) draws over the view on wings.
 - **A car that is a rigid body**: four raycast struts, tyres with a slip-angle curve and a friction
   circle, a torque curve and an automatic six-speed. Weight transfer, power oversteer, handbrake

@@ -169,6 +169,45 @@ export class CarAudio {
     squeak.stop(t + 0.2);
   }
 
+  /**
+   * A sonic boom: the N-wave's two cracks a tenth of a second apart, each a low thump of noise
+   * with a falling sine under it, and a long rumble after.
+   */
+  boom(): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.master) return;
+    const t = ctx.currentTime;
+    const n = Math.floor(ctx.sampleRate * 1.6);
+    const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    const second = Math.floor(ctx.sampleRate * 0.11);
+    for (let i = 0; i < n; i++) {
+      const crack = Math.exp(-i / (ctx.sampleRate * 0.02)) + (i >= second ? Math.exp(-(i - second) / (ctx.sampleRate * 0.02)) : 0);
+      d[i] = (Math.random() * 2 - 1) * (crack + 0.25 * Math.exp(-i / (ctx.sampleRate * 0.5)));
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const low = ctx.createBiquadFilter();
+    low.type = 'lowpass';
+    low.frequency.value = 380;
+    const g = ctx.createGain();
+    g.gain.value = 1.6;
+    src.connect(low).connect(g).connect(this.master);
+    src.start(t);
+
+    for (const at of [0, 0.11]) {
+      const thump = ctx.createOscillator();
+      thump.frequency.setValueAtTime(70, t + at);
+      thump.frequency.exponentialRampToValueAtTime(28, t + at + 0.25);
+      const tg = ctx.createGain();
+      tg.gain.setValueAtTime(0.9, t + at);
+      tg.gain.exponentialRampToValueAtTime(0.001, t + at + 0.3);
+      thump.connect(tg).connect(this.master);
+      thump.start(t + at);
+      thump.stop(t + at + 0.32);
+    }
+  }
+
   setMuted(muted: boolean): void {
     this.muted = muted;
     if (this.master && this.ctx) this.master.gain.setTargetAtTime(muted ? 0 : 0.5, this.ctx.currentTime, 0.05);

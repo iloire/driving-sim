@@ -172,8 +172,9 @@ export const ROADSTER: CarSpec = {
 };
 
 /**
- * A single-seat fighter: 9 t, a 28 m² swept wing, 52 kN dry and 90 kN on the afterburner. It
- * cruises near 820 km/h, tops out near 1,140 km/h where the transonic drag stops it, pulls
+ * A single-seat fighter: 9 t, a 28 m² swept wing, 52 kN dry and 97 kN on the afterburner. It
+ * cruises near 920 km/h and tops out at Mach 0.94 dry, where the wave drag stops it. The
+ * afterburner pushes it through the sound barrier in under 20 s and on to Mach 1.2. It pulls
  * 9 g and stalls under about 220 km/h. Fly-by-wire flies it; it never drives, and only lands on its
  * wheels if you put it down gently.
  */
@@ -198,21 +199,21 @@ export const JET: CarSpec = {
   driveFront: 0,
   brakeForce: 60000,
   brakeFront: 0.2,
-  cdA: 0.4,
+  cdA: 0.1,
   nitro: 0,
   body: [7.5, 7.5, 1.0, 1.1, 1.4],
   wings: {
     area: 28, span: 9.8, chord: 3.2,
     cl0: 0.05, clAlpha: 3.6, stall: 0.42,
-    cd0: 0.018, cdInduced: 0.12, sideArea: 12,
+    cd0: 0.022, cdInduced: 0.12, sideArea: 12,
     cmAlpha: 0.5, cm0: 0, cmElevator: 0.3, cmDamping: 10,
     clAileron: 0.06, clDamping: 0.45,
     cnBeta: 0.1, cnRudder: 0.03, cnDamping: 0.25,
-    thrust: 52000, afterburner: 38000,
+    thrust: 52000, afterburner: 45000,
     inertia: [0, 0, 0],
     unfoldRate: 10,
     fbw: { gMax: 9, gMin: -3, alphaMax: 0.38, rollRate: 4.5, kAlpha: 3, kPitch: 0.5, kRoll: 0.4, rudderFade: 120 },
-    mach: { crit: 0.85, rise: 3 },
+    mach: { crit: 0.85, peak: 0.015, plateau: 0.005 },
     airbrake: 0.08,
   },
 };

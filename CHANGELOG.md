@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-24 14:42
+
+- The Jet goes supersonic. Wave drag now builds to a hump just past Mach 1 and eases off beyond it,
+  where before it climbed forever and held the Jet at Mach 0.93. Dry it stops just under the
+  barrier. On the afterburner (now 45 kN) it pushes through in about 18 s from cruise and runs on to
+  Mach 1.2, about 1,470 km/h. A vapour cone wraps the fuselage around Mach 1, and crossing it
+  plays a double-crack sonic boom. The body's drag was being counted twice on top of the wing's,
+  and is now smaller; cruise moves from about 830 to 920 km/h.
+
 ## 2026-10-24 14:32
 
 - A fighter HUD on wings. A flight path marker shows where the plane is actually going, and a pitch
