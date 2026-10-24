@@ -2,6 +2,8 @@
 // place, a vehicle and the time of day, then drive. M or Esc on the road brings it back with
 // Resume. ← → change place, Enter drives. A shared link skips it and starts where it was shared.
 
+import { t, type Key, type Lang } from './i18n';
+
 export interface WelcomeView {
   places: { id: string; name: string }[];
   place: string;
@@ -14,6 +16,8 @@ export interface WelcomeView {
   canResume: boolean;
   /** The Jet takes off from the sky rather than driving off. */
   flies: boolean;
+  lang: Lang;
+  langs: Lang[];
 }
 
 export interface WelcomeHandlers {
@@ -22,6 +26,7 @@ export interface WelcomeHandlers {
   time(name: string): void;
   drive(): void;
   resume(): void;
+  lang(l: Lang): void;
 }
 
 type Tab = 'help' | 'places';
@@ -46,8 +51,8 @@ export class Welcome {
 
   constructor(
     private readonly on: WelcomeHandlers,
-    /** The controls table, shared with the in-game help card. */
-    private readonly helpHtml: string,
+    /** The full list of controls, in the language of the moment. */
+    private readonly helpHtml: () => string,
   ) {
     this.root.id = 'welcome';
     this.root.hidden = true;
@@ -92,6 +97,7 @@ export class Welcome {
     else if (d.time) this.on.time(d.time);
     else if (d.drive !== undefined) this.on.drive();
     else if (d.resume !== undefined) this.on.resume();
+    else if (d.lang) this.on.lang(d.lang as Lang);
     else if (d.tab) {
       this.tab = d.tab as Tab;
       this.paint();
@@ -124,34 +130,36 @@ export class Welcome {
       `<button type="button" class="wl-chip" ${attr}="${esc(value)}" aria-pressed="${on}">${esc(label)}</button>`;
     this.root.innerHTML = `
       <div class="wl-main">
-        <p class="wl-kicker">Canary Islands · every road on the island</p>
+        <p class="wl-kicker">${esc(t('menu.kicker'))}</p>
         <h1 class="wl-title">Lanzarote <span>Drive</span></h1>
         <div class="wl-place">
-          <button type="button" class="wl-arrow" data-place-step="-1" aria-label="Previous place">‹</button>
+          <button type="button" class="wl-arrow" data-place-step="-1" aria-label="${esc(t('menu.prev'))}">‹</button>
           <h2>${esc(v.places[at]?.name ?? '')}</h2>
-          <button type="button" class="wl-arrow" data-place-step="1" aria-label="Next place">›</button>
+          <button type="button" class="wl-arrow" data-place-step="1" aria-label="${esc(t('menu.next'))}">›</button>
           <span class="wl-count">${at + 1} / ${v.places.length}</span>
         </div>
         <div class="wl-row" role="group" aria-label="Vehicle">
-          <span class="wl-label">Ride</span>
+          <span class="wl-label">${esc(t('menu.ride'))}</span>
           ${v.vehicles.map((x) => chip('data-vehicle', x.id, x.name, x.id === v.vehicle)).join('')}
           <span class="wl-line">${esc(vehicle?.line ?? '')}</span>
         </div>
         <div class="wl-row" role="group" aria-label="Time of day">
-          <span class="wl-label">Sun</span>
-          ${v.times.map((t) => chip('data-time', t, t, t === v.time)).join('')}
+          <span class="wl-label">${esc(t('menu.sun'))}</span>
+          ${v.times.map((x) => chip('data-time', x, t(`time.${x}` as Key), x === v.time)).join('')}
         </div>
         <div class="wl-go">
-          ${v.canResume ? '<button type="button" class="wl-btn primary" data-resume>Resume<small>carry on where you were</small></button>' : ''}
-          <button type="button" class="wl-btn ${v.canResume ? '' : 'primary'}" data-drive>${v.flies ? 'Fly' : 'Drive'} →<small>${v.canResume ? 'start again from here' : v.flies ? '600 m over this place' : 'from this place'}</small></button>
+          ${v.canResume ? `<button type="button" class="wl-btn primary" data-resume>${esc(t('menu.resume'))}<small>${esc(t('menu.resume.note'))}</small></button>` : ''}
+          <button type="button" class="wl-btn ${v.canResume ? '' : 'primary'}" data-drive>${esc(t(v.flies ? 'menu.fly' : 'menu.drive'))} →<small>${esc(t(v.canResume ? 'menu.again' : v.flies ? 'menu.from.air' : 'menu.from.here'))}</small></button>
         </div>
       </div>
       <aside class="wl-side">
         <nav role="tablist">
-          <button type="button" role="tab" data-tab="help" aria-selected="${this.tab === 'help'}">Controls</button>
-          <button type="button" role="tab" data-tab="places" aria-selected="${this.tab === 'places'}">Places</button>
+          <button type="button" role="tab" data-tab="help" aria-selected="${this.tab === 'help'}">${esc(t('menu.controls'))}</button>
+          <button type="button" role="tab" data-tab="places" aria-selected="${this.tab === 'places'}">${esc(t('menu.places'))}</button>
+          <span class="wl-lang" role="group" aria-label="Language / Idioma">${v.langs.map((l) =>
+            `<button type="button" data-lang="${l}" aria-pressed="${l === v.lang}">${l.toUpperCase()}</button>`).join('')}</span>
         </nav>
-        <div class="wl-tab">${this.tab === 'help' ? `<div class="wl-help">${this.helpHtml}</div>` : this.places(v)}</div>
+        <div class="wl-tab">${this.tab === 'help' ? `<div class="wl-help">${this.helpHtml()}</div>` : this.places(v)}</div>
       </aside>`;
     if (focused) this.root.querySelector<HTMLButtonElement>(focused)?.focus();
   }

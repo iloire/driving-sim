@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-24 15:12
+
+- English and Spanish. The browser's language picks one on a first visit; EN / ES at the end of
+  the menu's tab bar (or Settings → Language) switches everything on screen at once and is
+  remembered. The menu, the controls, the messages, the road plate and the settings are
+  translated; the flight HUD's AB, BRAKE, PULL UP and g stay English, as in a real cockpit. The
+  words live in `src/game/i18n.ts`: the compiler refuses a Spanish dictionary missing a key, and a
+  test checks both say the same placeholders and that no control label is too long to fit.
+
 ## 2026-10-24 15:05
 
 - The controls card shows only the keys for what you're in: Driving, Hovering, On wings or Jet,

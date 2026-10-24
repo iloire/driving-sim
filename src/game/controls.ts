@@ -1,80 +1,68 @@
 // The controls, written once: the in-game card shows only the keys for what you're doing now
 // (driving, hovering, on wings, the Jet) and a line of the keys that work everywhere; the menu's
-// Controls tab shows them all, with the longer notes.
+// Controls tab shows them all, with the longer notes. The words are in i18n.ts.
+
+import { t, type Key } from './i18n';
 
 export type Mode = 'drive' | 'hover' | 'wings' | 'jet';
 
 export interface Row {
   keys: string[];
-  label: string;
+  label: Key;
   /** Said only in the menu's full list. */
-  more?: string;
+  more?: Key;
 }
 
 const THROTTLE: Row[] = [
-  { keys: ['Shift', 'Ctrl'], label: 'Throttle' },
-  { keys: ['1–4'], label: 'Idle · cruise · 80 % · full' },
-  { keys: ['Shift'], label: 'Afterburner', more: 'hold it with the throttle at full' },
+  { keys: ['Shift', 'Ctrl'], label: 'ctl.throttle' },
+  { keys: ['1–4'], label: 'ctl.presets' },
+  { keys: ['Shift'], label: 'ctl.afterburner', more: 'ctl.afterburner.more' },
 ];
 
-export const MODES: Record<Mode, { title: string; rows: Row[] }> = {
-  drive: {
-    title: 'Driving',
-    rows: [
-      { keys: ['W'], label: 'Accelerate' },
-      { keys: ['S'], label: 'Brake · reverse', more: 'reverses once stopped' },
-      { keys: ['A', 'D'], label: 'Steer' },
-      { keys: ['Space'], label: 'Handbrake' },
-      { keys: ['Shift'], label: 'Nitro' },
-      { keys: ['F'], label: 'Fly', more: 'the Roadster lights its thrusters, the 4×4 unfolds wings' },
-    ],
-  },
-  hover: {
-    title: 'Hovering',
-    rows: [
-      { keys: ['Space'], label: 'Climb' },
-      { keys: ['Ctrl'], label: 'Sink' },
-      { keys: ['W', 'S'], label: 'Tilt to fly' },
-      { keys: ['A', 'D'], label: 'Turn' },
-      { keys: ['Shift'], label: 'Boost' },
-      { keys: ['F'], label: 'Land' },
-    ],
-  },
-  wings: {
-    title: 'On wings',
-    rows: [
-      { keys: ['W', 'S'], label: 'Pitch', more: 'a tap nudges the stick, a hold pulls harder' },
-      { keys: ['A', 'D'], label: 'Roll' },
-      { keys: ['Q', 'E'], label: 'Rudder' },
-      ...THROTTLE,
-      { keys: ['F'], label: 'Fold the wings' },
-    ],
-  },
-  jet: {
-    title: 'Jet',
-    rows: [
-      { keys: ['W', 'S'], label: 'Pitch', more: 'up to 9 g — hold it too long and you black out' },
-      { keys: ['A', 'D'], label: 'Roll' },
-      { keys: ['Q', 'E'], label: 'Rudder' },
-      ...THROTTLE,
-      { keys: ['Space'], label: 'Airbrake' },
-    ],
-  },
+export const MODES: Record<Mode, Row[]> = {
+  drive: [
+    { keys: ['W'], label: 'ctl.accelerate' },
+    { keys: ['S'], label: 'ctl.brake', more: 'ctl.brake.more' },
+    { keys: ['A', 'D'], label: 'ctl.steer' },
+    { keys: ['Space'], label: 'ctl.handbrake' },
+    { keys: ['Shift'], label: 'ctl.nitro' },
+    { keys: ['F'], label: 'ctl.fly', more: 'ctl.fly.more' },
+  ],
+  hover: [
+    { keys: ['Space'], label: 'ctl.climb' },
+    { keys: ['Ctrl'], label: 'ctl.sink' },
+    { keys: ['W', 'S'], label: 'ctl.tilt' },
+    { keys: ['A', 'D'], label: 'ctl.turn' },
+    { keys: ['Shift'], label: 'ctl.boost' },
+    { keys: ['F'], label: 'ctl.land' },
+  ],
+  wings: [
+    { keys: ['W', 'S'], label: 'ctl.pitch', more: 'ctl.pitch.more' },
+    { keys: ['A', 'D'], label: 'ctl.roll' },
+    { keys: ['Q', 'E'], label: 'ctl.rudder' },
+    ...THROTTLE,
+    { keys: ['F'], label: 'ctl.fold' },
+  ],
+  jet: [
+    { keys: ['W', 'S'], label: 'ctl.pitch', more: 'ctl.pitch.jet.more' },
+    { keys: ['A', 'D'], label: 'ctl.roll' },
+    { keys: ['Q', 'E'], label: 'ctl.rudder' },
+    ...THROTTLE,
+    { keys: ['Space'], label: 'ctl.airbrake' },
+  ],
 };
 
 /** Keys that work whatever you're in. */
 export const GENERAL: Row[] = [
-  { keys: ['R'], label: 'Road', more: 'back on the nearest road' },
-  { keys: ['B'], label: 'Balloons', more: 'fly through them; chain pops for a combo' },
-  { keys: ['C'], label: 'Camera' },
-  { keys: ['G'], label: 'Map' },
-  { keys: ['V'], label: 'Mute' },
-  { keys: ['P'], label: 'Pause' },
-  { keys: ['M'], label: 'Menu', more: 'or Esc; N jumps to the next place' },
-  { keys: ['H'], label: 'Hide' },
+  { keys: ['R'], label: 'ctl.road', more: 'ctl.road.more' },
+  { keys: ['B'], label: 'ctl.balloons', more: 'ctl.balloons.more' },
+  { keys: ['C'], label: 'ctl.camera' },
+  { keys: ['G'], label: 'ctl.map' },
+  { keys: ['V'], label: 'ctl.mute' },
+  { keys: ['P'], label: 'ctl.pause' },
+  { keys: ['M'], label: 'ctl.menu', more: 'ctl.menu.more' },
+  { keys: ['H'], label: 'ctl.hide' },
 ];
-
-export const GAMEPAD = 'RT throttle · LT brake · stick steers · A handbrake · X fly · stick click turbo · Y camera';
 
 /** What the keys are doing right now. */
 export function modeOf(flying: boolean, thrusters: boolean, jet: boolean): Mode {
@@ -83,24 +71,27 @@ export function modeOf(flying: boolean, thrusters: boolean, jet: boolean): Mode 
   return thrusters ? 'hover' : 'wings';
 }
 
+export const modeName = (mode: Mode) => t(`mode.${mode}`);
+
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
 const keys = (r: Row) => r.keys.map((k) => `<kbd>${esc(k)}</kbd>`).join('');
 const table = (rows: Row[], full: boolean) => `<table>${rows.map((r) =>
-  `<tr><td>${keys(r)}</td><td>${esc(r.label)}${full && r.more ? `<small> — ${esc(r.more)}</small>` : ''}</td></tr>`).join('')}</table>`;
+  `<tr><td>${keys(r)}</td><td>${esc(t(r.label))}${full && r.more ? `<small> — ${esc(t(r.more))}</small>` : ''}</td></tr>`).join('')}</table>`;
 
 /** The in-game card: this mode's keys, then the general ones on a line, and the pad if one is plugged in. */
 export function cardHtml(mode: Mode, gamepad: boolean): string {
-  const general = GENERAL.filter((r) => r.keys[0] !== 'H').map((r) => `<span>${keys(r)} ${esc(r.label)}</span>`).join('');
-  return `${table(MODES[mode].rows, false)}<p class="help-general">${general}</p>${gamepad ? `<p>Gamepad: ${esc(GAMEPAD)}</p>` : ''}`;
+  const general = GENERAL.filter((r) => r.keys[0] !== 'H').map((r) => `<span>${keys(r)} ${esc(t(r.label))}</span>`).join('');
+  const pad = gamepad ? `<p>${esc(t('ctl.gamepad'))}: ${esc(t('ctl.gamepad.keys'))}</p>` : '';
+  return `${table(MODES[mode], false)}<p class="help-general">${general}</p>${pad}`;
 }
 
 /** The menu's full list: every mode, the general keys and the pad, with the notes. */
 export function referenceHtml(): string {
   const section = (title: string, rows: Row[]) => `<h3>${esc(title)}</h3>${table(rows, true)}`;
   return [
-    ...Object.values(MODES).map((m) => section(m.title, m.rows)),
-    section('Anywhere', GENERAL),
-    `<p>Arrow keys work as W A S D.</p><h3>Gamepad</h3><p>${esc(GAMEPAD)}</p>`,
+    ...(Object.keys(MODES) as Mode[]).map((m) => section(modeName(m), MODES[m])),
+    section(t('ctl.anywhere'), GENERAL),
+    `<p>${esc(t('ctl.arrows'))}</p><h3>${esc(t('ctl.gamepad'))}</h3><p>${esc(t('ctl.gamepad.keys'))}</p>`,
   ].join('');
 }
 

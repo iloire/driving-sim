@@ -3,6 +3,7 @@
 
 import type { Balloon } from '../sim/balloons';
 import { isPaved, type Road, type RoadKind } from '../sim/roads';
+import { t } from './i18n';
 
 const RPM_SEGMENTS = 24;
 /** The balloons' colours on the map, matching their envelopes. */
@@ -148,7 +149,7 @@ export class Hud {
     this.el.alt.hidden = !up;
     if (up) {
       const thrust = f.throttle === undefined ? '' : ` · ${f.boost ? 'AB' : `${Math.round(f.throttle * 100)}%`}${f.airbrake ? ' · BRAKE' : ''}`;
-      this.el.alt.textContent = `${Math.round(f.agl)} m up${f.mach === undefined ? '' : ` · M${f.mach.toFixed(2)}`}${thrust}`;
+      this.el.alt.textContent = `${Math.round(f.agl)} ${t('alt.up')}${f.mach === undefined ? '' : ` · M${f.mach.toFixed(2)}`}${thrust}`;
     }
     const lit = Math.round(f.rpmShare * RPM_SEGMENTS);
     this.segs.forEach((s, i) => s.classList.toggle('on', i < lit));
@@ -161,7 +162,7 @@ export class Hud {
       const [ref, name] = road ? splitRoadName(road.name) : ['', ''];
       this.el.plateRef.textContent = ref;
       this.el.plateRef.hidden = !ref;
-      this.el.plateName.textContent = key === 'air' ? 'In the air' : !road ? 'Off road' : name || (ref ? '' : road.kind === 'track' ? 'Dirt track' : 'Unnamed road');
+      this.el.plateName.textContent = key === 'air' ? t('plate.air') : !road ? t('plate.offroad') : name || (ref ? '' : t(road.kind === 'track' ? 'plate.track' : 'plate.unnamed'));
       this.el.plate.classList.toggle('off', !road || !isPaved(road.kind));
       // Replay the swap-in so a new road reads as an event.
       this.el.plate.classList.remove('swap');

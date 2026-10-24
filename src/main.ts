@@ -4,7 +4,8 @@ import * as THREE from 'three';
 import { CarAudio } from './game/audio';
 import { BalloonsView } from './game/balloons-view';
 import { CameraRig } from './game/camera';
-import { cardHtml, HelpFold, MODES, modeOf, referenceHtml, type Mode } from './game/controls';
+import { cardHtml, HelpFold, modeName, modeOf, referenceHtml, type Mode } from './game/controls';
+import { currentLang, LANGS, setLang, t, translatePage, type Lang } from './game/i18n';
 import { createCarModel, type CarModel } from './game/car-model';
 import { TileDresser } from './game/dress';
 import { Hud } from './game/hud';
@@ -35,19 +36,19 @@ const SITE = 'lanzarote';
 /** Solar time a drive starts at without ?time=: late afternoon, long shadows over the lava. */
 const DEFAULT_HOUR = 16.5;
 const TOUCH = matchMedia('(pointer: coarse)').matches;
-const KEY = TOUCH
-  ? { reset: 'RESET', pull: 'pull the right thumb down', climb: 'push the left thumb up to climb' }
-  : { reset: 'R', pull: 'S to pull up', climb: 'Space to climb, Ctrl to sink' };
+const KEY = () => TOUCH
+  ? { reset: t('touch.reset'), pull: t('hint.pull.touch'), climb: t('hint.climb.touch') }
+  : { reset: 'R', pull: t('hint.pull'), climb: t('hint.climb') };
 /** What to do first, in whatever it is. */
 const START_HINT = (spec: CarSpec) => isJet(spec)
-  ? (TOUCH ? 'right thumb to pull and roll, BOOST for the afterburner' : 'S to pull, A/D to roll, Shift / Ctrl throttle, Space airbrake')
-  : (TOUCH ? 'right thumb up to drive' : 'W to drive, A/D to steer');
+  ? t(TOUCH ? 'start.jet.touch' : 'start.jet')
+  : t(TOUCH ? 'start.car.touch' : 'start.car');
 
 /** The cars on offer: the default Roadster, which hovers on thrusters, the 4×4, which unfolds wings, and the Jet, which only flies. */
-const VEHICLES: Record<string, { name: string; line: string; spec: CarSpec; model: (spec: CarSpec) => CarModel }> = {
-  roadster: { name: 'Roadster', line: 'electric, 1,400 N·m · F lights the thrusters', spec: ROADSTER, model: createRoadsterModel },
-  '4x4': { name: 'Armoured 4×4', line: 'V8 on all-terrain tyres · F unfolds wings', spec: TRUCK, model: createCarModel },
-  jet: { name: 'Jet', line: 'delta fighter, 9 g · starts 600 m up', spec: JET, model: createJetModel },
+const VEHICLES: Record<string, { name: string; line: 'car.roadster' | 'car.4x4' | 'car.jet'; spec: CarSpec; model: (spec: CarSpec) => CarModel }> = {
+  roadster: { name: 'Roadster', line: 'car.roadster', spec: ROADSTER, model: createRoadsterModel },
+  '4x4': { name: 'Armoured 4×4', line: 'car.4x4', spec: TRUCK, model: createCarModel },
+  jet: { name: 'Jet', line: 'car.jet', spec: JET, model: createJetModel },
 };
 /** The Jet starts this high above the ground, already at cruise. */
 const JET_START = { agl: 600, speed: 230 };
@@ -115,9 +116,10 @@ function loading(text: string): void {
 
 async function boot(): Promise<void> {
   initAnalytics();
+  translatePage();
   const query = new URLSearchParams(location.search);
   const site = await loadSite(SITE);
-  loading('Painting the lava fields…');
+  loading(t('load.lava'));
   const terrain = site.terrain;
   const extent = terrain.extent;
 
@@ -142,7 +144,7 @@ async function boot(): Promise<void> {
     dress: (t, level) => dresser.dress(t, level),
   });
   scene.add(terrainView.group, createSurround(extent));
-  loading('Finding the car a road…');
+  loading(t('load.road'));
 
   // The balloon game is off until B (or the settings panel, or the phone's button) turns it on.
   const vehicleId = VEHICLES[query.get('car') ?? ''] ? query.get('car')! : 'roadster';
@@ -169,7 +171,7 @@ async function boot(): Promise<void> {
       field.fill(car.pos[0], car.pos[1]);
       lastPos.splice(0, 3, ...car.pos);
     }
-    hud.say(on ? 'Balloon game on — fly through them, chain them for a combo (B to stop)' : 'Balloon game off', 3);
+    hud.say(t(on ? 'say.balloons.on' : 'say.balloons.off'), 3);
   }
   const rig = new CameraRig(camera, canvas);
   const audio = new CarAudio();
@@ -263,7 +265,7 @@ async function boot(): Promise<void> {
     if (!hit) { await goTo(spawn); return; }
     const along = Math.cos(car.heading - hit.heading) >= 0 ? hit.heading : (hit.heading + Math.PI) % (2 * Math.PI);
     await place(hit.x, hit.y, along);
-    hud.say('Back on the road');
+    hud.say(t('say.road'));
   }
 
   // The welcome screen: the car holds still under it while the camera circles it.
@@ -291,7 +293,8 @@ async function boot(): Promise<void> {
       else leaveMenu();
     },
     resume: leaveMenu,
-  }, referenceHtml());
+    lang: (l) => relabel(l),
+  }, referenceHtml);
 
   /** From a drive the menu offers to carry on; at boot there is nothing to carry on. */
   function openMenu(fromDrive = true): void {
@@ -306,35 +309,35 @@ async function boot(): Promise<void> {
     welcome.close();
     rig.drive();
     track('start', { shared: false, spawn: spawn.spec.id, car: vehicleKey(), touch: TOUCH, resume: canResume });
-    if (!canResume) hud.say(`${spawn.spec.name} — ${START_HINT(spec)}`, 5);
+    if (!canResume) hud.say(t('say.start', { place: spawn.spec.name, hint: START_HINT(spec) }), 5);
   }
 
   function refreshMenu(): void {
-    const t = times();
+    const named = times();
     welcome.render({
       places: site.spawns.map((s) => ({ id: s.spec.id, name: s.spec.name })), place: spawn.spec.id,
-      vehicles: Object.entries(VEHICLES).map(([id, v]) => ({ id, name: v.name, line: v.line })), vehicle: vehicleKey(),
-      times: Object.keys(t), time: Object.keys(t).find((k) => Math.abs(t[k] - sky.hour) < 0.01) ?? '',
-      canResume, flies: isJet(spec),
+      vehicles: Object.entries(VEHICLES).map(([id, v]) => ({ id, name: v.name, line: t(v.line) })), vehicle: vehicleKey(),
+      times: Object.keys(named), time: Object.keys(named).find((k) => Math.abs(named[k] - sky.hour) < 0.01) ?? '',
+      canResume, flies: isJet(spec), lang: currentLang(), langs: LANGS,
     });
   }
 
   const actions: Record<Action, () => void> = {
     reset: () => { track('reset'); void recover(); },
-    camera: () => hud.say(`Camera: ${rig.next()}`, 1.5),
-    mute: () => { audio.setMuted(!audio.muted); hud.say(audio.muted ? 'Sound off' : 'Sound on', 1.5); },
-    pause: () => { setPaused(!paused); if (!paused) hud.say('Go', 1.5); },
+    camera: () => hud.say(t('say.camera', { name: t(`cam.${rig.next()}`) }), 1.5),
+    mute: () => { audio.setMuted(!audio.muted); hud.say(t(audio.muted ? 'say.sound.off' : 'say.sound.on'), 1.5); },
+    pause: () => { setPaused(!paused); if (!paused) hud.say(t('say.go'), 1.5); },
     help: () => helpFold.toggle(),
     menu: () => { if (!welcome.isOpen) openMenu(); else if (canResume) leaveMenu(); },
     next: () => void goTo(site.spawns[(site.spawns.indexOf(spawn) + 1) % site.spawns.length]),
     map: () => document.getElementById('minimap')!.classList.toggle('hidden'),
     balloons: () => setBalloons(!settings.balloons),
     transform: () => {
-      if (isJet(spec)) { hud.say('The jet only flies — Shift for the afterburner', 2); return; }
+      if (isJet(spec)) { hud.say(t('say.jet.only'), 2); return; }
       car.flying = !car.flying;
       track('fly', { on: car.flying, car: vehicleKey() });
-      if (spec.thrusters) hud.say(car.flying ? `Thrusters lit — ${KEY.climb}, W/S to tilt, A/D to turn` : 'Thrusters off — back to the road', 3);
-      else hud.say(car.flying ? `Wings out — the jet's on. Past 160 km/h, ${KEY.pull}` : 'Wings folded — back to a car', 3);
+      if (spec.thrusters) hud.say(car.flying ? t('say.thrusters.on', { climb: KEY().climb }) : t('say.thrusters.off'), 3);
+      else hud.say(car.flying ? t('say.wings.on', { pull: KEY().pull }) : t('say.wings.off'), 3);
     },
   };
   // Under the menu only M / Esc (back to the drive) and mute mean anything.
@@ -362,10 +365,12 @@ async function boot(): Promise<void> {
     sunlight.set(sun.dir, sun.elevationDeg);
   };
   applySun();
-  const gui = new GUI({ title: 'Settings' });
-  gui.add(sky, 'hour', hours.first, hours.last, 0.05).name('Solar time').onChange(applySun);
-  gui.add(settings, 'balloons').name('Balloon game (B)').listen().onChange((on: boolean) => setBalloons(on));
-  gui.add({ restart: () => { field.reset(car.pos[0], car.pos[1]); hud.say('New round — pop them all', 2); } }, 'restart').name('New balloon round');
+  const gui = new GUI({ title: t('gui.title') });
+  /** Each control's label key, so a language switch can rename them. */
+  const guiLabels = new Map<ReturnType<GUI['add']>, Parameters<typeof t>[0]>();
+  guiLabels.set(gui.add(sky, 'hour', hours.first, hours.last, 0.05).onChange(applySun), 'gui.hour');
+  guiLabels.set(gui.add(settings, 'balloons').listen().onChange((on: boolean) => setBalloons(on)), 'gui.balloons');
+  guiLabels.set(gui.add({ restart: () => { field.reset(car.pos[0], car.pos[1]); hud.say(t('say.round'), 2); } }, 'restart'), 'gui.round');
   const applyDrivetrain = () => {
     const split = DRIVETRAINS[settings.drivetrain];
     spec.driveFront = split ?? VEHICLES[vehicleKey()].spec.driveFront;
@@ -392,9 +397,22 @@ async function boot(): Promise<void> {
       refreshMenu();
     });
   };
-  gui.add(settings, 'vehicle', Object.values(VEHICLES).map((v) => v.name)).name('Vehicle').onChange(switchVehicle);
-  gui.add(settings, 'drivetrain', Object.keys(DRIVETRAINS)).name('Drivetrain').onChange(applyDrivetrain);
+  guiLabels.set(gui.add(settings, 'vehicle', Object.values(VEHICLES).map((v) => v.name)).onChange(switchVehicle), 'gui.vehicle');
+  guiLabels.set(gui.add(settings, 'drivetrain', Object.keys(DRIVETRAINS)).onChange(applyDrivetrain), 'gui.drivetrain');
+  const langSetting = { lang: currentLang() };
+  guiLabels.set(gui.add(langSetting, 'lang', { English: 'en', Español: 'es' }).onChange((l: Lang) => relabel(l)), 'gui.lang');
   gui.close();
+
+  /** Everything already on screen in the new language; messages pick it up as they're said. */
+  function relabel(l?: Lang): void {
+    if (l) setLang(l);
+    langSetting.lang = currentLang();
+    gui.title(t('gui.title'));
+    guiLabels.forEach((key, c) => c.name(t(key)).updateDisplay());
+    shownMode = null; // the controls card redraws on the next frame
+    refreshMenu();
+  }
+  relabel();
 
   // Paused, a link to this moment: here, this way, this fast, at this time of day, in this car.
   const shareLink = document.getElementById('share-link') as HTMLInputElement;
@@ -408,8 +426,8 @@ async function boot(): Promise<void> {
     shareLink.hidden = false;
     shareLink.select();
     navigator.clipboard.writeText(url).then(
-      () => hud.say('Link copied — it starts right here', 3),
-      () => hud.say('Copy the link to share it', 3),
+      () => hud.say(t('say.copied'), 3),
+      () => hud.say(t('say.copy'), 3),
     );
   });
 
@@ -418,7 +436,7 @@ async function boot(): Promise<void> {
   if (moment && moment.x > 0 && moment.y > 0 && moment.x < extent && moment.y < extent) {
     await resume(moment);
     track('start', { shared: true, car: vehicleId });
-    hud.say(`A shared drive — ${START_HINT(spec)}`, 5);
+    hud.say(t('say.shared', { hint: START_HINT(spec) }), 5);
   } else {
     await place(spawn.x, spawn.y, spawn.heading);
     openMenu(false);
@@ -470,7 +488,7 @@ async function boot(): Promise<void> {
       const wasOut = pilot.out;
       stepPilot(pilot, PILOT, car.flying ? gLoad : 1, dt);
       if (pilot.out && !wasOut) {
-        hud.say('Blacked out — too much g for too long', 3);
+        hud.say(t('say.blackout'), 3);
         track('blackout');
       }
       perf.physics += performance.now() - t0;
@@ -489,20 +507,20 @@ async function boot(): Promise<void> {
       lastPos.splice(0, 3, ...car.pos);
       const upright = rotate(car.q, [0, 0, 1])[2] > 0.3;
       if (car.inWater || (!upright && Math.hypot(...car.vel) < 1)) {
-        if (stuck === 0) hud.say(car.inWater ? `Into the Atlantic. ${KEY.reset} to get back on the road` : `On its roof. ${KEY.reset} to get back on the road`);
+        if (stuck === 0) hud.say(t(car.inWater ? 'say.water' : 'say.roof', { reset: KEY().reset }));
         stuck += dt;
         if (stuck > 4) void recover();
       }
       // Past the stall in the air: say so once, until it's flying again.
       const agl = car.pos[2] - terrain.heightAt(car.pos[0], car.pos[1]);
       const isStalled = !!spec.wings && car.wings > 0.5 && agl > 5 && car.airspeed > 5 && stalled(spec.wings, car.alpha);
-      if (isStalled && !stallWarned) hud.say('STALL — push the nose down', 2);
+      if (isStalled && !stallWarned) hud.say(t('say.stall'), 2);
       stallWarned = isStalled;
       // Through the sound barrier: the boom, once a crossing.
       const mach = car.mach;
       if (isJet(spec) && !supersonic && mach > 1) {
         audio.boom();
-        hud.say('Mach 1 — supersonic', 2);
+        hud.say(t('say.mach'), 2);
         track('supersonic');
       }
       supersonic = mach > 1 || (supersonic && mach > 0.97);
@@ -513,7 +531,7 @@ async function boot(): Promise<void> {
         if ((low && hard) || site.buildings.wall(car.pos[0], car.pos[1], car.pos[2])) {
           crashing = true;
           track('crash', { speed: Math.round(car.airspeed) });
-          hud.say('Crashed — back in the air', 2.5);
+          hud.say(t('say.crash'), 2.5);
           void place(car.pos[0], car.pos[1], car.heading).finally(() => { crashing = false; });
         }
       }
@@ -530,7 +548,7 @@ async function boot(): Promise<void> {
     if (mode !== shownMode || pad !== shownPad) {
       shownMode = mode;
       shownPad = pad;
-      helpMode.textContent = ` · ${MODES[mode].title}`;
+      helpMode.textContent = ` · ${modeName(mode)}`;
       helpBody.innerHTML = cardHtml(mode, pad);
     }
     if (!paused && !welcome.isOpen) helpFold.update(dt, mode, Math.abs(car.speed) > 8);
@@ -605,5 +623,5 @@ async function boot(): Promise<void> {
 boot().catch((err) => {
   console.error(err);
   const line = document.querySelector('.loading-line');
-  if (line) line.textContent = `Could not load the island: ${err instanceof Error ? err.message : err}`;
+  if (line) line.textContent = t('load.failed', { error: err instanceof Error ? err.message : String(err) });
 });

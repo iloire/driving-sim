@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DICTIONARIES } from './i18n';
 import { HelpFold, MODES, modeOf, PEEK_SECONDS, SETTLE_SECONDS } from './controls';
 
 describe('controls card', () => {
@@ -9,10 +10,12 @@ describe('controls card', () => {
     expect(modeOf(false, false, true)).toBe('jet');
   });
 
-  it('keeps each mode short enough to read at a glance', () => {
-    for (const m of Object.values(MODES)) {
-      expect(m.rows.length).toBeLessThanOrEqual(8);
-      for (const r of m.rows) expect(r.label.length).toBeLessThanOrEqual(28);
+  it('keeps each mode short enough to read at a glance, in every language', () => {
+    for (const rows of Object.values(MODES)) {
+      expect(rows.length).toBeLessThanOrEqual(8);
+      for (const dict of Object.values(DICTIONARIES)) {
+        for (const r of rows) expect(dict[r.label].length, dict[r.label]).toBeLessThanOrEqual(28);
+      }
     }
   });
 });
