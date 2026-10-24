@@ -10,6 +10,7 @@ import { Hud } from './game/hud';
 import { initAnalytics, track } from './game/analytics';
 import { formatHour, readMoment, writeMoment, type Moment } from './game/share';
 import { CRUISE_THRUST, Input, type Action } from './game/input';
+import { FlightHud, secondsToGround } from './game/flight-hud';
 import { createJetModel } from './game/jet-model';
 import { createRoadsterModel } from './game/roadster-model';
 import { RoadView } from './game/road-view';
@@ -53,6 +54,7 @@ const JET_CAMERA = 1.2;
 /** A jet touching down faster than this (m/s), or sinking faster, has crashed rather than landed. */
 const LANDING = { speed: 110, sink: 6 };
 const SPEED_OF_SOUND = 340;
+const G = 9.81;
 const isJet = (spec: CarSpec) => !!spec.wings?.fbw;
 
 const TARMAC: Surface = { grip: 1, rolling: 0.012 };
@@ -414,6 +416,9 @@ async function boot(): Promise<void> {
   let prevOf: CarState | null = null; // a new car (a reset, a place, a vehicle swap) has no step behind it yet
   let last = performance.now();
   let acc = 0;
+  const flightHud = new FlightHud(document.getElementById('flight-hud') as HTMLCanvasElement);
+  /** The load factor felt along the body's up axis, smoothed over a tenth of a second. */
+  let gLoad = 1;
   function frame(now: number): void {
     const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
@@ -422,12 +427,20 @@ async function boot(): Promise<void> {
     if (!paused && !welcome.isOpen) {
       acc += dt;
       const t0 = performance.now();
+      const v0 = [...car.vel];
+      let steps = 0;
       while (acc >= STEP) {
         prevPos.splice(0, 3, ...car.pos);
         prevQ = car.q;
         prevOf = car;
         stepCar(car, spec, input.controls, env, STEP);
         acc -= STEP;
+        steps++;
+      }
+      if (steps) {
+        const up = rotate(car.q, [0, 0, 1]);
+        const a = car.vel.map((v, i) => (v - v0[i]) / (steps * STEP) + (i === 2 ? G : 0));
+        gLoad += ((a[0] * up[0] + a[1] * up[1] + a[2] * up[2]) / G - gLoad) * (1 - Math.exp(-dt / 0.1));
       }
       perf.physics += performance.now() - t0;
       if (settings.balloons) {
@@ -490,6 +503,12 @@ async function boot(): Promise<void> {
     // Hovering, the chase camera only drops back a little: there's no wingspan to fit in.
     carVel.set(car.vel[0], car.vel[2], -car.vel[1]);
     rig.update(dt, model.group, carVel, followHeading, ground, car.wings * (isJet(spec) ? JET_CAMERA : spec.wings ? 1 : 0.3), boosting);
+    // Fighting HUD on wings. PULL UP when the line it's flying meets the ground within 5 s at a
+    // speed or sink rate that would crash rather than land.
+    const plane = car.flying && !!spec.wings && !welcome.isOpen;
+    const pullUp = plane && (car.airspeed > LANDING.speed || -car.vel[2] > LANDING.sink)
+      && secondsToGround([car.pos[0], car.pos[1], car.pos[2] - spec.cgHeight], car.vel, (x, y) => terrain.heightAt(x, y)) < 5;
+    flightHud.update(camera, plane ? { vel: carVel, heading: followHeading, g: gLoad, alpha: car.alpha, pullUp } : null, now / 1000);
     sunlight.follow(carPos);
     const t1 = performance.now();
     terrainView.update(camera.position, camera.position.y - ground(camera.position), Math.hypot(...car.vel));

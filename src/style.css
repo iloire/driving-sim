@@ -17,6 +17,8 @@
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--picon); color: var(--cal); font-family: var(--body); }
 #view { display: block; width: 100vw; height: 100vh; touch-action: none; }
 button { font: inherit; color: inherit; }
+#flight-hud { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; }
+#flight-hud[hidden] { display: none; }
 button:focus-visible { outline: 2px solid var(--cal); outline-offset: 2px; }
 
 /* Loading: the name rises out of a Timanfaya glow while a road's centre line runs under it. */
@@ -195,7 +197,7 @@ body.touch #cluster { min-width: 0; }
 }
 #welcome[hidden] { display: none; }
 #welcome > * { pointer-events: auto; }
-body.in-menu :is(#plate, #cluster, #minimap, #score, #pop-toast, #message, #help, #touch-buttons, #boost-btn, #paused, .lil-gui.autoPlace) { display: none; }
+body.in-menu :is(#flight-hud, #plate, #cluster, #minimap, #score, #pop-toast, #message, #help, #touch-buttons, #boost-btn, #paused, .lil-gui.autoPlace) { display: none; }
 
 .wl-main { display: grid; gap: 14px; justify-items: start; max-height: 100%; overflow-y: auto; }
 #welcome.enter .wl-main > * { animation: rise-in 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; }

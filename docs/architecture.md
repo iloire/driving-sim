@@ -287,3 +287,19 @@ line runs under it, and the status line follows the boot (terrain, photo, a road
   with speed.
 
 The palette is black picón, lime-wash white, Manrique's shutter green and Timanfaya rust.
+
+### Flying HUD (`src/game/flight-hud.ts`)
+
+On wings, a 2D canvas over the view draws a fighter's HUD in phosphor green, each line on a dark
+halo so it reads against a white sky. Every symbol is a world direction projected through the live
+camera, so it's true in chase, bonnet and orbit views alike:
+
+- **Flight path marker**: the velocity's direction, so where the plane is going, not where its nose points.
+- **Pitch ladder**: rungs every 5° within 22° of the flight path, built from the real horizon along
+  the travel heading. They bank as the view banks. Solid above the horizon, dashed below, tips
+  pointing at the horizon.
+- **Heading tape** along the bottom, with the heading boxed; **G** and **α** to the left.
+  `main.ts` takes the g from the change in velocity over each frame's physics steps, along the body's up axis, smoothed over 0.1 s.
+- **PULL UP**, flashing, when the straight line the plane is flying passes under the ground
+  within 5 s (`secondsToGround`, sampled every 0.25 s, so it sees ridges ahead as well as the
+  ground below), at a speed or sink rate that `main.ts` would call a crash rather than a landing.

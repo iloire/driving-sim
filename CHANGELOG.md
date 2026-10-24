@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-24 14:32
+
+- A fighter HUD on wings. A flight path marker shows where the plane is actually going, and a pitch
+  ladder fixed to the real horizon banks with the view. A heading tape runs along the bottom, with G and angle of
+  attack beside the marker. PULL UP flashes when the line you're flying meets the ground, or a
+  ridge ahead, within 5 s at a speed that would crash. It reads the same in the chase, bonnet and orbit
+  views, with each line on a dark halo against the bright sky.
+
 ## 2026-10-24 14:24
 
 - Flying on the keyboard is finer now. On wings, the keys move the stick gently at first and harder
