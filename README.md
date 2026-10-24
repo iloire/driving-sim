@@ -50,7 +50,8 @@ A shared link skips the menu and puts you straight into the moment someone share
   high it's faster still (past Mach 1.5 at 11 km) and runs out of air near 18 km. Above 8 km it draws a
   contrail, hard turns pull vapour off the wingtips, and low and fast it kicks up dust or sea spray.
   The cockpit warns you: "whoop whoop, pull up" near the ground, a stall horn at the angle-of-attack
-  limit, and the pilot's strained breathing as the g builds. Space puts out the airbrake. A fighter HUD (flight path marker, pitch ladder,
+  limit, and the pilot's strained breathing as the g builds. Fly into the ground and it goes up in
+  a fireball, with debris and smoke, before putting you back in the air. Space puts out the airbrake. A fighter HUD (flight path marker, pitch ladder,
   heading tape, g, PULL UP) draws over the view on wings. Hold too much g for too long and the view
   greys from the edges, the sound goes dull, and you black out for a few seconds; push hard and it reddens.
 - **A car that is a rigid body**: four raycast struts, tyres with a slip-angle curve and a friction

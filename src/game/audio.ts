@@ -200,6 +200,47 @@ export class CarAudio {
   }
 
   /**
+   * The Jet going up: a deep blast of noise opening out from a thud, a sub-bass drop under it, and
+   * a long crackling roar of the fire after.
+   */
+  explode(): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.master) return;
+    const t = ctx.currentTime;
+    const n = Math.floor(ctx.sampleRate * 3);
+    const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    let pop = 0;
+    for (let i = 0; i < n; i++) {
+      if (Math.random() < 0.0008) pop = 0.5 + Math.random() * 0.6;
+      pop *= 0.997;
+      const blast = Math.exp(-i / (ctx.sampleRate * 0.35));
+      const roar = 0.35 * Math.exp(-i / (ctx.sampleRate * 1.4));
+      d[i] = (Math.random() * 2 - 1) * (blast + roar + pop * roar * 2);
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const low = ctx.createBiquadFilter();
+    low.type = 'lowpass';
+    low.frequency.setValueAtTime(2400, t);
+    low.frequency.exponentialRampToValueAtTime(300, t + 1.2);
+    const g = ctx.createGain();
+    g.gain.value = 1.8;
+    src.connect(low).connect(g).connect(this.master);
+    src.start(t);
+
+    const sub = ctx.createOscillator();
+    sub.frequency.setValueAtTime(65, t);
+    sub.frequency.exponentialRampToValueAtTime(22, t + 0.8);
+    const sg = ctx.createGain();
+    sg.gain.setValueAtTime(1.2, t);
+    sg.gain.exponentialRampToValueAtTime(0.001, t + 0.9);
+    sub.connect(sg).connect(this.master);
+    sub.start(t);
+    sub.stop(t + 1);
+  }
+
+  /**
    * A sonic boom: the N-wave's two cracks a tenth of a second apart, each a low thump of noise
    * with a falling sine under it, and a long rumble after.
    */

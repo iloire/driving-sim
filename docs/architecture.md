@@ -249,8 +249,15 @@ can see instead of falling 40 m further away. `src/game/jet-effects.test.ts` pin
 starts and stops.
 
 `main.ts` checks for a crash each frame: low over the ground while too fast (110 m/s), sinking
-faster than 6 m/s or not upright, or inside a building. A crash puts the jet back in the air over the
-same spot. The terrain view stops at the 10 m level above 150 m/s (`terrainView.update`'s
+faster than 6 m/s or not upright, or inside a building. A crash hides the jet and sets off the
+`Explosion` (`src/game/explosion.ts`): a soft additive flash (gone by 0.4 s, `flash()`), a fireball of
+orange puffs from a `Smoke` pool carrying 15 % of the jet's speed, sixteen bits of debris flung
+out under gravity and bouncing off the terrain (`fling()`), trailing fire for 1.5 s, a column of
+grey smoke rising for several seconds, and an orange point light that fades over 0.9 s (it stays in
+the scene at zero, so lighting it doesn't recompile shaders). `CarAudio.explode()` plays a blast of
+low-passed noise over a sub-bass drop, then a crackling roar. For `WRECK_S` (1.8 s) the physics
+holds, the engine is silent, the HUD is off and the chase camera backs off from the wreck and
+shakes; then the jet is back in the air over the same spot. The terrain view stops at the 10 m level above 150 m/s (`terrainView.update`'s
 `speed`), since the 5 m mesh would be built for a tile you pass in seconds.
 
 **The pilot under g** (`src/sim/pilot.ts`). Blood takes seconds to leave the head, so the g the

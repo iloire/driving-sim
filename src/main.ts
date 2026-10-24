@@ -14,6 +14,7 @@ import { formatHour, readMoment, writeMoment, type Moment } from './game/share';
 import { CRUISE_THRUST, Input, type Action } from './game/input';
 import { FlightHud, secondsToGround } from './game/flight-hud';
 import { buffet, JetEffects } from './game/jet-effects';
+import { Explosion } from './game/explosion';
 import { createJetModel } from './game/jet-model';
 import { createRoadsterModel } from './game/roadster-model';
 import { RoadView } from './game/road-view';
@@ -57,6 +58,8 @@ const JET_START = { agl: 600, speed: 230 };
 const JET_CAMERA = 1.2;
 /** A jet touching down faster than this (m/s), or sinking faster, has crashed rather than landed. */
 const LANDING = { speed: 110, sink: 6 };
+/** Seconds a crash plays out before the jet is back in the air. */
+const WRECK_S = 1.8;
 const G = 9.81;
 const isJet = (spec: CarSpec) => !!spec.wings?.fbw;
 
@@ -161,7 +164,8 @@ async function boot(): Promise<void> {
   balloonsView.visible = false;
   scene.add(balloonsView.group);
   const jetFx = new JetEffects();
-  scene.add(jetFx.group);
+  const explosion = new Explosion();
+  scene.add(jetFx.group, explosion.group);
   let best = readBest();
   const lastPos: [number, number, number] = [0, 0, 0];
 
@@ -211,9 +215,13 @@ async function boot(): Promise<void> {
   let stallWarned = false;
   /** The pilot's body under g: grey-out, red-out and blacking out. */
   let pilot = createPilot();
+  /** The load factor felt along the body's up axis, smoothed over a tenth of a second. */
+  let gLoad = 1;
   /** Past Mach 1; it re-arms the boom once back under Mach 0.97. */
   let supersonic = false;
   let crashing = false;
+  /** Seconds left of a crash playing out (the jet gone, the explosion going) before it's back up. */
+  let wreck = 0;
 
   /** Puts the car on the road at (x, y) facing `heading`, once the 5 m ground there has loaded. */
   async function place(x: number, y: number, heading: number): Promise<void> {
@@ -227,7 +235,10 @@ async function boot(): Promise<void> {
     }
     stuck = 0;
     pilot = createPilot();
+    gLoad = 1;
     jetFx.reset();
+    wreck = 0;
+    model.group.visible = true;
     input.lever = CRUISE_THRUST;
     model.update(car, false, extent, 0, false, camera, 0);
     rig.snap(model.group, heading);
@@ -462,8 +473,6 @@ async function boot(): Promise<void> {
   let last = performance.now();
   let acc = 0;
   const flightHud = new FlightHud(document.getElementById('flight-hud') as HTMLCanvasElement);
-  /** The load factor felt along the body's up axis, smoothed over a tenth of a second. */
-  let gLoad = 1;
   function frame(now: number): void {
     const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
@@ -471,7 +480,9 @@ async function boot(): Promise<void> {
     input.update(dt);
     // Blacked out, the pilot's hands fall off the stick and the flight computer flies 1 g.
     if (pilot.out) Object.assign(input.controls.flight, { pitch: 0, roll: 0, yaw: 0 });
-    if (!paused && !welcome.isOpen) {
+    // A crash plays out, the jet gone and the physics held, before it's back in the air.
+    if (wreck > 0 && !paused && (wreck -= dt) <= 0) void place(car.pos[0], car.pos[1], car.heading).finally(() => { crashing = false; });
+    if (!paused && !welcome.isOpen && wreck <= 0) {
       acc += dt;
       const t0 = performance.now();
       const v0 = [...car.vel];
@@ -536,7 +547,10 @@ async function boot(): Promise<void> {
           crashing = true;
           track('crash', { speed: Math.round(car.airspeed) });
           hud.say(t('say.crash'), 2.5);
-          void place(car.pos[0], car.pos[1], car.heading).finally(() => { crashing = false; });
+          wreck = WRECK_S;
+          model.group.visible = false;
+          explosion.burst(model.group.position, carVel);
+          audio.explode();
         }
       }
     }
@@ -572,19 +586,23 @@ async function boot(): Promise<void> {
     const followHeading = moving > 4 && (car.speed > 0 || car.flying) ? travel : car.heading;
     // Hovering, the chase camera only drops back a little: there's no wingspan to fit in.
     carVel.set(car.vel[0], car.vel[2], -car.vel[1]);
+    if (wreck > 0) carVel.set(0, 0, 0); // the camera settles on the wreck
     // The Jet buffets through the sound barrier and skimming the ground; the airbrake shakes it too.
     const groundZ = terrain.heightAt(car.pos[0], car.pos[1]);
     const agl = car.pos[2] - spec.cgHeight - Math.max(groundZ, 0);
     const jetBuffet = isJet(spec) && car.flying ? buffet(car.mach, agl, car.airspeed) : 0;
-    rig.update(dt, model.group, carVel, followHeading, ground, car.wings * (isJet(spec) ? JET_CAMERA : spec.wings ? 1 : 0.3), boosting,
-      Math.min(car.airbrake * Math.min(car.airspeed / 250, 1) + jetBuffet, 1));
+    // Crashed, the camera backs well off from the fireball.
+    const reach = wreck > 0 ? 3 : car.wings * (isJet(spec) ? JET_CAMERA : spec.wings ? 1 : 0.3);
+    rig.update(dt, model.group, carVel, followHeading, ground, reach, boosting,
+      Math.min(car.airbrake * Math.min(car.airspeed / 250, 1) + jetBuffet + wreck / WRECK_S, 1));
     jetFx.update(paused ? 0 : dt, {
-      body: model.group, on: isJet(spec) && car.flying && !welcome.isOpen, altitude: car.pos[2], agl, airspeed: car.airspeed,
+      body: model.group, on: isJet(spec) && car.flying && !welcome.isOpen && wreck <= 0, altitude: car.pos[2], agl, airspeed: car.airspeed,
       g: gLoad, alpha: car.alpha, groundY: Math.max(groundZ, 0), sea: groundZ < 0, vel: carVel,
     }, camera);
+    explosion.update(paused ? 0 : dt, camera, ground);
     // Fighting HUD on wings. PULL UP when the line it's flying meets the ground within 5 s at a
     // speed or sink rate that would crash rather than land.
-    const plane = car.flying && !!spec.wings && !welcome.isOpen;
+    const plane = car.flying && !!spec.wings && !welcome.isOpen && wreck <= 0;
     const pullUp = plane && (car.airspeed > LANDING.speed || -car.vel[2] > LANDING.sink)
       && secondsToGround([car.pos[0], car.pos[1], car.pos[2] - spec.cgHeight], car.vel, (x, y) => terrain.heightAt(x, y)) < 5;
     hud.setVeil(welcome.isOpen ? 0 : pilot.grey, welcome.isOpen ? 0 : pilot.red);
@@ -609,7 +627,8 @@ async function boot(): Promise<void> {
     const slip = Math.max(...car.wheels.map((w) => (w.contact ? w.slip : 0)));
     const pedal = car.flying ? input.controls.flight.thrust : car.gear > 0 ? input.controls.throttle : input.controls.brake;
     audio.setPaused(paused || welcome.isOpen);
-    audio.update(car.rpm, pedal, slip, Math.abs(car.speed), boosting, car.lift);
+    // A wreck makes no engine noise.
+    audio.update(car.rpm, wreck > 0 ? 0 : pedal, slip, wreck > 0 ? 0 : Math.abs(car.speed), boosting && wreck <= 0, car.lift);
     audio.airbrake(welcome.isOpen ? 0 : car.airbrake, car.airspeed);
     // The horn sounds at the wing's angle-of-attack limit: the flight computer's, or the stall.
     const alphaLimit = spec.wings ? spec.wings.fbw?.alphaMax ?? spec.wings.stall : Infinity;

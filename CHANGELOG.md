@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-24 15:20
+
+- A better crash. Fly the Jet into the ground or a building and it explodes: a white flash, a
+  fireball, burning debris that bounces off the ground, a column of smoke and an orange glow on
+  the terrain, with a deep blast and the crackle of the fire. The camera backs off and shakes, and
+  after 1.8 s you're back in the air.
+
 ## 2026-10-24 15:14
 
 - Cockpit warnings, all synthesised. PULL UP now sounds as well as flashes: two rising whoops,
