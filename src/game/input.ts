@@ -14,8 +14,8 @@ const STEER_RATE = 2.2;
 const CENTRE_RATE = 4;
 const PEDAL_RATE = 4;
 const STICK_RATE = 3;
-/** On wings, a key's stick travel per second (it is squared on the way out, so 0.4 s is a quarter). */
-const PLANE_STICK_RATE = 1.2;
+/** On wings, a key's stick travel per second (it is cubed on the way out, so 1 s is a fifth and full takes 1.7 s). */
+export const PLANE_STICK_RATE = 0.6;
 export const CRUISE_THRUST = 0.6;
 const IDLE_THRUST = 0.1;
 /** Throttle lever travel per second on Shift / Ctrl, and the 1–4 presets. */
@@ -32,7 +32,7 @@ export function stepKey(v: number, target: number, rate: number, back: number, d
 }
 
 /** The plane's stick curve: fine near the middle, full at the end. */
-export const shapeStick = (v: number) => v * Math.abs(v);
+export const shapeStick = (v: number) => v * v * v;
 
 export type Action = 'reset' | 'camera' | 'mute' | 'pause' | 'help' | 'menu' | 'next' | 'map' | 'transform' | 'balloons';
 

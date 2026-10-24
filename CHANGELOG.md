@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-24 15:25
+
+- On wings the keys work the stick more gently, because a held key was too much and hard to
+  control. The stick goes out half as fast (0.6 a second) on a cubic curve instead of a square,
+  so a short press is a fine correction, a one-second hold is about a fifth of the stick and full
+  stick takes about 1.7 s. Letting go still snaps it back.
+
 ## 2026-10-24 15:23
 
 - The Jet is properly faster up high. The engine had been losing thrust to the thin air as if it

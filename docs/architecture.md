@@ -153,9 +153,9 @@ as the struts and tyres, scaled by how far out they are, and the wheel drive swi
 - **Jet.** Along the nose, at the throttle lever's setting (`Input.lever`, 10–100 %, cruise 60 %).
   Shift and Ctrl move it at 80 % a second, 1–4 set it, and the pad's triggers move it as far as
   they're pressed. Shift held at full is the afterburner: a detent, so a tap of Shift no longer
-  lights it. The keys also work the stick differently on wings (`Input.plane`): out at 1.2 a
-  second, back at 4, squared on the way out (`shapeStick`). A 0.15 s tap is under 5 % stick, so under
-  1.4 g in the Jet, and a second's hold is full. `src/game/input.test.ts` pins that curve.
+  lights it. The keys also work the stick differently on wings (`Input.plane`): out at 0.6 a
+  second, back at 4, cubed on the way out (`shapeStick`). A 0.3 s tap is under 1 % stick, a
+  second's hold about a fifth, and full takes 1.7 s, so a held key no longer overshoots. `src/game/input.test.ts` pins that curve.
 
 With the truck's heavier mass its wings are bigger (15 m², 9.4 m span) and its jet stronger
 (13,000 N). It rotates at about 210 km/h after a 9 s run and climbs at about 11° on full thrust. Hands-off
