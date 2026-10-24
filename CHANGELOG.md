@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-24 15:11
+
+- The Jet's speed and height show. Above about 8 km it lays a contrail that lingers and spreads
+  for 25 s behind it. Hard pulls stream vapour off both wingtips. Fast and below 50 m it throws up
+  dust over land and spray over the sea, and the camera shakes as it skims the ground and as it
+  goes through the sound barrier. The chase camera no longer falls far behind near Mach 1, so the
+  Jet stays a size you can see.
+
 ## 2026-10-24 15:12
 
 - English and Spanish. The browser's language picks one on a first visit; EN / ES at the end of

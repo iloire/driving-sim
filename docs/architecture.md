@@ -212,6 +212,29 @@ out the fly-by-wire fails eight of them.
 The haze (`Sunlight.setViewHeight`) thins with the camera's height above 1,000 m, at 1,500 / (h + 500)
 of its low-level density, since real haze lies in the low air: from 8 km the whole island reads clearly.
 
+**Showing the speed and the height** (`src/game/jet-effects.ts`). Up high nothing near the jet moves,
+and low down the ground blurs past without touching it, so the Jet leaves marks in the air:
+
+- **Contrail**: a ribbon from the nozzle once the air is cold enough, fading in from 7.5 km to full
+  at 9 km. It forms a few tens of metres behind, widens from 1 to 16 m and lingers 25 s.
+- **Wingtip vapour**: thin ribbons off both tips, pulling past 4 g (full at 7 g) or flying past
+  10° of angle of attack, gone in 1.2 s.
+
+  Both are `Trail`s: points dropped at a fixed interval and led by the live source, built each
+  frame into a camera-facing strip with an alpha map feathering both edges, widening and fading
+  with age. They live in the scene, so they stay where the jet has been, and a jump of more than
+  2 km (a respawn) starts them afresh.
+- **Ground wash**: below 50 m and past 80 m/s, puffs from the `Smoke` pool (dimmer than the
+  roadster's thruster smoke, since they pile up) thrown off the surface under the jet. They're dragged
+  along in its wake at about two-thirds of its speed, so they billow round it instead of vanishing
+  under the camera: tan dust over land, white spray over the sea.
+- **Buffet**: the chase camera's shake, strongest at Mach 1 (fading by Mach 0.9 and 1.1) and when
+  skimming the ground fast, on top of the airbrake's.
+
+The chase camera's speed lag is capped at 20 m (`MAX_LAG`), so near Mach 1 the Jet stays a size you
+can see instead of falling 40 m further away. `src/game/jet-effects.test.ts` pins when each effect
+starts and stops.
+
 `main.ts` checks for a crash each frame: low over the ground while too fast (110 m/s), sinking
 faster than 6 m/s or not upright, or inside a building. A crash puts the jet back in the air over the
 same spot. The terrain view stops at the 10 m level above 150 m/s (`terrainView.update`'s

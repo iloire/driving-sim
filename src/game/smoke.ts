@@ -37,7 +37,8 @@ export class Smoke {
   private readonly s = new THREE.Vector3();
   private readonly c = new THREE.Color();
 
-  constructor(private readonly tint = new THREE.Color(0xe9f1ff)) {
+  /** `opacity`: a fresh puff's brightness under the additive blend (they pile up where they overlap). */
+  constructor(private readonly tint = new THREE.Color(0xe9f1ff), private readonly opacity = 0.55) {
     this.mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1),
       new THREE.MeshBasicMaterial({ map: puffTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }), POOL);
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -71,7 +72,7 @@ export class Smoke {
       this.m.compose(p.pos, camera.quaternion, this.s.setScalar(p.size));
       this.mesh.setMatrixAt(live, this.m);
       // Fade in fast, out slowly; under additive blending, darker is more transparent.
-      const a = Math.min(age / 0.08, 1) * (1 - age) ** 1.5 * 0.55;
+      const a = Math.min(age / 0.08, 1) * (1 - age) ** 1.5 * this.opacity;
       this.mesh.setColorAt(live, this.c.copy(this.tint).multiplyScalar(a));
       live++;
     }

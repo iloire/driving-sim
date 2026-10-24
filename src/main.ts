@@ -13,6 +13,7 @@ import { initAnalytics, track } from './game/analytics';
 import { formatHour, readMoment, writeMoment, type Moment } from './game/share';
 import { CRUISE_THRUST, Input, type Action } from './game/input';
 import { FlightHud, secondsToGround } from './game/flight-hud';
+import { buffet, JetEffects } from './game/jet-effects';
 import { createJetModel } from './game/jet-model';
 import { createRoadsterModel } from './game/roadster-model';
 import { RoadView } from './game/road-view';
@@ -159,6 +160,8 @@ async function boot(): Promise<void> {
   const balloonsView = new BalloonsView(extent);
   balloonsView.visible = false;
   scene.add(balloonsView.group);
+  const jetFx = new JetEffects();
+  scene.add(jetFx.group);
   let best = readBest();
   const lastPos: [number, number, number] = [0, 0, 0];
 
@@ -224,6 +227,7 @@ async function boot(): Promise<void> {
     }
     stuck = 0;
     pilot = createPilot();
+    jetFx.reset();
     input.lever = CRUISE_THRUST;
     model.update(car, false, extent, 0, false, camera, 0);
     rig.snap(model.group, heading);
@@ -568,8 +572,16 @@ async function boot(): Promise<void> {
     const followHeading = moving > 4 && (car.speed > 0 || car.flying) ? travel : car.heading;
     // Hovering, the chase camera only drops back a little: there's no wingspan to fit in.
     carVel.set(car.vel[0], car.vel[2], -car.vel[1]);
+    // The Jet buffets through the sound barrier and skimming the ground; the airbrake shakes it too.
+    const groundZ = terrain.heightAt(car.pos[0], car.pos[1]);
+    const agl = car.pos[2] - spec.cgHeight - Math.max(groundZ, 0);
+    const jetBuffet = isJet(spec) && car.flying ? buffet(car.mach, agl, car.airspeed) : 0;
     rig.update(dt, model.group, carVel, followHeading, ground, car.wings * (isJet(spec) ? JET_CAMERA : spec.wings ? 1 : 0.3), boosting,
-      car.airbrake * Math.min(car.airspeed / 250, 1));
+      Math.min(car.airbrake * Math.min(car.airspeed / 250, 1) + jetBuffet, 1));
+    jetFx.update(paused ? 0 : dt, {
+      body: model.group, on: isJet(spec) && car.flying && !welcome.isOpen, altitude: car.pos[2], agl, airspeed: car.airspeed,
+      g: gLoad, alpha: car.alpha, groundY: Math.max(groundZ, 0), sea: groundZ < 0, vel: carVel,
+    }, camera);
     // Fighting HUD on wings. PULL UP when the line it's flying meets the ground within 5 s at a
     // speed or sink rate that would crash rather than land.
     const plane = car.flying && !!spec.wings && !welcome.isOpen;

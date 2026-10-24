@@ -21,6 +21,8 @@ const BOOST_FOV = 80;
  * over this, the lag an eased camera would have, so speed still pulls the view back.
  */
 const CHASE_RATE = 10;
+/** The most the speed lag may pull the chase camera back (m), so the Jet near Mach 1 stays a size you can see. */
+const MAX_LAG = 20;
 /**
  * The menu's circle round the car: metres out and up (more with wings out, to fit the span),
  * radians per second, and how far the car may jump before the circle cuts there instead of gliding.
@@ -42,6 +44,7 @@ export class CameraRig {
    */
   private readonly offset = new THREE.Vector3();
   private readonly offsetTarget = new THREE.Vector3();
+  private readonly lag = new THREE.Vector3();
   /** The chase camera's own heading, lagging the car's so turns read. */
   private heading = 0;
   /** 0 car … 1 plane (more for a longer one): how far back the chase camera sits. */
@@ -179,7 +182,8 @@ export class CameraRig {
       d = Math.atan2(Math.sin(d), Math.cos(d));
       this.heading += d * (1 - Math.exp(-dt * 4));
       this.chaseTarget(car.position);
-      this.offsetTarget.subVectors(this.desired, car.position).addScaledVector(velocity, -1 / CHASE_RATE);
+      this.lag.copy(velocity).multiplyScalar(-1 / CHASE_RATE).clampLength(0, MAX_LAG);
+      this.offsetTarget.subVectors(this.desired, car.position).add(this.lag);
       this.offset.lerp(this.offsetTarget, 1 - Math.exp(-dt * CHASE_RATE));
       cam.position.addVectors(car.position, this.offset);
       // A little shake on the turbo, and the airbrake's buffet.
