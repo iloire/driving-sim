@@ -111,6 +111,10 @@ this corner inside a building?" 32 times (8 points × 4 sub-steps), at 120 steps
   so a slow frame doesn't change how the car handles. A frame runs one, two or three steps, so the car
   is drawn between the last two of them (`lerpV3` and `blendQuat` in `sim/vec.ts`). Drawn at the
   latest step only, the Jet jumped 2 to 6 m a frame and shook in front of the chase camera.
+- **The chase camera moves with the car and eases only its offset** (`camera.ts`). Easing its
+  position instead left it trailing a fast car by a lag that changed with each frame's length:
+  one 51 ms hitch put it 1.4 m closer to the Jet, so the plane pulsed with every uneven frame.
+  The lag is now the car's velocity over the chase rate, the same framing without the frame time in it.
 - **The minimap** is redrawn 15 times a second, not every frame.
 - **Lamps and posts aren't solid**, which saves about 40,000 extra collision checks.
 

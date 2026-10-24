@@ -17,6 +17,11 @@ const FLY_UP = 4.5;
 const FOV = 60;
 const BOOST_FOV = 80;
 /**
+ * How fast the chase camera settles behind the car (1/s). It trails a moving car by its velocity
+ * over this, the lag an eased camera would have, so speed still pulls the view back.
+ */
+const CHASE_RATE = 10;
+/**
  * The menu's circle round the car: metres out and up (more with wings out, to fit the span),
  * radians per second, and how far the car may jump before the circle cuts there instead of gliding.
  */
@@ -30,6 +35,13 @@ export class CameraRig {
   private readonly lastTarget = new THREE.Vector3();
   private readonly desired = new THREE.Vector3();
   private readonly look = new THREE.Vector3();
+  /**
+   * The chase camera's place relative to the car. It moves with the car exactly and only this
+   * eases: easing the position itself made its lag behind a fast car swing with every uneven
+   * frame, so the Jet pulsed in and out by a metre or more.
+   */
+  private readonly offset = new THREE.Vector3();
+  private readonly offsetTarget = new THREE.Vector3();
   /** The chase camera's own heading, lagging the car's so turns read. */
   private heading = 0;
   /** 0 car … 1 plane (more for a longer one): how far back the chase camera sits. */
@@ -72,6 +84,7 @@ export class CameraRig {
     this.showing = false;
     this.startBlend();
     this.orbit.enabled = this.mode === 'orbit';
+    this.offset.subVectors(this.camera.position, this.lastTarget);
     if (this.mode === 'orbit') {
       this.chaseTarget(this.lastTarget);
       this.camera.position.copy(this.desired);
@@ -94,6 +107,7 @@ export class CameraRig {
     this.mode = MODES[(MODES.indexOf(this.mode) + 1) % MODES.length];
     this.orbit.enabled = this.mode === 'orbit';
     this.camera.up.set(0, 1, 0);
+    this.offset.subVectors(this.camera.position, this.lastTarget); // chase eases out from the last view
     if (this.mode === 'orbit') {
       // Start from where the chase camera would be, not from the bonnet.
       this.chaseTarget(this.lastTarget);
@@ -115,6 +129,7 @@ export class CameraRig {
     }
     this.chaseTarget(car.position);
     this.camera.position.copy(this.desired);
+    this.offset.subVectors(this.desired, car.position);
     this.camera.lookAt(this.look);
     if (this.mode === 'orbit') {
       this.orbit.target.copy(car.position);
@@ -129,8 +144,11 @@ export class CameraRig {
     this.look.set(p.x + fx * 4, p.y + 0.9, p.z + fz * 4);
   }
 
-  /** `heading`: compass heading to follow (the car's, or its travel when sliding); `groundY` under the camera. */
-  update(dt: number, car: THREE.Object3D, heading: number, groundAt: (p: THREE.Vector3) => number, wings = 0, boosting = false): void {
+  /**
+   * `velocity`: the car's, in scene axes; `heading`: compass heading to follow (the car's, or its
+   * travel when sliding); `groundAt`: the ground height under a point.
+   */
+  update(dt: number, car: THREE.Object3D, velocity: THREE.Vector3, heading: number, groundAt: (p: THREE.Vector3) => number, wings = 0, boosting = false): void {
     const cam = this.camera;
     this.wings = wings;
     this.boost += ((boosting ? 1 : 0) - this.boost) * (1 - Math.exp(-dt * (boosting ? 3 : 1.5)));
@@ -160,7 +178,9 @@ export class CameraRig {
       d = Math.atan2(Math.sin(d), Math.cos(d));
       this.heading += d * (1 - Math.exp(-dt * 4));
       this.chaseTarget(car.position);
-      cam.position.lerp(this.desired, 1 - Math.exp(-dt * 10));
+      this.offsetTarget.subVectors(this.desired, car.position).addScaledVector(velocity, -1 / CHASE_RATE);
+      this.offset.lerp(this.offsetTarget, 1 - Math.exp(-dt * CHASE_RATE));
+      cam.position.addVectors(car.position, this.offset);
       // A little shake on the turbo.
       const shake = 0.06 * this.boost;
       cam.position.x += (Math.random() - 0.5) * shake;

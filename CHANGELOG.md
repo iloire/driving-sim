@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-24 14:16
+
+- The Jet holds still in the chase view now; the last fix only helped on perfectly even frames. The
+  chase camera eased its position after the plane, which left it trailing by ~21 m. The size of that
+  lag changed with each frame's length, so every frame hitch (a terrain tile loading, a busy browser)
+  pulled the camera a metre or more toward the plane and let it drift back. Now the camera moves with
+  the car exactly and eases only its offset. The speed lag comes from the velocity, so the framing
+  stays the same. In a test with frames between 17 and 217 ms, the distance to the plane held to 2 cm.
+
 ## 2026-10-24 14:08
 
 - The Jet no longer shakes in front of the chase camera. A frame runs one, two or three 120 Hz

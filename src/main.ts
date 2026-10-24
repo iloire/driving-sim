@@ -403,6 +403,7 @@ async function boot(): Promise<void> {
   if (import.meta.env.DEV) Object.assign(window, { drive: { car: () => car, controls: input.controls, terrain, site, perf, renderer, field } });
 
   const carPos = new THREE.Vector3();
+  const carVel = new THREE.Vector3();
   const ground = (p: THREE.Vector3) => terrain.heightAt(p.x + extent / 2, extent / 2 - p.z);
   // The pose one physics step back. A frame runs 1, 2 or 3 steps as its length wobbles around two
   // of them, so drawing only the latest step jerks the car along (2 to 6 m a frame in the Jet);
@@ -485,7 +486,8 @@ async function boot(): Promise<void> {
     const travel = Math.atan2(car.vel[0], car.vel[1]);
     const followHeading = moving > 4 && (car.speed > 0 || car.flying) ? travel : car.heading;
     // Hovering, the chase camera only drops back a little: there's no wingspan to fit in.
-    rig.update(dt, model.group, followHeading, ground, car.wings * (isJet(spec) ? JET_CAMERA : spec.wings ? 1 : 0.3), boosting);
+    carVel.set(car.vel[0], car.vel[2], -car.vel[1]);
+    rig.update(dt, model.group, carVel, followHeading, ground, car.wings * (isJet(spec) ? JET_CAMERA : spec.wings ? 1 : 0.3), boosting);
     sunlight.follow(carPos);
     const t1 = performance.now();
     terrainView.update(camera.position, camera.position.y - ground(camera.position), Math.hypot(...car.vel));
