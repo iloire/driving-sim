@@ -1,0 +1,73 @@
+{
+  "name": "Zaragoza",
+  "country": "Spain",
+  "kicker": {
+    "en": "Aragón · the city, the Ebro and the air base",
+    "es": "Aragón · la ciudad, el Ebro y la base aérea"
+  },
+  "proj4": "+proj=utm +zone=30 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs",
+  "crs": "EPSG:25830",
+  "bbox": [
+    656000,
+    4598000,
+    686000,
+    4628000
+  ],
+  "plainM": 220,
+  "maxStoreys": 14,
+  "heightmap": {
+    "file": "height.bin",
+    "size": 2048
+  },
+  "ortho": {
+    "file": "ortho.jpg",
+    "size": 4096
+  },
+  "detail": {
+    "dir": "detail",
+    "tileM": 3000,
+    "orthoSize": 2048
+  },
+  "spawns": [
+    {
+      "id": "pilar",
+      "name": "Basílica del Pilar (Paseo de Echegaray)",
+      "lat": 41.6569,
+      "lon": -0.8781
+    },
+    {
+      "id": "expo",
+      "name": "Expo 2008 (Avenida de Ranillas)",
+      "lat": 41.669,
+      "lon": -0.902
+    },
+    {
+      "id": "parque-grande",
+      "name": "Parque Grande José Antonio Labordeta",
+      "lat": 41.6313,
+      "lon": -0.896
+    },
+    {
+      "id": "a23",
+      "name": "A-23 Autovía Mudéjar",
+      "lat": 41.608,
+      "lon": -0.945
+    },
+    {
+      "id": "air-base",
+      "name": "Zaragoza Air Base, runway 12L",
+      "lat": 41.669109,
+      "lon": -1.0399325,
+      "toward": {
+        "lat": 41.6553779,
+        "lon": -1.0082645
+      }
+    },
+    {
+      "id": "juslibol",
+      "name": "Juslibol",
+      "lat": 41.693,
+      "lon": -0.924
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "name": "Tenerife",
+  "country": "Spain",
+  "kicker": {
+    "en": "Canary Islands · from the coast to the top of Teide",
+    "es": "Islas Canarias · de la costa a la cima del Teide"
+  },
+  "proj4": "+proj=utm +zone=28 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs",
+  "crs": "EPSG:4083",
+  "bbox": [
+    314000,
+    3102000,
+    356000,
+    3144000
+  ],
+  "maxStoreys": 10,
+  "heightmap": {
+    "file": "height.bin",
+    "size": 2048,
+    "unitM": 0.2
+  },
+  "ortho": {
+    "file": "ortho.jpg",
+    "size": 4096
+  },
+  "detail": {
+    "dir": "detail",
+    "tileM": 3000,
+    "orthoSize": 2048
+  },
+  "spawns": [
+    {
+      "id": "teide",
+      "name": "Teide cable car (TF-21)",
+      "lat": 28.2556,
+      "lon": -16.6206
+    },
+    {
+      "id": "masca",
+      "name": "Masca (TF-436)",
+      "lat": 28.30594,
+      "lon": -16.84036
+    },
+    {
+      "id": "orotava",
+      "name": "La Orotava",
+      "lat": 28.3906,
+      "lon": -16.5239
+    },
+    {
+      "id": "airport",
+      "name": "Tenerife South Airport, runway 07",
+      "lat": 28.0392093,
+      "lon": -16.5876278,
+      "toward": {
+        "lat": 28.0497351,
+        "lon": -16.5573395
+      }
+    },
+    {
+      "id": "vilaflor",
+      "name": "Vilaflor (TF-21)",
+      "lat": 28.15727,
+      "lon": -16.63811
+    },
+    {
+      "id": "los-gigantes",
+      "name": "Los Gigantes",
+      "lat": 28.244,
+      "lon": -16.84
+    },
+    {
+      "id": "los-cristianos",
+      "name": "Los Cristianos",
+      "lat": 28.0513,
+      "lon": -16.7166
+    }
+  ]
+}

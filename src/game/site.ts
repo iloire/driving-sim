@@ -1,6 +1,6 @@
 // Loads a site folder from public/sites/<id>/ and converts between lat/lon and the local frame
 // (x east, y north, metres from the bbox's south-west corner). The 5 m detail tiles cover the
-// whole island, too many to fetch up front: a tile's heights and objects (buildings, lamps, posts)
+// whole site, too many to fetch up front: a tile's heights and objects (buildings, lamps, posts)
 // load with its photo as the car nears it (terrain-view.ts), and `ensureDetail` waits for the
 // tiles around a point.
 
@@ -9,6 +9,21 @@ import { BuildingIndex, roofline } from '../sim/buildings';
 import { parseObjects, type TileObjects, type TileObjectsFile } from '../sim/objects';
 import { isPaved, parseRoads, RoadIndex, type RoadsFile } from '../sim/roads';
 import { Heightmap } from '../sim/terrain';
+import type { Lang } from './i18n';
+
+/** The zones on offer, each a folder in public/sites/; the first is where a link without ?site= goes. */
+export const ZONES = [
+  { id: 'lanzarote', name: 'Lanzarote' },
+  { id: 'tenerife', name: 'Tenerife' },
+  { id: 'zaragoza', name: 'Zaragoza' },
+  { id: 'benasque', name: 'Benasque' },
+];
+
+/** The zone a link asks for with ?site=, or the first. */
+export function zoneOf(q: URLSearchParams): string {
+  const id = q.get('site');
+  return ZONES.some((z) => z.id === id) ? id! : ZONES[0].id;
+}
 
 export interface SpawnSpec {
   id: string;
@@ -22,9 +37,15 @@ export interface SpawnSpec {
 export interface SiteSpec {
   name: string;
   country: string;
+  /** The line over the title on the welcome screen. */
+  kicker: Record<Lang, string>;
   proj4: string;
   crs: string;
   bbox: [number, number, number, number];
+  /** Inland: the height of the farmland around the site. Omitted = an island, sea all round. */
+  plainM?: number;
+  /** Tallest a building gets (scripts/fetch-terrain.ts); omitted = two. */
+  maxStoreys?: number;
   /** `unitM`: metres per stored step, omitted = 0.1. */
   heightmap: { file: string; size: number; unitM?: number };
   ortho: { file: string; size: number };
@@ -72,19 +93,27 @@ export interface Site {
 
 const BASE = `${import.meta.env.BASE_URL}sites/`;
 
+/** A JSON file of the site. A missing one comes back as the page itself from a dev server, so say which file it was. */
+async function json<T>(url: string): Promise<T> {
+  const res = await fetch(url);
+  if (!res.ok || !res.headers.get('content-type')?.includes('json')) throw new Error(`${url} is missing (is the zone built? npm run fetch-terrain)`);
+  return res.json() as Promise<T>;
+}
+
 export async function loadSite(id: string): Promise<Site> {
   const base = `${BASE}${id}/`;
-  const spec = (await (await fetch(`${base}site.json`)).json()) as SiteSpec;
+  const spec = await json<SiteSpec>(`${base}site.json`);
   const detailDir = `${base}${spec.detail.dir}/`;
   const [heights, roadsFile, index] = await Promise.all([
     fetch(`${base}${spec.heightmap.file}`).then((r) => r.arrayBuffer()),
-    fetch(`${base}roads.json`).then((r) => r.json() as Promise<RoadsFile>),
-    fetch(`${detailDir}tiles.json`).then((r) => r.json() as Promise<{ size: number; tiles: [number, number][] }>),
+    json<RoadsFile>(`${base}roads.json`),
+    json<{ size: number; tiles: [number, number][] }>(`${detailDir}tiles.json`),
   ]);
   const [x0, y0, x1] = spec.bbox;
   const unitM = spec.heightmap.unitM ?? 0.1;
   const tileM = spec.detail.tileM;
   const terrain = Heightmap.fromInt16(heights, spec.heightmap.size, x1 - x0, unitM);
+  if (spec.plainM !== undefined) terrain.outside = spec.plainM;
   const roads = new RoadIndex(parseRoads(roadsFile));
   const proj = proj4('EPSG:4326', spec.proj4);
 

@@ -9,6 +9,19 @@
   a fine correction. From a 60° dive at 800 km/h a held S now levels out in about 500 m instead of
   630. A 0.4 s press at cruise moves the nose about 2° and it stays there.
 
+## 2026-10-24 16:23
+
+- Three new zones next to Lanzarote: **Tenerife** (Teide, Masca, La Orotava, the south airport),
+  **Zaragoza** (the city, the Ebro, a takeoff from the air base's runway 12L) and **Benasque** (the
+  Pyrenees: Aneto, Posets, the A-139 to Llanos del Hospital). The welcome screen has a Zone row,
+  and `?site=` links to one. A link without it opens Lanzarote, as before.
+- Sharing a moment now writes the zone into the link (`?site=`), so it opens where it was taken.
+- Each zone's `site.json` sets how tall its buildings get (`maxStoreys`: Zaragoza 14, Tenerife 10,
+  Benasque 4, Lanzarote still 2) and, inland, the farmland around it (`plainM`) instead of sea.
+- The title, loading screen and welcome screen name the zone instead of Lanzarote.
+- `fetch-terrain` asks IGN for uncompressed replies: its WMS failed one Maladeta photo with a steady
+  500 when asked to compress it. A missing site file now says which one instead of a JSON error.
+
 ## 2026-10-24 15:54
 
 - A shared moment now carries the view too: the camera (chase, bonnet or orbit), the flight HUD and

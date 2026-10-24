@@ -1,4 +1,4 @@
-# Lanzarote Drive
+# Driving Sim
 
 
 https://github.com/user-attachments/assets/2760293f-edd4-4c84-ab65-bea412dab348
@@ -8,9 +8,11 @@ https://github.com/user-attachments/assets/2760293f-edd4-4c84-ab65-bea412dab348
 
 ### ▶ Play it now: **[https://iloire.github.io/driving-sim/](https://iloire.github.io/driving-sim/)**
 
-A browser driving simulator over the real island of Lanzarote: the IGN 5 m terrain and aerial photo
-used by [Famara Glide](https://github.com/iloire/paragliding-sim), with every OpenStreetMap road on
-the island carved into it. You can drive the LZ-67 through Timanfaya, wind along La Geria, or leave
+A browser driving simulator over real places in Spain: the IGN 5 m terrain and aerial photo
+used by [Famara Glide](https://github.com/iloire/paragliding-sim), with every OpenStreetMap road
+carved into it. Four zones: **Lanzarote**, **Tenerife** (Teide, Masca, the south airport),
+**Zaragoza** (the city, the Ebro and the air base) and **Benasque** (the Pyrenees under Aneto and
+Posets). Pick one on the welcome screen, or link straight to it with `?site=tenerife`. You can drive the LZ-67 through Timanfaya, wind along La Geria, or leave
 the road and bounce across the lava. Or press **F**: the Roadster lights the gas thrusters in its
 floor and lifts off like a rocket, and the armoured 4×4 unfolds wings and takes off from Lanzarote
 Airport's runway.
@@ -155,8 +157,10 @@ CI runs all three on every push to `main` and on every pull request.
 
 ## Terrain and roads
 
-`public/sites/lanzarote/` holds what the game loads. `npm run fetch-terrain -- lanzarote` builds
-it: the IGN heightmap and photo, the 5 m tiles, and the OSM roads from Overpass, which it then
+`public/sites/<zone>/` holds what the game loads, one folder a zone, each described by its
+`site.json` (the square, the projection, the places; the fields are in
+[docs/architecture.md](docs/architecture.md#zones-srcgamesitets-publicsiteszonesitejson)).
+`npm run fetch-terrain -- <zone>` builds it: the IGN heightmap and photo, the 5 m tiles, and the OSM roads from Overpass, which it then
 carves into the tiles. It also writes each tile's OSM buildings, street lamps and edge posts to
 `objects/<col>_<row>.json`. Downloads are cached in `cache/` (git-ignored), so re-carving after a change
 to the road model happens offline. `--refresh` downloads everything again. See

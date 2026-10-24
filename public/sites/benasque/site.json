@@ -1,0 +1,70 @@
+{
+  "name": "Benasque",
+  "country": "Spain",
+  "kicker": {
+    "en": "Pyrenees · Aneto, Posets and the Benasque valley",
+    "es": "Pirineo · Aneto, Posets y el valle de Benasque"
+  },
+  "proj4": "+proj=utm +zone=30 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs",
+  "crs": "EPSG:25830",
+  "bbox": [
+    776000,
+    4708000,
+    806000,
+    4738000
+  ],
+  "plainM": 1100,
+  "maxStoreys": 4,
+  "heightmap": {
+    "file": "height.bin",
+    "size": 2048,
+    "unitM": 0.2
+  },
+  "ortho": {
+    "file": "ortho.jpg",
+    "size": 4096
+  },
+  "detail": {
+    "dir": "detail",
+    "tileM": 3000,
+    "orthoSize": 2048
+  },
+  "spawns": [
+    {
+      "id": "benasque",
+      "name": "Benasque (A-139)",
+      "lat": 42.60399,
+      "lon": 0.52465
+    },
+    {
+      "id": "hospital",
+      "name": "Llanos del Hospital (end of the A-139)",
+      "lat": 42.68479,
+      "lon": 0.60471
+    },
+    {
+      "id": "cerler",
+      "name": "Cerler (A-2617)",
+      "lat": 42.58918,
+      "lon": 0.54036
+    },
+    {
+      "id": "eriste",
+      "name": "Eriste (A-139)",
+      "lat": 42.59207,
+      "lon": 0.49947
+    },
+    {
+      "id": "castejon",
+      "name": "Castejón de Sos (N-260)",
+      "lat": 42.51237,
+      "lon": 0.49306
+    },
+    {
+      "id": "ventamillo",
+      "name": "Congosto de Ventamillo",
+      "lat": 42.489,
+      "lon": 0.502
+    }
+  ]
+}

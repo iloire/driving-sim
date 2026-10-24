@@ -5,10 +5,10 @@
 
 const en = {
   // Loading and the pages around the drive
-  'load.island': 'Loading the island…',
-  'load.lava': 'Painting the lava fields…',
+  'load.map': 'Loading the map…',
+  'load.ground': 'Painting the ground…',
   'load.road': 'Finding the car a road…',
-  'load.failed': 'Could not load the island: {error}',
+  'load.failed': 'Could not load the map: {error}',
   'rotate': 'Turn your phone sideways to drive',
   'paused.title': 'Paused',
   'paused.share': 'Share this moment',
@@ -26,7 +26,7 @@ const en = {
   'touch.boost': 'BOOST',
 
   // Welcome menu
-  'menu.kicker': 'Canary Islands · every road on the island',
+  'menu.zone': 'Zone',
   'menu.prev': 'Previous place',
   'menu.next': 'Next place',
   'menu.ride': 'Ride',
@@ -153,10 +153,10 @@ const en = {
 export type Key = keyof typeof en;
 
 const es: Record<Key, string> = {
-  'load.island': 'Cargando la isla…',
-  'load.lava': 'Pintando los campos de lava…',
+  'load.map': 'Cargando el mapa…',
+  'load.ground': 'Pintando el terreno…',
   'load.road': 'Buscando una carretera para el coche…',
-  'load.failed': 'No se pudo cargar la isla: {error}',
+  'load.failed': 'No se pudo cargar el mapa: {error}',
   'rotate': 'Gira el móvil para conducir',
   'paused.title': 'Pausa',
   'paused.share': 'Compartir este momento',
@@ -172,7 +172,7 @@ const es: Record<Key, string> = {
   'touch.pause': 'PAUSA',
   'touch.boost': 'TURBO',
 
-  'menu.kicker': 'Islas Canarias · todas las carreteras de la isla',
+  'menu.zone': 'Zona',
   'menu.prev': 'Lugar anterior',
   'menu.next': 'Lugar siguiente',
   'menu.ride': 'Vehículo',

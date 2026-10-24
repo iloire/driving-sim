@@ -18,7 +18,7 @@ import { Explosion } from './game/explosion';
 import { createJetModel } from './game/jet-model';
 import { createRoadsterModel } from './game/roadster-model';
 import { RoadView } from './game/road-view';
-import { loadSite, type Spawn } from './game/site';
+import { loadSite, ZONES, zoneOf, type Spawn } from './game/site';
 import { TerrainView } from './game/terrain-view';
 import { TouchPad } from './game/touch';
 import { timesOfDay, Welcome } from './game/welcome';
@@ -34,7 +34,6 @@ import { stalled } from './sim/wings';
 declare const __COMMIT_SHA__: string;
 
 const STEP = 1 / 120;
-const SITE = 'lanzarote';
 /** Solar time a drive starts at without ?time=: late afternoon, long shadows over the lava. */
 const DEFAULT_HOUR = 16.5;
 const TOUCH = matchMedia('(pointer: coarse)').matches;
@@ -73,6 +72,7 @@ const GRAVEL: Surface = { grip: 0.72, rolling: 0.03 };
 /** Picón and lava fields: loose and rough. */
 const OFFROAD: Surface = { grip: 0.62, rolling: 0.06 };
 
+// The storage keys keep the name the game had when it was Lanzarote alone, so nobody loses them.
 /** Where the best balloon score is kept, in this browser only. */
 const BEST_KEY = 'lanzarote-drive.best';
 /** Set once the controls card has folded away, so a returning player starts with it folded. */
@@ -127,8 +127,11 @@ async function boot(): Promise<void> {
   initAnalytics();
   translatePage();
   const query = new URLSearchParams(location.search);
-  const site = await loadSite(SITE);
-  loading(t('load.lava'));
+  const zone = zoneOf(query);
+  document.getElementById('brand-zone')!.textContent = ZONES.find((z) => z.id === zone)!.name.toUpperCase();
+  const site = await loadSite(zone);
+  document.title = `${site.spec.name} Drive`;
+  loading(t('load.ground'));
   const terrain = site.terrain;
   const extent = terrain.extent;
 
@@ -152,7 +155,7 @@ async function boot(): Promise<void> {
     free: (t) => { dresser.free(t); site.freeTile(t); },
     dress: (t, level) => dresser.dress(t, level),
   });
-  scene.add(terrainView.group, createSurround(extent));
+  scene.add(terrainView.group, createSurround(extent, site.spec.plainM));
   loading(t('load.road'));
 
   // The balloon game is off until B (or the settings panel, or the phone's button) turns it on.
@@ -295,6 +298,15 @@ async function boot(): Promise<void> {
   // The welcome screen: the car holds still under it while the camera circles it.
   let canResume = false;
   const welcome = new Welcome({
+    // Another zone is another page load: the car, the sun and the language come along.
+    zone: (id) => {
+      const q = new URLSearchParams(location.search);
+      for (const k of ['spawn', 'at', 'fly']) q.delete(k);
+      q.set('site', id);
+      q.set('time', formatHour(sky.hour));
+      track('zone', { site: id });
+      location.search = q.toString().replace(/%3A/g, ':');
+    },
     place: (id) => {
       const s = site.spawns.find((x) => x.spec.id === id);
       if (!s) return;
@@ -332,13 +344,14 @@ async function boot(): Promise<void> {
   function leaveMenu(): void {
     welcome.close();
     rig.drive();
-    track('start', { shared: false, spawn: spawn.spec.id, car: vehicleKey(), touch: TOUCH, resume: canResume });
+    track('start', { shared: false, site: zone, spawn: spawn.spec.id, car: vehicleKey(), touch: TOUCH, resume: canResume });
     if (!canResume) hud.say(t('say.start', { place: spawn.spec.name, hint: START_HINT(spec) }), 5);
   }
 
   function refreshMenu(): void {
     const named = times();
     welcome.render({
+      title: site.spec.name, kicker: site.spec.kicker[currentLang()], zones: ZONES, zone,
       places: site.spawns.map((s) => ({ id: s.spec.id, name: s.spec.name })), place: spawn.spec.id,
       vehicles: Object.entries(VEHICLES).map(([id, v]) => ({ id, name: v.name, line: t(v.line) })), vehicle: vehicleKey(),
       times: Object.keys(named), time: Object.keys(named).find((k) => Math.abs(named[k] - sky.hour) < 0.01) ?? '',
@@ -443,7 +456,7 @@ async function boot(): Promise<void> {
   const shareLink = document.getElementById('share-link') as HTMLInputElement;
   document.getElementById('share-btn')!.addEventListener('click', () => {
     const q = new URLSearchParams(location.search);
-    writeMoment({ x: car.pos[0], y: car.pos[1], z: car.pos[2], heading: car.heading, speed: car.speed, flying: car.flying }, q);
+    writeMoment({ x: car.pos[0], y: car.pos[1], z: car.pos[2], heading: car.heading, speed: car.speed, flying: car.flying }, zone, q);
     writeView({ cam: rig.mode, hud: hudShown, map: !minimap.classList.contains('hidden'), balloons: settings.balloons, drive: settings.drivetrain }, q);
     q.set('time', formatHour(sky.hour));
     const url = `${location.origin}${location.pathname}?${q.toString().replace(/%2C/g, ',').replace(/%3A/g, ':')}`;
@@ -469,7 +482,7 @@ async function boot(): Promise<void> {
     applyDrivetrain();
     gui.controllersRecursive().forEach((c) => c.updateDisplay());
     await resume(moment);
-    track('start', { shared: true, car: vehicleId });
+    track('start', { shared: true, site: zone, car: vehicleId });
     hud.say(t('say.shared', { hint: START_HINT(spec) }), 5);
   } else {
     await place(spawn.x, spawn.y, spawn.heading);

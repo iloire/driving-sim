@@ -13,7 +13,7 @@ src/sim/    pure TypeScript, no three.js, no DOM — unit-tested
   terrain.ts  Heightmap with 5 m detail tiles (shared with paragliding-sim)
   sun.ts      sun position and daylight hours (shared with paragliding-sim)
 src/game/   three.js scene, input, HUD, audio — the rendering layer
-public/sites/lanzarote/   site.json + generated terrain and road data
+public/sites/<zone>/      site.json + generated terrain and road data (lanzarote, tenerife, zaragoza, benasque)
 scripts/fetch-terrain.ts  IGN + OSM download → height.bin, ortho.jpg, roads.json, carved detail tiles
 ```
 
@@ -21,9 +21,38 @@ The terrain pipeline, `Heightmap`, the LOD terrain view and the sky come from
 [paragliding-sim](https://github.com/iloire/paragliding-sim). The differences are listed under each
 section below.
 
+## Zones (`src/game/site.ts`, `public/sites/<zone>/site.json`)
+
+The game plays one zone a page load: `?site=` picks it from `ZONES`, and a link without one (every
+link from before there were zones) opens the first, Lanzarote. Choosing another zone on the welcome
+screen reloads the page with the car, the time and the language kept. A shared moment writes
+`?site=` next to `?at=`, because x and y only mean something in the zone they came from.
+
+Each zone is a folder with a `site.json`, which `scripts/fetch-terrain.ts` fills in:
+
+| field | meaning |
+|---|---|
+| `name`, `kicker` | the welcome screen's title and the line over it (`en`, `es`) |
+| `proj4`, `crs` | the map projection, and the code IGN's services know it by |
+| `bbox` | the square, in that projection's metres: a multiple of `detail.tileM` a side |
+| `plainM` | inland only: the farmland's height around the square. Omitted means an island with sea all round |
+| `maxStoreys` | the tallest a building gets (default two, Lanzarote's planning rule) |
+| `heightmap.unitM` | metres per stored step. 0.1 (default) holds 3,276 m. Tenerife and Benasque use 0.2 for Teide and Aneto |
+| `spawns` | the places, as lat/lon, snapped to the nearest paved road; `toward` starts on a runway facing that way |
+
+| zone | square | projection | notes |
+|---|---|---|---|
+| Lanzarote | 42 km | UTM 28 (`EPSG:4083`) | island, two storeys |
+| Tenerife | 42 km | UTM 28 (`EPSG:4083`) | the middle of the island: Teide, Masca, La Orotava, the south airport |
+| Zaragoza | 30 km | UTM 30 (`EPSG:25830`) | inland, plain at 220 m, up to 14 storeys |
+| Benasque | 30 km | UTM 30 (`EPSG:25830`) | inland, plain at 1,100 m. It is in zone 31 by longitude, but IGN only serves the peninsula in 30 (about 0.06 % stretch, 2.4° grid convergence). The north edge stops short of France, where IGN's data has holes that would read as sea |
+
+The data is IGN's, so a zone has to be in Spain. Everything else (roads, buildings) is OSM.
+Buildings are drawn in Lanzarote's style (lime-white walls, flat roofs) everywhere.
+
 ## Frames
 
-Site frame: **x east, y north, z up**, metres, origin at the bbox's south-west corner (UTM 28N).
+Site frame: **x east, y north, z up**, metres, origin at the bbox's south-west corner (in the zone's UTM projection).
 three.js: `X = x − e/2, Y = z, Z = e/2 − y`, so the site is centred on the origin.
 Car body frame: **X forward, Y left, Z up**, origin at the centre of mass. A heading is a compass
 bearing in radians (0 = north, clockwise).

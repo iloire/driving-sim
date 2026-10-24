@@ -1,6 +1,6 @@
 // A shared moment of a drive, as a link: where the car is, which way it points and how fast it goes.
-// It rides in the query as ?at=x,y,z,heading,speed (site metres to the decimetre, compass degrees,
-// km/h along the nose) plus ?fly=1 while the car is in the air, next to the ?time and ?car the page
+// It rides in the query as ?site=<zone>&at=x,y,z,heading,speed (the zone's metres to the decimetre,
+// compass degrees, km/h along the nose) plus ?fly=1 while the car is in the air, next to the ?time and ?car the page
 // already reads. The view rides along too, so the link looks as it did: ?cam=bonnet|orbit, ?hud=0
 // (flight HUD hidden), ?map=0 (minimap hidden), ?balloons=1 and ?drive=RWD|FWD; defaults are left out.
 
@@ -18,10 +18,11 @@ export interface Moment {
   flying: boolean;
 }
 
-/** Writes the moment into `q`, in place of any ?spawn. */
-export function writeMoment(m: Moment, q: URLSearchParams): void {
+/** Writes the moment in zone `site` into `q`, in place of any ?spawn. */
+export function writeMoment(m: Moment, site: string, q: URLSearchParams): void {
   const deg = (((m.heading * 180) / Math.PI) % 360 + 360) % 360;
   q.delete('spawn');
+  q.set('site', site); // x and y mean nothing in another zone
   q.set('at', [m.x.toFixed(1), m.y.toFixed(1), m.z.toFixed(1), deg.toFixed(0), (m.speed * 3.6).toFixed(0)].join(','));
   if (m.flying) q.set('fly', '1');
   else q.delete('fly');

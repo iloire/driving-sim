@@ -8,7 +8,7 @@
 //                tile with land, the roads carved into their heights, plus tiles.json listing them
 // Downloads are cached in cache/<site>/ (git-ignored) and reused, so re-carving after a change
 // to the road model is offline. --refresh downloads everything again.
-// Usage: npm run fetch-terrain -- lanzarote
+// Usage: npm run fetch-terrain -- lanzarote   (or zaragoza, benasque, tenerife)
 //        npm run fetch-terrain -- lanzarote --refresh
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -35,6 +35,8 @@ interface SiteFile {
   heightmap: { file: string; size: number; unitM?: number };
   ortho: { file: string; size: number };
   detail: { dir: string; tileM: number; orthoSize: number };
+  /** Tallest a building gets, in storeys; omitted = Lanzarote's two. */
+  maxStoreys?: number;
 }
 
 /** OSM highway=* values worth driving, and what the game calls them. */
@@ -48,9 +50,11 @@ const HIGHWAYS: Record<string, RoadKind> = {
 /** Service ways that are car parks and private drives, not roads. */
 const SKIP_SERVICE = new Set(['driveway', 'parking_aisle', 'drive-through']);
 
-// IGN answers the odd request with a 502 partway through a long run; retry those.
+// IGN answers the odd request with a 502 partway through a long run; retry those. Its WMS also fails
+// some tiles with a steady 500 when asked to compress the reply (a photo of the Maladeta, for one),
+// and a JPEG or GeoTIFF gains nothing from it, so ask for the bytes as they are.
 async function download(url: string, tries = 4): Promise<ArrayBuffer> {
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: { 'Accept-Encoding': 'identity' } });
   if (res.ok) return res.arrayBuffer();
   if (res.status >= 500 && tries > 1) {
     await new Promise((r) => setTimeout(r, 5000));
@@ -162,13 +166,18 @@ async function fetchOsm(site: SiteFile, filter: string): Promise<OsmWay[]> {
   const lons = corners.map((c) => c[0]), lats = corners.map((c) => c[1]);
   const box = `${Math.min(...lats)},${Math.min(...lons)},${Math.max(...lats)},${Math.max(...lons)}`;
   const query = `[out:json][timeout:600];way${filter}(${box});out tags geom;`;
-  const res = await fetch(OVERPASS, {
-    method: 'POST',
-    body: new URLSearchParams({ data: query }),
-    headers: { 'User-Agent': 'driving-sim fetch-terrain (github.com/iloire/driving-sim)' },
-  });
-  if (!res.ok) throw new Error(`Overpass: ${res.status} ${res.statusText}`);
-  return ((await res.json()) as { elements: OsmWay[] }).elements;
+  // The public server turns big queries away with a 502 or 504 when it is busy; wait and ask again.
+  for (let tries = 4; ; tries--) {
+    const res = await fetch(OVERPASS, {
+      method: 'POST',
+      body: new URLSearchParams({ data: query }),
+      headers: { 'User-Agent': 'driving-sim fetch-terrain (github.com/iloire/driving-sim)' },
+    });
+    if (res.ok) return ((await res.json()) as { elements: OsmWay[] }).elements;
+    if (res.status < 500 && res.status !== 429 || tries === 1) throw new Error(`Overpass: ${res.status} ${res.statusText}`);
+    console.log(`Overpass: ${res.status}, again in a minute …`);
+    await new Promise((r) => setTimeout(r, 60000));
+  }
 }
 
 /** OSM building ways → footprints in the site frame (to the decimetre), slivers dropped. */
@@ -186,7 +195,7 @@ function toBuildings(site: SiteFile, ways: OsmWay[]): Building[] {
     if (pts[0] === pts[pts.length - 2] && pts[1] === pts[pts.length - 1]) pts.length -= 2; // OSM closes the ring
     const footprint = Math.abs(area(pts));
     if (pts.length < 6 || footprint < 8) continue;
-    out.push({ pts, height: Math.round(buildingHeight(way.tags, way.id, footprint) * 10) / 10 });
+    out.push({ pts, height: Math.round(buildingHeight(way.tags, way.id, footprint, site.maxStoreys) * 10) / 10 });
   }
   return out;
 }

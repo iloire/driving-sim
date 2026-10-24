@@ -1,6 +1,10 @@
 {
   "name": "Lanzarote",
   "country": "Spain",
+  "kicker": {
+    "en": "Canary Islands · every road on the island",
+    "es": "Islas Canarias · todas las carreteras de la isla"
+  },
   "proj4": "+proj=utm +zone=28 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs",
   "crs": "EPSG:4083",
   "bbox": [

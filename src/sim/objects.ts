@@ -30,21 +30,21 @@ export function parseObjects(f: TileObjectsFile): TileObjects {
 }
 
 const STOREY = 3.2;
-/** Lanzarote's planning rules keep the island low: two storeys at most, bar the church towers. */
+/** Lanzarote's planning rules keep the island low: two storeys at most, bar the church towers. A site sets its own as `maxStoreys`. */
 const MAX_STOREYS = 2;
 
 /**
- * A building's height from its OSM tags, capped at two storeys. Untagged ones (most of the island)
+ * A building's height from its OSM tags, capped at `maxStoreys`. Untagged ones (most of the island)
  * get one or two, picked by the OSM id so a house is the same height on every load; a big
  * footprint is likelier to be taller.
  */
-export function buildingHeight(tags: Record<string, string>, id: number, footprint: number): number {
+export function buildingHeight(tags: Record<string, string>, id: number, footprint: number, maxStoreys = MAX_STOREYS): number {
   if (tags.building === 'church' || tags.building === 'cathedral') return 11;
-  const cap = MAX_STOREYS * STOREY + 0.6;
+  const cap = maxStoreys * STOREY + 0.6;
   const h = parseFloat(tags.height ?? '');
   if (h > 0) return Math.min(h, cap);
   const levels = parseFloat(tags['building:levels'] ?? '');
-  if (levels > 0) return Math.min(levels, MAX_STOREYS) * STOREY + 0.6;
+  if (levels > 0) return Math.min(levels, maxStoreys) * STOREY + 0.6;
   if (['garage', 'garages', 'shed', 'hut', 'roof', 'carport'].includes(tags.building)) return 2.6;
   const roll = ((id * 2654435761) >>> 0) / 2 ** 32;
   return (roll < (footprint > 300 ? 0.35 : 0.7) ? 1 : 2) * STOREY + 0.6;

@@ -14,6 +14,11 @@ describe('buildingHeight', () => {
     expect(buildingHeight({ building: 'church', height: '20' }, 1, 100)).toBe(11);
   });
 
+  it('lets a site raise the cap: a city keeps its blocks of flats', () => {
+    expect(buildingHeight({ 'building:levels': '8' }, 1, 100, 14)).toBeCloseTo(26.2);
+    expect(buildingHeight({ height: '60' }, 1, 100, 14)).toBeCloseTo(45.4);
+  });
+
   it('gives an untagged house one or two storeys, the same every time', () => {
     const seen = new Set<number>();
     for (let id = 1; id < 200; id++) {

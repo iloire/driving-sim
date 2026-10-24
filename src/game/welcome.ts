@@ -1,10 +1,15 @@
-// The welcome screen, laid over the live island: the camera circles the car while you pick a
-// place, a vehicle and the time of day, then drive. M or Esc on the road brings it back with
+// The welcome screen, laid over the live map: the camera circles the car while you pick a
+// zone, a place, a vehicle and the time of day, then drive. M or Esc on the road brings it back with
 // Resume. ← → change place, Enter drives. A shared link skips it and starts where it was shared.
 
 import { t, type Key, type Lang } from './i18n';
 
 export interface WelcomeView {
+  /** The zone's name (the title) and the line over it. */
+  title: string;
+  kicker: string;
+  zones: { id: string; name: string }[];
+  zone: string;
   places: { id: string; name: string }[];
   place: string;
   vehicles: { id: string; name: string; line: string }[];
@@ -21,6 +26,7 @@ export interface WelcomeView {
 }
 
 export interface WelcomeHandlers {
+  zone(id: string): void;
   place(id: string): void;
   vehicle(id: string): void;
   time(name: string): void;
@@ -91,7 +97,8 @@ export class Welcome {
     const v = this.view;
     if (!t || !v) return;
     const d = t.dataset;
-    if (d.placeStep) this.on.place(step(v.places.map((p) => p.id), v.place, Number(d.placeStep)));
+    if (d.zone) { if (d.zone !== v.zone) this.on.zone(d.zone); }
+    else if (d.placeStep) this.on.place(step(v.places.map((p) => p.id), v.place, Number(d.placeStep)));
     else if (d.place) this.on.place(d.place);
     else if (d.vehicle) this.on.vehicle(d.vehicle);
     else if (d.time) this.on.time(d.time);
@@ -130,8 +137,12 @@ export class Welcome {
       `<button type="button" class="wl-chip" ${attr}="${esc(value)}" aria-pressed="${on}">${esc(label)}</button>`;
     this.root.innerHTML = `
       <div class="wl-main">
-        <p class="wl-kicker">${esc(t('menu.kicker'))}</p>
-        <h1 class="wl-title">Lanzarote <span>Drive</span></h1>
+        <p class="wl-kicker">${esc(v.kicker)}</p>
+        <h1 class="wl-title">${esc(v.title)} <span>Drive</span></h1>
+        <div class="wl-row" role="group" aria-label="Zone">
+          <span class="wl-label">${esc(t('menu.zone'))}</span>
+          ${v.zones.map((x) => chip('data-zone', x.id, x.name, x.id === v.zone)).join('')}
+        </div>
         <div class="wl-place">
           <button type="button" class="wl-arrow" data-place-step="-1" aria-label="${esc(t('menu.prev'))}">‹</button>
           <h2>${esc(v.places[at]?.name ?? '')}</h2>
