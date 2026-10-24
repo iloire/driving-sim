@@ -2,6 +2,13 @@
 
 ## 2026-10-24 15:34
 
+- The Jet's control surfaces move. The tailplanes tilt together when you pull or push and against
+  each other when you roll, ailerons on the wing's trailing edge roll, and a rudder on each fin
+  swings with Q/E. They follow what the fly-by-wire gives the wing, not the raw keys, so the rudder
+  goes out less at speed. It only rotates a few extra small meshes, so it costs nothing to draw.
+
+## 2026-10-24 15:34
+
 - The Jet's bonnet view is now the pilot's eye, high in the canopy, so the nose drops away about
   12° below the line of flight. The camera used to sit just above the nose, and the fuselage
   filled the bottom half of the screen.

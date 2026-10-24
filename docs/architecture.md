@@ -189,6 +189,11 @@ the afterburner. Two additions make it a fighter rather than a fast light plane:
   behind the canopy (`jet-model.ts`), an amber AIRBRAKE box on the flying HUD with a bar for how far
   out it is (flashing while it moves), a buffet in the camera that grows with airspeed, and in
   `audio.ts` a clunk as it goes out (a lighter one as it stows) and a low fluttering rumble while it's out.
+- **Control surfaces** (`CarState.surfaces`): the pitch, roll and yaw the wing actually got this
+  step, after the fly-by-wire (so the rudder shrinks at speed and a steady pull shows its trim). In
+  `jet-model.ts` the all-moving tailplanes tilt together to pitch and against each other to roll,
+  ailerons cut out of the wing's trailing edge roll, and a rudder on each fin yaws, all up to 20°,
+  easing towards the sim's value at 12/s so the fly-by-wire's corrections don't jitter them.
 
 - **The air** (`atmosphere()`): the International Standard Atmosphere by height above the sea.
   The temperature falls 6.5 °C a kilometre to −56.5 °C at 11 km, the density follows (0.36 kg/m³ at

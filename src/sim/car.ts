@@ -265,6 +265,8 @@ export interface CarState {
   mach: number;
   /** How far the airbrake panel is up, 0..1, swinging towards the Space key over half a second. */
   airbrake: number;
+  /** Where the control surfaces sit, −1..1: what the wing is actually given after the fly-by-wire. */
+  surfaces: { pitch: number; roll: number; yaw: number };
 }
 
 /** Strut length at rest under the static load, mount to hub. */
@@ -291,7 +293,7 @@ export function createCar(spec: CarSpec, x: number, y: number, groundZ: number, 
   return {
     pos: [x, y, groundZ + spec.cgHeight], vel: [0, 0, 0], q: [Math.cos(yaw / 2), 0, 0, Math.sin(yaw / 2)], w: [0, 0, 0],
     steer: 0, gear: 1, rpm: spec.engine.idle, shiftTimer: 0, wheels, speed: 0, heading, inWater: false,
-    flying: false, wings: 0, lift: 0, alpha: 0, airspeed: 0, mach: 0, airbrake: 0,
+    flying: false, wings: 0, lift: 0, alpha: 0, airspeed: 0, mach: 0, airbrake: 0, surfaces: { pitch: 0, roll: 0, yaw: 0 },
   };
 }
 
@@ -494,6 +496,7 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
     torque = add(torque, a.torque);
     s.alpha = a.alpha;
     s.airspeed = a.airspeed;
+    s.surfaces = { pitch: stick.pitch, roll: stick.roll, yaw: stick.yaw };
   } else if (s.wings > 0 && th) {
     const h = hover(th, spec.mass, spec.inertia, s.q, s.vel, s.w, c.flight, s.wings);
     force = add(force, h.force);
@@ -502,6 +505,7 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
     s.airspeed = speed;
   } else {
     s.lift = 0;
+    s.surfaces = { pitch: 0, roll: 0, yaw: 0 };
   }
 
   // Newton for the centre of mass, Euler's equations for the rotation (in the body frame).

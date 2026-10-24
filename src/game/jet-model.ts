@@ -4,7 +4,9 @@
 // The landing gear only shows when it is slow enough to need it. Around Mach 1 a vapour cone
 // wraps the fuselage from the canopy back, thickest right at the sound barrier. The airbrake is a
 // panel on the spine behind the canopy, hinged at its front edge, that swings up to 55° and
-// shudders in the airflow, opening a dark well beneath it.
+// shudders in the airflow, opening a dark well beneath it. The control surfaces follow what the
+// fly-by-wire gives the wing: the all-moving tailplanes tilt together to pitch and against each
+// other to roll, ailerons on the wing's trailing edge roll, and a rudder on each fin yaws.
 // Built in the sim's body frame turned into three.js axes: forward +X, up +Y, left −Z, origin at
 // the centre of mass.
 
@@ -19,6 +21,8 @@ const GEAR_DOWN = 110;
 const VAPOUR = { mach: 0.99, width: 0.035 };
 /** The airbrake panel fully up (rad), and how much it shudders at speed. */
 const AIRBRAKE = { angle: 0.95, shudder: 0.04 };
+/** Full travel of the tailplanes, ailerons and rudders (rad), and how fast they get there (1/s). */
+const SURFACES = { travel: 0.35, rate: 12 };
 
 /**
  * A cone of condensation, apex at the canopy opening back over the wings: clear at the tip, densest
@@ -48,6 +52,17 @@ function planform(points: [number, number][], thickness: number, side: 1 | -1): 
   return g.rotateX(Math.PI / 2);
 }
 
+/** A control surface hinged along the line `hinge` of a planform, swinging about it via `swing(angle)`; positive is trailing edge down (or, on a fin, towards the right). */
+function hinged(points: [number, number][], hinge: [[number, number], [number, number]], thickness: number, side: 1 | -1, material: THREE.Material) {
+  const [[x0, y0], [x1, y1]] = hinge;
+  const pivot = new THREE.Group();
+  pivot.position.set(x0, 0, y0 * side);
+  pivot.add(new THREE.Mesh(planform(points, thickness, side).translate(-x0, 0, -y0 * side), material));
+  // Pointing right on either side, so the same angle drops either trailing edge.
+  const axis = new THREE.Vector3(x1 - x0, 0, (y1 - y0) * side).normalize().multiplyScalar(side);
+  return { pivot, swing: (angle: number) => pivot.setRotationFromAxisAngle(axis, angle) };
+}
+
 export function createJetModel(spec: CarSpec): CarModel {
   const group = new THREE.Group();
   const grey = new THREE.MeshStandardMaterial({ color: 0x8a939c, roughness: 0.55, metalness: 0.35 });
@@ -66,20 +81,31 @@ export function createJetModel(spec: CarSpec): CarModel {
   const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.65, 1.1, 20, 1, true).rotateZ(Math.PI / 2), metal);
   nozzle.position.set(-7.4, 0.05, 0);
 
-  const wing: [number, number][] = [[2.2, 0], [-5.8, 0], [-6.2, 4.9], [-4.6, 4.9]];
+  // The wing and fins have a notch cut out of the trailing edge where the aileron and rudder sit.
+  const wing: [number, number][] = [[2.2, 0], [-5.8, 0], [-5.87, 0.9], [-5.07, 0.9], [-5.37, 4.6], [-6.17, 4.6], [-6.2, 4.9], [-4.6, 4.9]];
+  const aileron: [number, number][] = [[-5.07, 0.9], [-5.87, 0.9], [-6.17, 4.6], [-5.37, 4.6]];
   const tail: [number, number][] = [[-5.6, 0], [-7.6, 0], [-7.8, 2.6], [-7.0, 2.6]];
-  const fin: [number, number][] = [[-4.2, 0], [-7.4, 0], [-7.9, 2.6], [-6.8, 2.6]];
+  const fin: [number, number][] = [[-4.2, 0], [-7.4, 0], [-7.46, 0.3], [-6.76, 0.3], [-7.07, 2.3], [-7.84, 2.3], [-7.9, 2.6], [-6.8, 2.6]];
+  const rudder: [number, number][] = [[-6.76, 0.3], [-7.46, 0.3], [-7.84, 2.3], [-7.07, 2.3]];
+  const movers: { tail: (a: number) => void; aileron: (a: number) => void; rudder: (a: number) => void; side: 1 | -1 }[] = [];
   for (const side of [1, -1] as const) {
     const w = new THREE.Mesh(planform(wing, 0.18, side), grey);
     w.position.y = -0.15;
-    const t = new THREE.Mesh(planform(tail, 0.12, side), grey);
-    t.position.y = -0.2;
+    const a = hinged(aileron, [[-5.07, 0.9], [-5.37, 4.6]], 0.12, side, grey);
+    w.add(a.pivot);
+    // The tailplane pivots whole about a spanwise shaft a little behind its middle.
+    const t = hinged(tail, [[-6.7, 0], [-6.7, 1]], 0.12, side, grey);
+    t.pivot.position.y = -0.2;
     // Fins stand on the spine either side, canted out about 20°.
     const f = new THREE.Mesh(planform(fin, 0.12, 1), dark);
     f.rotation.x = -(Math.PI / 2 - 0.35 * side);
     f.position.set(0, 0.5, side * 0.55);
-    group.add(w, t, f);
+    const r = hinged(rudder, [[-6.76, 0.3], [-7.07, 2.3]], 0.1, 1, dark);
+    f.add(r.pivot);
+    group.add(w, t.pivot, f);
+    movers.push({ tail: t.swing, aileron: a.swing, rudder: r.swing, side });
   }
+  const surfaces = { pitch: 0, roll: 0, yaw: 0 };
 
   const flameMat = new THREE.MeshBasicMaterial({ color: 0xffa040, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false });
   const flame = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1, 16).rotateZ(Math.PI / 2).translate(-0.5, 0, 0), flameMat);
@@ -117,7 +143,7 @@ export function createJetModel(spec: CarSpec): CarModel {
   const q = new THREE.Quaternion();
   return {
     group,
-    update(s, _braking, extent, thrust, boost) {
+    update(s, _braking, extent, thrust, boost, _camera, dt = 0) {
       // Sim quaternion [w, x, y, z] in (east, north, up) → three.js (x, up, −north).
       q.set(s.q[1], s.q[3], -s.q[2], s.q[0]);
       group.quaternion.copy(q);
@@ -144,6 +170,17 @@ export function createJetModel(spec: CarSpec): CarModel {
       const shudder = s.airbrake * AIRBRAKE.shudder * Math.min(s.airspeed / 200, 1) * (Math.random() - 0.5);
       brakeHinge.rotation.z = -(s.airbrake * AIRBRAKE.angle + shudder);
       well.visible = s.airbrake > 0.01;
+
+      // The surfaces chase the sim's at a servo's pace (dt is 0 on a still frame: snap).
+      const k = dt > 0 ? 1 - Math.exp(-SURFACES.rate * dt) : 1;
+      for (const key of ['pitch', 'roll', 'yaw'] as const) surfaces[key] += (s.surfaces[key] - surfaces[key]) * k;
+      const { pitch, roll, yaw } = surfaces, T = SURFACES.travel;
+      for (const m of movers) {
+        // Pull or roll away from a side raises its trailing edges (−); the right fin's leads the yaw.
+        m.tail(-T * Math.max(-1, Math.min(1, pitch + roll * m.side)));
+        m.aileron(-T * roll * m.side);
+        m.rudder(T * yaw);
+      }
 
       // The cone flickers as the shock shifts.
       const near = Math.exp(-(((s.mach - VAPOUR.mach) / VAPOUR.width) ** 2));

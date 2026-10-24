@@ -171,6 +171,19 @@ describe('the jet', () => {
 });
 
 describe('the atmosphere', () => {
+  it('reports its control surfaces as the fly-by-wire sets them: rolling right, a fading rudder', () => {
+    const s = airborne(240), still = airborne(240);
+    const c = controls(0, 1);
+    c.flight.yaw = 1;
+    fly(s, c, 0.2);
+    fly(still, controls(), 0.2);
+    expect(s.surfaces.roll).toBeGreaterThan(0.3);
+    // Full right boot, cut to (120 / 240)² = a quarter at 240 m/s.
+    expect(s.surfaces.yaw).toBeCloseTo(0.25, 2);
+    expect(Math.abs(still.surfaces.roll)).toBeLessThan(0.05);
+    expect(Math.abs(still.surfaces.yaw)).toBeLessThan(0.01);
+  });
+
   it('matches the standard atmosphere at the sea, at 11 km and at 20 km', () => {
     expect(atmosphere(0).rho).toBeCloseTo(1.225, 3);
     expect(atmosphere(0).sound).toBeCloseTo(340.3, 0);
