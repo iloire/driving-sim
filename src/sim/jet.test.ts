@@ -101,6 +101,19 @@ describe('the jet', () => {
     expect(braked.pos[2]).toBeGreaterThan(2900);
   });
 
+  it('swings the airbrake panel up over half a second and back down the same when Space lets go', () => {
+    const s = airborne(230);
+    const c = controls(0, 0, 0.1);
+    c.flight.airbrake = true;
+    fly(s, c, 0.25);
+    expect(s.airbrake).toBeCloseTo(0.5, 1);
+    fly(s, c, 0.3);
+    expect(s.airbrake).toBe(1);
+    c.flight.airbrake = false;
+    fly(s, c, 0.55);
+    expect(s.airbrake).toBe(0);
+  });
+
   it('sinks when it is too slow to fly, nose held under the stall', () => {
     const s = airborne(55);
     fly(s, controls(1, 0, 0.1), 6);

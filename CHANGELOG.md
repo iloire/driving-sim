@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-24 14:52
+
+- The Jet's airbrake shows. A panel on the spine behind the canopy swings up over half a second
+  and shudders in the airflow; the flying HUD shows an amber AIRBRAKE box with a bar for how far it
+  is out, flashing while it moves; and the chase and bonnet cameras buffet harder the faster you go.
+  The drag now builds and fades with the panel instead of switching on at once.
+
 ## 2026-10-24 14:44
 
 - G-effects. The pilot's body lags the load: a quick 9 g snap is fine, and 6 g can be held for

@@ -1,6 +1,7 @@
 // The flying HUD, drawn over the view on wings: a flight path marker where the plane is actually
 // going, a pitch ladder fixed to the real horizon (so it tilts as the view banks), a heading tape,
-// the g and angle of attack, and a flashing PULL UP when the line it's flying meets the ground.
+// the g and angle of attack, an amber AIRBRAKE box while it's out (flashing as the panel swings),
+// and a flashing PULL UP when the line it's flying meets the ground.
 // Everything is projected through the live camera, so it reads true in chase, bonnet and orbit.
 
 import * as THREE from 'three';
@@ -14,6 +15,8 @@ export interface FlightHudFrame {
   g: number;
   alpha: number;
   pullUp: boolean;
+  /** How far the airbrake panel is up, 0..1. */
+  airbrake: number;
 }
 
 /**
@@ -29,6 +32,7 @@ export function secondsToGround(pos: readonly number[], vel: readonly number[], 
 
 const GREEN = '#86ffa8';
 const WARN = '#ff5a3a';
+const CAUTION = '#ffbf3a';
 /** A dark rim round every line and letter, so the green reads against a bright sky. */
 const HALO = 'rgba(6, 18, 10, 0.6)';
 const FONT = "600 13px 'IBM Plex Mono', ui-monospace, monospace";
@@ -82,12 +86,32 @@ export class FlightHud {
     c.textAlign = 'left';
     this.text(`G ${f.g.toFixed(1)}`, cx - 230, cy - 30);
     this.text(`α ${Math.round(f.alpha * THREE.MathUtils.RAD2DEG)}°`, cx - 230, cy - 10);
+    if (f.airbrake > 0) this.airbrake(f.airbrake, cx - 236, cy + 6, time);
     if (f.pullUp && Math.floor(time * 4) % 2 === 0) {
       c.fillStyle = WARN;
       c.font = "800 34px 'Big Shoulders Display', 'Barlow', sans-serif";
       c.textAlign = 'center';
       this.text('PULL UP', cx, cy + 90);
     }
+  }
+
+  /** The AIRBRAKE caution box with a bar under it for how far the panel is up; it flashes while the panel moves. */
+  private airbrake(out: number, x: number, y: number, time: number): void {
+    if (out < 1 && Math.floor(time * 8) % 2 === 0) return;
+    const c = this.ctx;
+    c.save();
+    c.strokeStyle = c.fillStyle = CAUTION;
+    c.beginPath();
+    c.rect(x, y, 84, 20);
+    this.ink();
+    c.beginPath();
+    c.moveTo(x, y + 26);
+    c.lineTo(x + 84 * out, y + 26);
+    c.lineWidth = 3;
+    this.ink();
+    c.textBaseline = 'middle';
+    this.text('AIRBRAKE', x + 7, y + 11);
+    c.restore();
   }
 
   /** Strokes the current path over its halo. */

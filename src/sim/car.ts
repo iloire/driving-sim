@@ -21,6 +21,8 @@ const TYRE_C = 1.4;
 const SLIP_FLOOR = 2.5;
 /** N per m/s: how hard a braked wheel resists rolling before its brake saturates (stops dead, no oscillation). */
 const BRAKE_STIFFNESS = 20000;
+/** Airbrake panel travel per second (1 = fully up). */
+const AIRBRAKE_RATE = 2;
 /** A locked, sliding tyre keeps this share of its grip. */
 const KINETIC = 0.8;
 /** Body corners touching the ground (a roll, a bottoming): stiffness N/m, damping N per m/s. */
@@ -260,6 +262,8 @@ export interface CarState {
   /** Angle of attack (rad) and airspeed (m/s) while the wings are out. */
   alpha: number;
   airspeed: number;
+  /** How far the airbrake panel is up, 0..1, swinging towards the Space key over half a second. */
+  airbrake: number;
 }
 
 /** Strut length at rest under the static load, mount to hub. */
@@ -286,7 +290,7 @@ export function createCar(spec: CarSpec, x: number, y: number, groundZ: number, 
   return {
     pos: [x, y, groundZ + spec.cgHeight], vel: [0, 0, 0], q: [Math.cos(yaw / 2), 0, 0, Math.sin(yaw / 2)], w: [0, 0, 0],
     steer: 0, gear: 1, rpm: spec.engine.idle, shiftTimer: 0, wheels, speed: 0, heading, inWater: false,
-    flying: false, wings: 0, lift: 0, alpha: 0, airspeed: 0,
+    flying: false, wings: 0, lift: 0, alpha: 0, airspeed: 0, airbrake: 0,
   };
 }
 
@@ -359,6 +363,8 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
   const w = spec.wings, th = spec.thrusters;
   const deploy = w?.unfoldRate ?? th?.spool ?? 0;
   s.wings += clamp((s.flying && deploy ? 1 : 0) - s.wings, -deploy * dt, deploy * dt);
+  const panel = s.flying && w?.airbrake && c.flight.airbrake ? 1 : 0;
+  s.airbrake += clamp(panel - s.airbrake, -AIRBRAKE_RATE * dt, AIRBRAKE_RATE * dt);
   // In plane mode the jet drives it, so the wheels just roll (Space still brakes the rear ones).
   const { drive, brake } = s.flying ? { drive: 0, brake: 0 } : powertrain(s, spec, c, dt);
   if (s.flying) s.rpm += (spec.engine.idle + c.flight.thrust * (spec.engine.redline - spec.engine.idle) - s.rpm) * (1 - Math.exp(-dt * 3));
@@ -479,7 +485,7 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
   if (c.boost) force = add(force, scale(nose, spec.nitro * (1 - s.wings) + airBoost * s.wings));
   if (s.wings > 0 && w) {
     const stick = w.fbw ? flyByWire(w, w.fbw, spec.mass, s.q, s.vel, s.w, c.flight) : c.flight;
-    const a = aero(w, s.q, s.vel, s.w, stick, s.wings);
+    const a = aero(w, s.q, s.vel, s.w, stick, s.wings, s.airbrake);
     force = add(force, a.force);
     torque = add(torque, a.torque);
     s.alpha = a.alpha;

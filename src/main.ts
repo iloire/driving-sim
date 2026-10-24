@@ -524,7 +524,8 @@ async function boot(): Promise<void> {
     const followHeading = moving > 4 && (car.speed > 0 || car.flying) ? travel : car.heading;
     // Hovering, the chase camera only drops back a little: there's no wingspan to fit in.
     carVel.set(car.vel[0], car.vel[2], -car.vel[1]);
-    rig.update(dt, model.group, carVel, followHeading, ground, car.wings * (isJet(spec) ? JET_CAMERA : spec.wings ? 1 : 0.3), boosting);
+    rig.update(dt, model.group, carVel, followHeading, ground, car.wings * (isJet(spec) ? JET_CAMERA : spec.wings ? 1 : 0.3), boosting,
+      car.airbrake * Math.min(car.airspeed / 250, 1));
     // Fighting HUD on wings. PULL UP when the line it's flying meets the ground within 5 s at a
     // speed or sink rate that would crash rather than land.
     const plane = car.flying && !!spec.wings && !welcome.isOpen;
@@ -532,7 +533,7 @@ async function boot(): Promise<void> {
       && secondsToGround([car.pos[0], car.pos[1], car.pos[2] - spec.cgHeight], car.vel, (x, y) => terrain.heightAt(x, y)) < 5;
     hud.setVeil(welcome.isOpen ? 0 : pilot.grey, welcome.isOpen ? 0 : pilot.red);
     audio.setMuffle(welcome.isOpen ? 0 : pilot.grey);
-    flightHud.update(camera, plane ? { vel: carVel, heading: followHeading, g: gLoad, alpha: car.alpha, pullUp } : null, now / 1000);
+    flightHud.update(camera, plane ? { vel: carVel, heading: followHeading, g: gLoad, alpha: car.alpha, pullUp, airbrake: car.airbrake } : null, now / 1000);
     sunlight.follow(carPos);
     const t1 = performance.now();
     terrainView.update(camera.position, camera.position.y - ground(camera.position), Math.hypot(...car.vel));

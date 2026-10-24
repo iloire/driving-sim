@@ -2,7 +2,9 @@
 // nose and a bubble canopy, a cropped delta wing, small tailplanes, twin fins canted outwards, and
 // one round nozzle whose flame grows with the throttle and turns blue-white on the afterburner.
 // The landing gear only shows when it is slow enough to need it. Around Mach 1 a vapour cone
-// wraps the fuselage from the canopy back, thickest right at the sound barrier.
+// wraps the fuselage from the canopy back, thickest right at the sound barrier. The airbrake is a
+// panel on the spine behind the canopy, hinged at its front edge, that swings up to 55° and
+// shudders in the airflow, opening a dark well beneath it.
 // Built in the sim's body frame turned into three.js axes: forward +X, up +Y, left −Z, origin at
 // the centre of mass.
 
@@ -16,6 +18,8 @@ const GEAR_DOWN = 110;
 const SPEED_OF_SOUND = 340;
 /** The vapour cone: Mach number where it's thickest, and how far either side it fades out. */
 const VAPOUR = { mach: 0.99, width: 0.035 };
+/** The airbrake panel fully up (rad), and how much it shudders at speed. */
+const AIRBRAKE = { angle: 0.95, shudder: 0.04 };
 
 /**
  * A cone of condensation, apex at the canopy opening back over the wings: clear at the tip, densest
@@ -85,6 +89,15 @@ export function createJetModel(spec: CarSpec): CarModel {
   const vapour = vapourCone();
   group.add(nozzle, flame, vapour);
 
+  // Airbrake: a panel on the spine hinged at its front edge, over a dark well it uncovers.
+  const brakeHinge = new THREE.Group();
+  brakeHinge.position.set(-0.3, 0.76, 0);
+  const brakePanel = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.06, 0.95).translate(-1.1, 0, 0), grey);
+  brakeHinge.add(brakePanel);
+  const well = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.04, 0.85).translate(-1.15, 0, 0), metal);
+  well.position.set(-0.3, 0.73, 0);
+  group.add(brakeHinge, well);
+
   // Landing gear: a leg and a wheel at each of the sim's wheel mounts.
   const gear = new THREE.Group();
   const wheelGeo = new THREE.CylinderGeometry(spec.wheelRadius, spec.wheelRadius, 0.25, 20).rotateX(Math.PI / 2);
@@ -128,6 +141,10 @@ export function createJetModel(spec: CarSpec): CarModel {
       flame.visible = burn > 0.05;
       flame.scale.set(0.8 + burn * (2.2 + Math.random() * 0.5), 0.7 + burn * 0.3, 0.7 + burn * 0.3);
       flameMat.color.copy(ORANGE).lerp(BLUE, after * 0.7);
+
+      const shudder = s.airbrake * AIRBRAKE.shudder * Math.min(s.airspeed / 200, 1) * (Math.random() - 0.5);
+      brakeHinge.rotation.z = -(s.airbrake * AIRBRAKE.angle + shudder);
+      well.visible = s.airbrake > 0.01;
 
       // The cone flickers as the shock shifts.
       const near = Math.exp(-(((s.airspeed / SPEED_OF_SOUND - VAPOUR.mach) / VAPOUR.width) ** 2));

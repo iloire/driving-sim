@@ -183,8 +183,11 @@ the afterburner. Two additions make it a fighter rather than a fast light plane:
   0.015 hump at Mach 1.05, then eases off towards 0.005 past it. Full dry thrust can't push through
   the hump. The afterburner beats it by a few kN, so the run to Mach 1 is slow and dramatic, and once
   through, the falling drag lets it run on to Mach 1.2.
-- **Airbrake** (`WingSpec.airbrake`, Space): adds 0.08 to CD while it's out. At idle from 830 km/h it
-  sheds about 260 km/h in 10 s where the clean jet sheds 90.
+- **Airbrake** (`WingSpec.airbrake`, Space): adds 0.08 to CD when fully out. At idle from 830 km/h it
+  sheds about 260 km/h in 10 s where the clean jet sheds 90. The panel swings up over 0.5 s
+  (`CarState.airbrake`, 0..1) and the drag follows it. It shows as a panel hinged up on the spine
+  behind the canopy (`jet-model.ts`), an amber AIRBRAKE box on the flying HUD with a bar for how far
+  out it is (flashing while it moves), and a buffet in the camera that grows with airspeed.
 
 It cruises at about 920 km/h, does Mach 0.94 dry, and on the afterburner passes Mach 1 about 18 s
 from cruise and tops out at Mach 1.2 (about 1,470 km/h). It pulls 9 g above about 180 m/s and mushes downwards below about 60 m/s.

@@ -69,7 +69,7 @@ export interface WingSpec {
   fbw?: FlyByWire;
   /** Transonic wave drag (`waveDrag`): from Mach `crit` up to `peak` just past Mach 1, then down to `plateau`. */
   mach?: { crit: number; peak: number; plateau: number };
-  /** Drag coefficient the airbrake adds while it's out. */
+  /** Drag coefficient the airbrake adds while it's fully out. */
   airbrake?: number;
 }
 
@@ -131,8 +131,8 @@ export interface AeroResult {
   airspeed: number;
 }
 
-/** Aerodynamic force and torque on the body for wings `out` (0..1) unfolded. */
-export function aero(w: WingSpec, q: Quat, vel: V3, omega: V3, c: FlightControls, out: number): AeroResult {
+/** Aerodynamic force and torque on the body for wings `out` (0..1) unfolded and the airbrake `brake` (0..1) out. */
+export function aero(w: WingSpec, q: Quat, vel: V3, omega: V3, c: FlightControls, out: number, brake = 0): AeroResult {
   const vb = unrotate(q, vel);
   const V = length(vel);
   const force: V3 = [0, 0, 0];
@@ -146,7 +146,7 @@ export function aero(w: WingSpec, q: Quat, vel: V3, omega: V3, c: FlightControls
   const S = w.area * out;
   const cl = liftCoefficient(w, alpha);
   const wave = w.mach ? waveDrag(w.mach, V / SPEED_OF_SOUND) : 0;
-  const cd = w.cd0 + w.cdInduced * cl * cl + wave + (c.airbrake ? w.airbrake ?? 0 : 0);
+  const cd = w.cd0 + w.cdInduced * cl * cl + wave + (w.airbrake ?? 0) * brake;
   const along = scale(vel, 1 / V);
   const left = rotate(q, [0, 1, 0]);
   const liftDir = normalize(cross(along, left));

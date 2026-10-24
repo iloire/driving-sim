@@ -146,9 +146,10 @@ export class CameraRig {
 
   /**
    * `velocity`: the car's, in scene axes; `heading`: compass heading to follow (the car's, or its
-   * travel when sliding); `groundAt`: the ground height under a point.
+   * travel when sliding); `groundAt`: the ground height under a point; `buffet` 0..1: the airbrake
+   * shaking the airframe.
    */
-  update(dt: number, car: THREE.Object3D, velocity: THREE.Vector3, heading: number, groundAt: (p: THREE.Vector3) => number, wings = 0, boosting = false): void {
+  update(dt: number, car: THREE.Object3D, velocity: THREE.Vector3, heading: number, groundAt: (p: THREE.Vector3) => number, wings = 0, boosting = false, buffet = 0): void {
     const cam = this.camera;
     this.wings = wings;
     this.boost += ((boosting ? 1 : 0) - this.boost) * (1 - Math.exp(-dt * (boosting ? 3 : 1.5)));
@@ -181,8 +182,8 @@ export class CameraRig {
       this.offsetTarget.subVectors(this.desired, car.position).addScaledVector(velocity, -1 / CHASE_RATE);
       this.offset.lerp(this.offsetTarget, 1 - Math.exp(-dt * CHASE_RATE));
       cam.position.addVectors(car.position, this.offset);
-      // A little shake on the turbo.
-      const shake = 0.06 * this.boost;
+      // A little shake on the turbo, and the airbrake's buffet.
+      const shake = 0.06 * this.boost + 0.2 * buffet;
       cam.position.x += (Math.random() - 0.5) * shake;
       cam.position.y += (Math.random() - 0.5) * shake;
       cam.position.y = Math.max(cam.position.y, groundAt(cam.position) + 0.8);
@@ -192,6 +193,7 @@ export class CameraRig {
       // On the bonnet, looking down the road, moving with the body.
       cam.position.copy(new THREE.Vector3(1.3, 0.95, 0).applyQuaternion(car.quaternion).add(car.position));
       cam.quaternion.copy(car.quaternion).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2));
+      cam.position.y += (Math.random() - 0.5) * 0.03 * buffet;
     }
     this.lastTarget.copy(car.position);
     if (this.blend > 0) {
