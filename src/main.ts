@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { CarAudio } from './game/audio';
 import { BalloonsView } from './game/balloons-view';
 import { CameraRig } from './game/camera';
+import { cardHtml, HelpFold, MODES, modeOf, referenceHtml, type Mode } from './game/controls';
 import { createCarModel, type CarModel } from './game/car-model';
 import { TileDresser } from './game/dress';
 import { Hud } from './game/hud';
@@ -64,6 +65,17 @@ const OFFROAD: Surface = { grip: 0.62, rolling: 0.06 };
 
 /** Where the best balloon score is kept, in this browser only. */
 const BEST_KEY = 'lanzarote-drive.best';
+/** Set once the controls card has folded away, so a returning player starts with it folded. */
+const HELP_SEEN_KEY = 'lanzarote-drive.help-seen';
+
+function storageFlag(key: string, set = false): boolean {
+  try {
+    if (set) localStorage.setItem(key, '1');
+    return localStorage.getItem(key) === '1';
+  } catch {
+    return false;
+  }
+}
 
 function readBest(): number {
   try {
@@ -184,7 +196,13 @@ async function boot(): Promise<void> {
   }
   let stuck = 0; // seconds on its roof or side, or in the sea
   let detailTimer = 0;
-  let helpFolded = false;
+  const helpFold = new HelpFold(storageFlag(HELP_SEEN_KEY));
+  const help = document.getElementById('help')!;
+  const helpBody = document.getElementById('help-body')!;
+  const helpMode = document.getElementById('help-mode')!;
+  document.getElementById('help-toggle')!.addEventListener('click', () => helpFold.toggle());
+  let shownMode: Mode | null = null;
+  let shownPad = false;
   let stallWarned = false;
   /** The pilot's body under g: grey-out, red-out and blacking out. */
   let pilot = createPilot();
@@ -273,7 +291,7 @@ async function boot(): Promise<void> {
       else leaveMenu();
     },
     resume: leaveMenu,
-  }, ['#help table', '#help p'].map((sel) => document.querySelector(sel)?.outerHTML ?? '').join(''));
+  }, referenceHtml());
 
   /** From a drive the menu offers to carry on; at boot there is nothing to carry on. */
   function openMenu(fromDrive = true): void {
@@ -306,7 +324,7 @@ async function boot(): Promise<void> {
     camera: () => hud.say(`Camera: ${rig.next()}`, 1.5),
     mute: () => { audio.setMuted(!audio.muted); hud.say(audio.muted ? 'Sound off' : 'Sound on', 1.5); },
     pause: () => { setPaused(!paused); if (!paused) hud.say('Go', 1.5); },
-    help: () => document.getElementById('help')!.classList.toggle('collapsed'),
+    help: () => helpFold.toggle(),
     menu: () => { if (!welcome.isOpen) openMenu(); else if (canResume) leaveMenu(); },
     next: () => void goTo(site.spawns[(site.spawns.indexOf(spawn) + 1) % site.spawns.length]),
     map: () => document.getElementById('minimap')!.classList.toggle('hidden'),
@@ -506,10 +524,19 @@ async function boot(): Promise<void> {
       void site.ensureDetail(car.pos[0], car.pos[1], 400);
     }
 
-    // The help folds away once the car is moving; H brings it back.
-    if (!helpFolded && Math.abs(car.speed) > 8) {
-      helpFolded = true;
-      document.getElementById('help')!.classList.add('collapsed');
+    // The controls card shows the keys for what the car is doing now (see HelpFold for when it folds).
+    const mode = modeOf(car.flying, !!spec.thrusters, isJet(spec));
+    const pad = !!navigator.getGamepads?.().some((p) => p?.connected);
+    if (mode !== shownMode || pad !== shownPad) {
+      shownMode = mode;
+      shownPad = pad;
+      helpMode.textContent = ` · ${MODES[mode].title}`;
+      helpBody.innerHTML = cardHtml(mode, pad);
+    }
+    if (!paused && !welcome.isOpen) helpFold.update(dt, mode, Math.abs(car.speed) > 8);
+    if (helpFold.folded !== help.classList.contains('collapsed')) {
+      help.classList.toggle('collapsed', helpFold.folded);
+      if (helpFold.folded) storageFlag(HELP_SEEN_KEY, true);
     }
     const braking = car.gear > 0 ? input.controls.brake > 0.1 : input.controls.throttle > 0.1;
     const boosting = input.controls.boost && !paused;

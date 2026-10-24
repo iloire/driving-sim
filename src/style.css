@@ -134,16 +134,24 @@ button:focus-visible { outline: 2px solid var(--cal); outline-offset: 2px; }
 }
 #message.show { opacity: 1; }
 
-/* Help */
-#help { position: fixed; top: 16px; left: var(--edge); background: var(--picon-glass); border-radius: 8px; padding: 8px 12px; font-size: 13px; max-width: 290px; }
+/* Help: the keys are what you scan for, so they are the bright part, drawn as keycaps. */
+#help { position: fixed; top: 16px; left: var(--edge); background: var(--picon-glass); border-radius: 8px; padding: 8px 12px 10px; font-size: 13px; max-width: 260px; }
 #help h2 { margin: 0; font-size: 13px; }
 #help h2 button { background: none; border: 0; padding: 0; cursor: pointer; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
-#help table { border-collapse: collapse; margin-top: 6px; }
-#help td { padding: 2px 10px 2px 0; vertical-align: top; }
-#help td:first-child { font-family: var(--mono); color: var(--malpais); white-space: nowrap; }
-#help p { margin: 6px 0 0; color: var(--malpais); font-size: 12px; }
-#help.collapsed table, #help.collapsed p { display: none; }
-kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--malpais); border-radius: 3px; padding: 0 4px; }
+#help-mode { color: var(--rust); }
+#help table, .wl-help table { border-collapse: collapse; margin-top: 6px; }
+#help td, .wl-help td { padding: 3px 10px 3px 0; vertical-align: baseline; color: rgba(244, 243, 238, 0.85); }
+#help td:first-child, .wl-help td:first-child { white-space: nowrap; }
+.wl-help td:first-child { width: 7.5em; }
+#help td kbd + kbd, .wl-help td kbd + kbd { margin-left: 3px; }
+#help p { margin: 8px 0 0; color: var(--malpais); font-size: 12px; }
+#help .help-general { display: flex; flex-wrap: wrap; gap: 4px 10px; padding-top: 8px; border-top: 1px solid rgba(244, 243, 238, 0.15); }
+#help .help-general kbd { font-size: 10px; padding: 0 4px; }
+#help.collapsed #help-body { display: none; }
+kbd {
+  display: inline-block; min-width: 1.6em; text-align: center; font-family: var(--mono); font-size: 11px; font-weight: 600; line-height: 1.5;
+  color: var(--cal); background: rgba(244, 243, 238, 0.1); border: 1px solid rgba(244, 243, 238, 0.4); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px;
+}
 
 #paused {
   position: fixed; left: 50%; top: 22vh; transform: translateX(-50%); width: min(360px, calc(100vw - 32px));
@@ -262,9 +270,9 @@ body.in-menu :is(#flight-hud, #g-desat, #g-veil, #plate, #cluster, #minimap, #sc
 }
 #welcome .wl-side nav button[aria-selected="true"] { color: var(--cal); border-bottom-color: var(--rust); }
 .wl-tab { overflow-y: auto; padding: 10px 16px 14px; }
-.wl-help table { border-collapse: collapse; }
-.wl-help td { padding: 2px 10px 2px 0; vertical-align: top; }
-.wl-help td:first-child { font-family: var(--mono); color: var(--malpais); white-space: nowrap; }
+.wl-help h3 { margin: 14px 0 0; font-family: var(--display); font-weight: 800; font-size: 14px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--rust); }
+.wl-help h3:first-child { margin-top: 2px; }
+.wl-help small { color: var(--malpais); font-size: 12px; }
 .wl-help p { margin: 8px 0 0; color: var(--malpais); font-size: 12px; }
 .wl-places { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 #welcome .wl-places button { width: 100%; padding: 8px 10px; text-align: left; font-size: 15px; font-weight: 600; border-color: transparent; background: none; }

@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-24 15:05
+
+- The controls card shows only the keys for what you're in: Driving, Hovering, On wings or Jet,
+  six or seven short rows, with the keys drawn as bright keycaps and the keys that work anywhere
+  (R B C G V P M) on one line under them. It opens for 6 s whenever the keys change meaning
+  (taking off, landing, a new vehicle), folds after 4 s on the move, and starts folded for a
+  returning player; H overrides it either way. The gamepad line shows only with a pad plugged in.
+  The menu's Controls tab lists every mode with the longer notes. One source for both:
+  `src/game/controls.ts`.
+
 ## 2026-10-24 15:02
 
 - The airbrake sounds. A heavy hydraulic clunk as it goes out and a lighter one as it stows, and
