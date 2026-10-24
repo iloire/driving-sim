@@ -2,6 +2,13 @@
 
 ## 2026-10-24 15:45
 
+- Roll starts as soon as you press A/D. The gentler key stick slowed roll down along with pitch:
+  half a second in, it was only 3 % stick. Roll asks the fly-by-wire for a roll rate, which can't
+  overshoot, so it now goes out at 2 a second on a square curve, a quarter stick (about 65°/s) at
+  0.25 s and full at 0.5 s. Pitch keeps its slow, gentle curve.
+
+## 2026-10-24 15:45
+
 - The Jet's gear only comes down when it is slow (under 400 km/h) and low (under 150 m over the
   ground or sea), or when a wheel is on the ground. It used to hang out at any height once slow.
 

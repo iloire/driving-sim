@@ -16,6 +16,8 @@ const PEDAL_RATE = 4;
 const STICK_RATE = 3;
 /** On wings, a key's stick travel per second (it is cubed on the way out, so 1 s is a fifth and full takes 1.7 s). */
 export const PLANE_STICK_RATE = 0.6;
+/** Roll asks the fly-by-wire for a roll rate, which can't overshoot, so it goes out faster on a softer curve (squared: full in 0.5 s). */
+export const PLANE_ROLL_RATE = 2;
 export const CRUISE_THRUST = 0.6;
 const IDLE_THRUST = 0.1;
 /** Throttle lever travel per second on Shift / Ctrl, and the 1–4 presets. */
@@ -33,6 +35,7 @@ export function stepKey(v: number, target: number, rate: number, back: number, d
 
 /** The plane's stick curve: fine near the middle, full at the end. */
 export const shapeStick = (v: number) => v * v * v;
+export const shapeRoll = (v: number) => v * Math.abs(v);
 
 export type Action = 'reset' | 'camera' | 'mute' | 'pause' | 'help' | 'menu' | 'next' | 'map' | 'transform' | 'balloons' | 'hud';
 
@@ -99,8 +102,8 @@ export class Input {
     // On wings the stick goes out slowly and snaps back; otherwise it moves the same both ways.
     const [out, back] = this.plane ? [PLANE_STICK_RATE, CENTRE_RATE] : [STICK_RATE, STICK_RATE];
     this.keyPitch = stepKey(this.keyPitch, (this.down('KeyS', 'ArrowDown') ? 1 : 0) - (this.down('KeyW', 'ArrowUp') ? 1 : 0), out, back, dt);
-    this.keyRoll = stepKey(this.keyRoll, (this.down('KeyD', 'ArrowRight') ? 1 : 0) - (this.down('KeyA', 'ArrowLeft') ? 1 : 0), out, back, dt);
-    const shape = this.plane ? shapeStick : (v: number) => v;
+    this.keyRoll = stepKey(this.keyRoll, (this.down('KeyD', 'ArrowRight') ? 1 : 0) - (this.down('KeyA', 'ArrowLeft') ? 1 : 0), this.plane ? PLANE_ROLL_RATE : out, back, dt);
+    const [shape, shapeR] = this.plane ? [shapeStick, shapeRoll] : [(v: number) => v, (v: number) => v];
 
     let padSteer = 0, padThrottle = 0, padBrake = 0, padHand = false, padPitch = 0, padYaw = 0, padBoost = false;
     const pad = navigator.getGamepads?.().find((p) => p && p.connected);
@@ -141,7 +144,7 @@ export class Input {
     const f = c.flight;
     const clamp1 = (v: number) => Math.max(-1, Math.min(1, v));
     f.pitch = clamp1(shape(this.keyPitch) + padPitch + (t ? t.brake - t.throttle : 0));
-    f.roll = clamp1(shape(this.keyRoll) - padSteer - (t?.steer ?? 0));
+    f.roll = clamp1(shapeR(this.keyRoll) - padSteer - (t?.steer ?? 0));
     f.yaw = clamp1((this.down('KeyE') ? 1 : 0) - (this.down('KeyQ') ? 1 : 0) + padYaw);
     if (this.plane) f.thrust = c.boost ? 1 : this.lever;
     else f.thrust = ctrl || padBrake > 0.5 ? IDLE_THRUST : CRUISE_THRUST + (1 - CRUISE_THRUST) * (c.boost ? 1 : padThrottle);

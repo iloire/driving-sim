@@ -155,7 +155,10 @@ as the struts and tyres, scaled by how far out they are, and the wheel drive swi
   they're pressed. Shift held at full is the afterburner: a detent, so a tap of Shift no longer
   lights it. The keys also work the stick differently on wings (`Input.plane`): out at 0.6 a
   second, back at 4, cubed on the way out (`shapeStick`). A 0.3 s tap is under 1 % stick, a
-  second's hold about a fifth, and full takes 1.7 s, so a held key no longer overshoots. `src/game/input.test.ts` pins that curve.
+  second's hold about a fifth, and full takes 1.7 s, so a held key no longer overshoots. Roll is the exception: it asks the fly-by-wire for a roll
+  rate, which stops when you let go, so A/D go out at 2 a second on a square (`shapeRoll`) and
+  start the roll straight away: a quarter stick (about 65°/s) at 0.25 s, full at 0.5 s.
+  `src/game/input.test.ts` pins both curves.
 
 With the truck's heavier mass its wings are bigger (15 m², 9.4 m span) and its jet stronger
 (13,000 N). It rotates at about 210 km/h after a 9 s run and climbs at about 11° on full thrust. Hands-off
