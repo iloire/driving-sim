@@ -30,9 +30,13 @@ const MAX_LAG = 20;
 const SHOWCASE = { radius: 10, wideRadius: 22, height: 2.6, wideHeight: 6, rate: 0.12, cutAt: 300 };
 /** Seconds to sweep between the showcase and a driving camera. */
 const BLEND_S = 1.4;
+/** Where the bonnet camera sits on a car, in its body frame (forward +X, up +Y). */
+export const BONNET_EYE = new THREE.Vector3(1.3, 0.95, 0);
 
 export class CameraRig {
   mode: CameraMode = 'chase';
+  /** The bonnet camera's seat in the body frame: a car's bonnet, or a pilot's eye. */
+  eye = BONNET_EYE;
   private readonly orbit: OrbitControls;
   private readonly lastTarget = new THREE.Vector3();
   private readonly desired = new THREE.Vector3();
@@ -195,7 +199,7 @@ export class CameraRig {
       cam.lookAt(this.look);
     } else {
       // On the bonnet, looking down the road, moving with the body.
-      cam.position.copy(new THREE.Vector3(1.3, 0.95, 0).applyQuaternion(car.quaternion).add(car.position));
+      cam.position.copy(this.eye.clone().applyQuaternion(car.quaternion).add(car.position));
       cam.quaternion.copy(car.quaternion).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2));
       cam.position.y += (Math.random() - 0.5) * 0.03 * buffet;
     }

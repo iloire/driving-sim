@@ -3,7 +3,7 @@ import GUI from 'lil-gui';
 import * as THREE from 'three';
 import { CarAudio } from './game/audio';
 import { BalloonsView } from './game/balloons-view';
-import { CameraRig } from './game/camera';
+import { BONNET_EYE, CameraRig } from './game/camera';
 import { cardHtml, HelpFold, modeName, modeOf, referenceHtml, type Mode } from './game/controls';
 import { currentLang, LANGS, setLang, t, translatePage, type Lang } from './game/i18n';
 import { createCarModel, type CarModel } from './game/car-model';
@@ -56,6 +56,11 @@ const VEHICLES: Record<string, { name: string; line: 'car.roadster' | 'car.4x4' 
 const JET_START = { agl: 600, speed: 230 };
 /** How far back the chase camera sits behind the Jet (1 = the 4×4's wingspan). */
 const JET_CAMERA = 1.2;
+/**
+ * The Jet's bonnet view is the pilot's eye, high in the canopy, so the nose drops away about 12°
+ * below the line of flight instead of filling the bottom of the screen.
+ */
+const JET_EYE = new THREE.Vector3(3.4, 1.1, 0);
 /** A jet touching down faster than this (m/s), or sinking faster, has crashed rather than landed. */
 const LANDING = { speed: 110, sink: 6 };
 /** Seconds a crash plays out before the jet is back in the air. */
@@ -593,6 +598,7 @@ async function boot(): Promise<void> {
     const jetBuffet = isJet(spec) && car.flying ? buffet(car.mach, agl, car.airspeed) : 0;
     // Crashed, the camera backs well off from the fireball.
     const reach = wreck > 0 ? 3 : car.wings * (isJet(spec) ? JET_CAMERA : spec.wings ? 1 : 0.3);
+    rig.eye = isJet(spec) ? JET_EYE : BONNET_EYE;
     rig.update(dt, model.group, carVel, followHeading, ground, reach, boosting,
       Math.min(car.airbrake * Math.min(car.airspeed / 250, 1) + jetBuffet + wreck / WRECK_S, 1));
     jetFx.update(paused ? 0 : dt, {

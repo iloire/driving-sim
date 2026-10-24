@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-24 15:34
+
+- The Jet's bonnet view is now the pilot's eye, high in the canopy, so the nose drops away about
+  12° below the line of flight. The camera used to sit just above the nose, and the fuselage
+  filled the bottom half of the screen.
+
 ## 2026-10-24 15:25
 
 - On wings the keys work the stick more gently, because a held key was too much and hard to
