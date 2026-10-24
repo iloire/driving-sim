@@ -110,8 +110,8 @@ npm run dev        # http://localhost:5173
 nozzles. On a phone the left thumb climbs and sinks.
 
 **In the air with wings** (the 4×4 and the Jet) the same keys fly it. **W / S** push and pull the stick (S pulls the nose up),
-**A / D** roll, and **Q / E** work the rudder. On keys the stick goes out gently: a tap is a nudge, a second's hold is about
-a fifth of the stick, and full stick takes about 1.7 s. It snaps back when you let go. The jet has a throttle lever, starting at cruise (60 %):
+**A / D** roll, and **Q / E** work the rudder. On keys a tap is a nudge and a hold builds to full stick in
+about two-thirds of a second, enough to pull out of a dive. It snaps back when you let go. On the Jet the stick asks for how fast the nose comes round (20°/s at full), up to 9 g. The jet has a throttle lever, starting at cruise (60 %):
 **Shift** opens it, **Ctrl** closes it, and **1–4** jump to idle, cruise, 80 % and full. Keep holding **Shift** at
 full to light the afterburner. On the Jet, **Space** is the airbrake. The HUD shows the throttle next to the height.
 To take off in the 4×4, transform, let it run past about 160 km/h, and pull **S**.

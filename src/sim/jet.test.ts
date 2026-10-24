@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCar, JET, stepCar, type CarEnv, type CarState, type Controls } from './car';
 import { atmosphere, stalled } from './wings';
+import { PLANE_STICK_RATE, shapeStick } from '../game/input';
 import { rotate, unrotate } from './vec';
 
 const STEP = 1 / 120;
@@ -25,6 +26,14 @@ function fly(s: CarState, c: Controls, seconds: number, each?: () => void): void
     stepCar(s, JET, c, flat, STEP);
     each?.();
   }
+}
+
+/** Pitch on a held key, `t` s after it went down, as the keys work it on wings. */
+const keyed = (t: number) => shapeStick(Math.min(PLANE_STICK_RATE * t, 1));
+
+/** Nose above the horizon, degrees. */
+function noseUp(s: CarState): number {
+  return (Math.asin(rotate(s.q, [1, 0, 0])[2]) * 180) / Math.PI;
 }
 
 /** Load factor along the body's up axis over the last step. */
@@ -75,6 +84,52 @@ describe('the jet', () => {
       if (speed >= 250) expect(most).toBeGreaterThan(8);
     });
   }
+
+  it('pulls out of a 60° dive at 800 km/h on a held key within 550 m, under 9 g', () => {
+    const s = airborne(222, 6000);
+    const pitch = Math.PI / 3;
+    s.q = [Math.SQRT1_2 * Math.cos(pitch / 2), -Math.SQRT1_2 * Math.sin(pitch / 2), Math.SQRT1_2 * Math.sin(pitch / 2), Math.SQRT1_2 * Math.cos(pitch / 2)];
+    s.vel = [0, 222 * Math.cos(pitch), -222 * Math.sin(pitch)];
+    const c = controls();
+    const g = gauge(s);
+    let t = 0, most = 0;
+    while (s.vel[2] < 0 && t < 10) {
+      c.flight.pitch = keyed(t);
+      fly(s, c, STEP, () => { most = Math.max(most, g()); });
+      t += STEP;
+    }
+    expect(6000 - s.pos[2]).toBeLessThan(550);
+    expect(most).toBeLessThan(9.3);
+  });
+
+  it('a short press at cruise nudges the nose a degree or two, and it stays there', () => {
+    const s = airborne(230, 3000);
+    const c = controls();
+    const start = noseUp(s);
+    let t = 0;
+    for (; t < 0.4; t += STEP) { c.flight.pitch = keyed(t); fly(s, c, STEP); }
+    const out = c.flight.pitch;
+    for (let r = 0; r < 2; r += STEP) { c.flight.pitch = Math.max(0, out - 4 * r); fly(s, c, STEP); }
+    const settled = noseUp(s);
+    fly(s, c, 1);
+    expect(settled - start).toBeGreaterThan(0.5);
+    expect(settled - start).toBeLessThan(3);
+    expect(Math.abs(noseUp(s) - settled)).toBeLessThan(1);
+  });
+
+  it('asks for a rate: full pull at 650 km/h turns the flight path at about 20°/s, under the g limit', () => {
+    // Slower the wing's angle-of-attack limit holds it back, faster the 9 g limit does.
+    const s = airborne(180);
+    const g = gauge(s);
+    let most = 0;
+    fly(s, controls(1, 0, 1, true), 1.5, () => { most = Math.max(most, g()); });
+    const before = Math.atan2(s.vel[2], s.vel[1]);
+    fly(s, controls(1, 0, 1, true), 0.5);
+    const rate = (Math.atan2(s.vel[2], s.vel[1]) - before) / 0.5;
+    expect(rate).toBeGreaterThan(0.3);
+    expect(rate).toBeLessThan(0.4);
+    expect(most).toBeLessThan(8);
+  });
 
   it('rolls at the same rate at 250 and 300 m/s, and slower when slow', () => {
     const rate = (speed: number) => {

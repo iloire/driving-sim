@@ -153,9 +153,10 @@ as the struts and tyres, scaled by how far out they are, and the wheel drive swi
 - **Jet.** Along the nose, at the throttle lever's setting (`Input.lever`, 10–100 %, cruise 60 %).
   Shift and Ctrl move it at 80 % a second, 1–4 set it, and the pad's triggers move it as far as
   they're pressed. Shift held at full is the afterburner: a detent, so a tap of Shift no longer
-  lights it. The keys also work the stick differently on wings (`Input.plane`): out at 0.6 a
-  second, back at 4, cubed on the way out (`shapeStick`). A 0.3 s tap is under 1 % stick, a
-  second's hold about a fifth, and full takes 1.7 s, so a held key no longer overshoots. Roll is the exception: it asks the fly-by-wire for a roll
+  lights it. The keys also work the stick differently on wings (`Input.plane`): out at 1.5 a
+  second, back at 4, cubed on the way out (`shapeStick`). A 0.2 s tap is 3 % stick, a 0.4 s hold
+  about a fifth, and full takes 0.67 s: a tap is a fine correction, a held key pulls hard soon
+  enough to get out of a dive. Roll is the exception: it asks the fly-by-wire for a roll
   rate, which stops when you let go, so A/D go out at 2 a second on a square (`shapeRoll`) and
   start the roll straight away: a quarter stick (about 65°/s) at 0.25 s, full at 0.5 s.
   `src/game/input.test.ts` pins both curves.
@@ -175,9 +176,12 @@ only 0.1 m², since the wing's 0.022 already counts the airframe), 52 kN dry and
 the afterburner. Two additions make it a fighter rather than a fast light plane:
 
 - **Fly-by-wire** (`WingSpec.fbw`, `flyByWire()`). The bare surfaces get stronger with V², so at
-  300 m/s the stick would be some 36× as sharp as at 50. Instead the stick asks for a load factor
-  (1 g hands-off, 9 g full pull, −3 g full push) and a roll rate (4.5 rad/s at full stick). The
-  computer flies that load factor as the angle of attack that gives it, capped at 22° (under the
+  300 m/s the stick would be some 36× as sharp as at 50. Instead pitch asks for a rate: how fast the
+  flight path turns, 0.35 rad/s (20°/s) at full stick. That is the load factor 1 + V·rate/g
+  (1 g hands-off), kept between −3 g and 9 g, so above about 230 m/s a full pull is simply the 9 g
+  limit, the hardest dive recovery the jet has, and slower the same stick swings the path no
+  faster than 20°/s. Roll asks for a roll rate (4.5 rad/s at full stick). The computer flies the
+  load factor as the angle of attack that gives it, capped at 22° (under the
   stall), and sets each surface to what holds the target steady plus a correction for the error. The
   pitch-rate target is capped at the g the wing can reach, so a slow pull doesn't overshoot the cap.
   Deflections clamp at full travel, so below about 150 m/s it runs out of authority as the bare wing would.

@@ -14,8 +14,8 @@ const STEER_RATE = 2.2;
 const CENTRE_RATE = 4;
 const PEDAL_RATE = 4;
 const STICK_RATE = 3;
-/** On wings, a key's stick travel per second (it is cubed on the way out, so 1 s is a fifth and full takes 1.7 s). */
-export const PLANE_STICK_RATE = 0.6;
+/** On wings, a key's stick travel per second (it is cubed on the way out, so 0.4 s is a fifth and full takes 0.67 s). */
+export const PLANE_STICK_RATE = 1.5;
 /** Roll asks the fly-by-wire for a roll rate, which can't overshoot, so it goes out faster on a softer curve (squared: full in 0.5 s). */
 export const PLANE_ROLL_RATE = 2;
 export const CRUISE_THRUST = 0.6;

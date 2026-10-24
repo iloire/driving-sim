@@ -55,7 +55,9 @@ export function thrustLapse(air: Air, mach: number): number {
 
 /** A fighter's flight computer: what the stick asks for, and how hard it chases it. */
 export interface FlyByWire {
-  /** Load factor at full pull, and at full push (negative g). */
+  /** How fast full stick turns the flight path (rad/s): pitch asks for a rate, not a load, so it feels the same at any speed. */
+  pitchRate: number;
+  /** Load factor at full pull, and at full push (negative g): the most the pitch rate may ask for. */
   gMax: number;
   gMin: number;
   /** Highest angle of attack it lets the wing fly (rad), kept under the stall. */
@@ -225,8 +227,11 @@ const clamp1 = (v: number) => Math.min(Math.max(v, -1), 1);
 
 /**
  * The flight computer: turns the pilot's stick (`c`) into surface deflections for `aero`. Pitch
- * asks for a load factor (1 g hands-off, `gMax` at full pull), flown as the angle of attack that
- * gives it, capped at `alphaMax`; roll asks for a roll rate. Each deflection is what holds it
+ * asks for a pitch rate of the flight path (`pitchRate` at full stick), as the load factor that
+ * turns it that fast (1 g hands-off) kept between `gMin` and `gMax`, flown as the angle of attack
+ * that gives it, capped at `alphaMax`. Fast, the g limit comes first, so a full pull is the hardest
+ * recovery the jet has; slow, it only swings the path at `pitchRate`. Roll asks for a roll rate.
+ * Each deflection is what holds it
  * steady plus a correction for the error, clamped to full travel, so at low speed it runs out of
  * authority the way the bare wing would.
  */
@@ -238,7 +243,7 @@ export function flyByWire(w: WingSpec, f: FlyByWire, mass: number, q: Quat, vel:
   const alpha = Math.atan2(-vb[2], vb[0]);
   const qbar = 0.5 * air.rho * V * V;
 
-  const nz = 1 + c.pitch * (c.pitch > 0 ? f.gMax - 1 : 1 - f.gMin);
+  const nz = Math.min(Math.max(1 + (V * c.pitch * f.pitchRate) / G, f.gMin), f.gMax);
   const cl = (nz * mass * G) / (qbar * w.area);
   const want = Math.min(Math.max((cl - w.cl0) / w.clAlpha, -f.alphaMax), f.alphaMax);
   // The elevator that holds `want` against the tail's stability, plus the error terms. A steady

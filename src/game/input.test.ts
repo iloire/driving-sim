@@ -9,9 +9,9 @@ function hold(v: number, target: number, seconds: number, rate = PLANE_STICK_RAT
 
 describe('the key stick', () => {
   it('nudges on a tap and reaches full stick on a hold, on the plane curve', () => {
-    expect(shapeStick(hold(0, 1, 0.3))).toBeLessThan(0.01);
-    expect(shapeStick(hold(0, 1, 1))).toBeCloseTo(0.216, 2);
-    expect(shapeStick(hold(0, -1, 1.7))).toBe(-1);
+    expect(shapeStick(hold(0, 1, 0.2))).toBeCloseTo(0.027, 3);
+    expect(shapeStick(hold(0, 1, 0.4))).toBeCloseTo(0.216, 2);
+    expect(shapeStick(hold(0, -1, 0.67))).toBeCloseTo(-1, 5);
   });
 
   it('rolls from the first moment of a press, full by half a second', () => {

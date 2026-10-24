@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-24 16:24
+
+- The Jet pulls out of dives. Pitch now asks the fly-by-wire for how fast the flight path turns
+  (20°/s at full stick) instead of for a load, kept under 9 g. At speed a full pull is the 9 g
+  limit, and slower the same pull can't whip the nose round. With that, the keys can work the
+  stick faster again: full in 0.67 s instead of 1.7 s, on the same cubic curve, so a tap is still
+  a fine correction. From a 60° dive at 800 km/h a held S now levels out in about 500 m instead of
+  630. A 0.4 s press at cruise moves the nose about 2° and it stays there.
+
 ## 2026-10-24 15:54
 
 - A shared moment now carries the view too: the camera (chase, bonnet or orbit), the flight HUD and
