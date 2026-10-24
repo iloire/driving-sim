@@ -22,7 +22,7 @@ import { BalloonField } from './sim/balloons';
 import { createCar, JET, ROADSTER, TRUCK, stepCar, type CarEnv, type CarSpec, type CarState, type Surface } from './sim/car';
 import { isPaved, MAX_HALF_WIDTH, ROAD_WIDTH, type Road } from './sim/roads';
 import { dayOfYear, daylightHours, sunPosition } from './sim/sun';
-import { rotate } from './sim/vec';
+import { blendQuat, lerpV3, rotate, type Quat, type V3 } from './sim/vec';
 import { stalled } from './sim/wings';
 
 declare const __COMMIT_SHA__: string;
@@ -404,6 +404,12 @@ async function boot(): Promise<void> {
 
   const carPos = new THREE.Vector3();
   const ground = (p: THREE.Vector3) => terrain.heightAt(p.x + extent / 2, extent / 2 - p.z);
+  // The pose one physics step back. A frame runs 1, 2 or 3 steps as its length wobbles around two
+  // of them, so drawing only the latest step jerks the car along (2 to 6 m a frame in the Jet);
+  // drawing it between the last two steps keeps its motion even.
+  const prevPos: V3 = [0, 0, 0];
+  let prevQ: Quat = [1, 0, 0, 0];
+  let prevOf: CarState | null = null; // a new car (a reset, a place, a vehicle swap) has no step behind it yet
   let last = performance.now();
   let acc = 0;
   function frame(now: number): void {
@@ -414,6 +420,9 @@ async function boot(): Promise<void> {
       acc += dt;
       const t0 = performance.now();
       while (acc >= STEP) {
+        prevPos.splice(0, 3, ...car.pos);
+        prevQ = car.q;
+        prevOf = car;
         stepCar(car, spec, input.controls, env, STEP);
         acc -= STEP;
       }
@@ -467,7 +476,9 @@ async function boot(): Promise<void> {
     }
     const braking = car.gear > 0 ? input.controls.brake > 0.1 : input.controls.throttle > 0.1;
     const boosting = input.controls.boost && !paused;
-    model.update(car, braking, extent, input.controls.flight.thrust, boosting, camera, dt);
+    const alpha = acc / STEP;
+    const drawn = prevOf === car ? { ...car, pos: lerpV3(prevPos, car.pos, alpha), q: blendQuat(prevQ, car.q, alpha) } : car;
+    model.update(drawn, braking, extent, input.controls.flight.thrust, boosting, camera, dt);
     carPos.copy(model.group.position);
     // Follow the way the car is travelling when it slides, its nose when it is slow.
     const moving = Math.hypot(car.vel[0], car.vel[1]);

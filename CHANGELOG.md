@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-24 14:08
+
+- The Jet no longer shakes in front of the chase camera. A frame runs one, two or three 120 Hz
+  physics steps, and the car was drawn at the last one, so at jet speed it jumped 2 to 6 m from frame
+  to frame. The chase camera eases after the plane, so every jump showed. The car is now drawn between
+  its last two steps, which cuts the on-screen shake about sixfold. The orbit camera moves with the
+  plane, so it never showed this.
+
 ## 2026-10-24 13:42
 
 - A welcome screen over the live island. The camera circles your car slowly while you pick a place

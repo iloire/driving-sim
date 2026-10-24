@@ -108,7 +108,9 @@ this corner inside a building?" 32 times (8 points × 4 sub-steps), at 120 steps
 
 - **Shadows** come from an 80 m box that follows the car, not from the whole island.
 - **Physics runs at a fixed 120 Hz**, independently of the frame rate (with 4 sub-steps inside),
-  so a slow frame doesn't change how the car handles.
+  so a slow frame doesn't change how the car handles. A frame runs one, two or three steps, so the car
+  is drawn between the last two of them (`lerpV3` and `blendQuat` in `sim/vec.ts`). Drawn at the
+  latest step only, the Jet jumped 2 to 6 m a frame and shook in front of the chase camera.
 - **The minimap** is redrawn 15 times a second, not every frame.
 - **Lamps and posts aren't solid**, which saves about 40,000 extra collision checks.
 

@@ -50,3 +50,13 @@ export function integrate(q: Quat, w: V3, dt: number): Quat {
   const l = Math.hypot(r[0], r[1], r[2], r[3]);
   return [r[0] / l, r[1] / l, r[2] / l, r[3] / l];
 }
+
+export const lerpV3 = (a: V3, b: V3, t: number): V3 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+
+/** Between two orientations a step apart (normalised lerp, plenty for one physics step), the short way round. */
+export function blendQuat(a: Quat, b: Quat, t: number): Quat {
+  const s = a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] < 0 ? -1 : 1;
+  const r: Quat = [a[0] + (s * b[0] - a[0]) * t, a[1] + (s * b[1] - a[1]) * t, a[2] + (s * b[2] - a[2]) * t, a[3] + (s * b[3] - a[3]) * t];
+  const l = Math.hypot(r[0], r[1], r[2], r[3]);
+  return [r[0] / l, r[1] / l, r[2] / l, r[3] / l];
+}
