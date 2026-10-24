@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-24 22:59
+
+- No more accidental text selection on phones. A held thumb on the HUD, a button or the menu
+  used to start selecting text and pop up the copy/look-up callout; the page now turns
+  selection and the iOS callout off, leaving input fields selectable.
+
 ## 2026-10-24 16:24
 
 - The Jet pulls out of dives. Pitch now asks the fly-by-wire for how fast the flight path turns
