@@ -6,6 +6,8 @@
   gentle curves (pitch cubed, full in 0.67 s; roll squared, full in 0.5 s) for small corrections,
   while the arrows go straight out, linear, full in an eighth of a second, to snap into a turn or
   a pull. In the car and on thrusters the arrows still work as W A S D.
+- The H card and the menu's Controls list say so: on wings and in the Jet a row of arrow keys reads
+  "Same, hard stick", and the menu adds that W A S D move the stick finely.
 
 ## 2026-10-24 22:59
 

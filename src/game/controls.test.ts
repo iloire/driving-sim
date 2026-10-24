@@ -12,7 +12,7 @@ describe('controls card', () => {
 
   it('keeps each mode short enough to read at a glance, in every language', () => {
     for (const rows of Object.values(MODES)) {
-      expect(rows.length).toBeLessThanOrEqual(8);
+      expect(rows.length).toBeLessThanOrEqual(9);
       for (const dict of Object.values(DICTIONARIES)) {
         for (const r of rows) expect(dict[r.label].length, dict[r.label]).toBeLessThanOrEqual(28);
       }

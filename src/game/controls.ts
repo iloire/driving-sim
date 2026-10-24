@@ -39,6 +39,7 @@ export const MODES: Record<Mode, Row[]> = {
   wings: [
     { keys: ['W', 'S'], label: 'ctl.pitch', more: 'ctl.pitch.more' },
     { keys: ['A', 'D'], label: 'ctl.roll' },
+    { keys: ['↑', '↓', '←', '→'], label: 'ctl.hardstick', more: 'ctl.hardstick.more' },
     { keys: ['Q', 'E'], label: 'ctl.rudder' },
     ...THROTTLE,
     { keys: ['F'], label: 'ctl.fold' },
@@ -47,6 +48,7 @@ export const MODES: Record<Mode, Row[]> = {
   jet: [
     { keys: ['W', 'S'], label: 'ctl.pitch', more: 'ctl.pitch.jet.more' },
     { keys: ['A', 'D'], label: 'ctl.roll' },
+    { keys: ['↑', '↓', '←', '→'], label: 'ctl.hardstick', more: 'ctl.hardstick.more' },
     { keys: ['Q', 'E'], label: 'ctl.rudder' },
     ...THROTTLE,
     { keys: ['Space'], label: 'ctl.airbrake' },
