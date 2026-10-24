@@ -60,7 +60,13 @@
       <button type="button" data-action="reset" data-i18n="touch.reset">RESET</button>
       <button type="button" data-action="menu" data-i18n="touch.menu">MENU</button>
       <button type="button" data-action="pause" data-i18n="touch.pause">PAUSE</button>
+      <button type="button" data-action="replay" data-i18n="touch.replay">REPLAY</button>
     </nav>
+
+    <div id="replay" hidden>
+      <span data-i18n="replay.title">Replay</span><kbd>I</kbd>
+      <div id="replay-track"><div id="replay-bar"></div></div>
+    </div>
 
     <div id="paused" hidden>
       <h2 data-i18n="paused.title">Paused</h2>

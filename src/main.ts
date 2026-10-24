@@ -17,6 +17,7 @@ import { buffet, JetEffects } from './game/jet-effects';
 import { Explosion } from './game/explosion';
 import { createJetModel } from './game/jet-model';
 import { createRoadsterModel } from './game/roadster-model';
+import { applyPose, poseOf, ReplayBuffer } from './game/replay';
 import { RoadView } from './game/road-view';
 import { loadSite, ZONES, zoneOf, type Spawn } from './game/site';
 import { TerrainView } from './game/terrain-view';
@@ -234,6 +235,31 @@ async function boot(): Promise<void> {
   let crashing = false;
   /** Seconds left of a crash playing out (the jet gone, the explosion going) before it's back up. */
   let wreck = 0;
+  /** I plays back the last half-minute; the drive holds still under it and carries on after. */
+  const replay = new ReplayBuffer();
+  /** Where the replay is, in drive time; null while driving. */
+  let replayAt: number | null = null;
+  /** Drive time, counted while live, that the replay is kept in. */
+  let liveClock = 0;
+  /** Whether the replay last drew the jet: when it goes, the crash goes off again. */
+  let replayShown = true;
+  const replayBadge = document.getElementById('replay')!;
+  const replayBar = document.getElementById('replay-bar')!;
+  function setReplay(on: boolean): void {
+    if (on === (replayAt !== null)) return;
+    if (on && replay.end - replay.start < 1) { hud.say(t('say.replay.none'), 2); return; }
+    replayAt = on ? replay.start : null;
+    replayShown = true;
+    replayBadge.hidden = !on;
+    model.group.visible = on || wreck <= 0;
+    if (on) track('replay');
+    else acc = 0; // the physics picks up where it was, not with the replay's seconds to catch up on
+    // The camera cuts to the start of the replay, and back to the car after it.
+    const s = on ? applyPose(car, replay.at(replay.start)!) : car;
+    model.update(s, false, extent, 0, false, camera, 0);
+    rig.snap(model.group, s.heading);
+    jetFx.reset();
+  }
 
   /** Puts the car on the road at (x, y) facing `heading`, once the 5 m ground there has loaded. */
   async function place(x: number, y: number, heading: number): Promise<void> {
@@ -245,6 +271,8 @@ async function boot(): Promise<void> {
       car.pos[2] += JET_START.agl;
       car.vel = [Math.sin(heading) * JET_START.speed, Math.cos(heading) * JET_START.speed, 0];
     }
+    setReplay(false);
+    replay.cut();
     stuck = 0;
     pilot = createPilot();
     gLoad = 1;
@@ -336,6 +364,7 @@ async function boot(): Promise<void> {
   function openMenu(fromDrive = true): void {
     if (!welcome.isOpen) canResume = fromDrive;
     setPaused(false);
+    setReplay(false);
     refreshMenu();
     welcome.open();
     rig.showcase();
@@ -370,7 +399,9 @@ async function boot(): Promise<void> {
     map: () => minimap.classList.toggle('hidden'),
     balloons: () => setBalloons(!settings.balloons),
     hud: () => { hudShown = !hudShown; },
+    replay: () => setReplay(replayAt === null),
     transform: () => {
+      if (replayAt !== null) return;
       if (isJet(spec)) { hud.say(t('say.jet.only'), 2); return; }
       car.flying = !car.flying;
       track('fly', { on: car.flying, car: vehicleKey() });
@@ -422,6 +453,8 @@ async function boot(): Promise<void> {
     if (model.world) scene.remove(model.world);
     spec = { ...VEHICLES[id].spec };
     applyDrivetrain();
+    setReplay(false);
+    replay.clear(); // it would be drawn in the new body
     model = VEHICLES[id].model(spec, heightAt);
     scene.add(model.group);
     if (model.world) scene.add(model.world);
@@ -513,8 +546,9 @@ async function boot(): Promise<void> {
     // Blacked out, the pilot's hands fall off the stick and the flight computer flies 1 g.
     if (pilot.out) Object.assign(input.controls.flight, { pitch: 0, roll: 0, yaw: 0 });
     // A crash plays out, the jet gone and the physics held, before it's back in the air.
-    if (wreck > 0 && !paused && (wreck -= dt) <= 0) void place(car.pos[0], car.pos[1], car.heading).finally(() => { crashing = false; });
-    if (!paused && !welcome.isOpen && wreck <= 0) {
+    const live = replayAt === null;
+    if (wreck > 0 && !paused && live && (wreck -= dt) <= 0) void place(car.pos[0], car.pos[1], car.heading).finally(() => { crashing = false; });
+    if (!paused && !welcome.isOpen && wreck <= 0 && live) {
       acc += dt;
       const t0 = performance.now();
       const v0 = [...car.vel];
@@ -589,7 +623,8 @@ async function boot(): Promise<void> {
     // Keep the 5 m heights under the car whatever the view has loaded.
     if ((detailTimer -= dt) <= 0) {
       detailTimer = 0.5;
-      void site.ensureDetail(car.pos[0], car.pos[1], 400);
+      const at = (replayAt !== null && replay.at(replayAt)?.car.pos) || car.pos;
+      void site.ensureDetail(at[0], at[1], 400);
     }
 
     // The controls card shows the keys for what the car is doing now (see HelpFold for when it folds).
@@ -601,74 +636,98 @@ async function boot(): Promise<void> {
       helpMode.textContent = ` · ${modeName(mode)}`;
       helpBody.innerHTML = cardHtml(mode, pad);
     }
-    if (!paused && !welcome.isOpen) helpFold.update(dt, mode, Math.abs(car.speed) > 8);
+    if (!paused && !welcome.isOpen && live) helpFold.update(dt, mode, Math.abs(car.speed) > 8);
     if (helpFold.folded !== help.classList.contains('collapsed')) {
       help.classList.toggle('collapsed', helpFold.folded);
       if (helpFold.folded) storageFlag(HELP_SEEN_KEY, true);
     }
-    const braking = car.gear > 0 ? input.controls.brake > 0.1 : input.controls.throttle > 0.1;
-    const boosting = input.controls.boost && !paused;
+    const c = input.controls;
+    if (live && !paused && !welcome.isOpen) {
+      liveClock += dt;
+      replay.push(() => poseOf(liveClock, car, {
+        braking: car.gear > 0 ? c.brake > 0.1 : c.throttle > 0.1, boost: c.boost, thrust: c.flight.thrust,
+        pedal: car.flying ? c.flight.thrust : car.gear > 0 ? c.throttle : c.brake, g: gLoad, shown: wreck <= 0,
+      }), liveClock);
+    }
+    // Live, the car is drawn between its last two physics steps; in a replay, as the replay has it.
     const alpha = acc / STEP;
-    const drawn = prevOf === car ? { ...car, pos: lerpV3(prevPos, car.pos, alpha), q: blendQuat(prevQ, car.q, alpha) } : car;
-    model.update(drawn, braking, extent, input.controls.flight.thrust, boosting, camera, dt);
+    const shown = replayAt === null ? null : replay.at(replayAt += paused ? 0 : dt);
+    const view = shown ? applyPose(car, shown) : prevOf === car ? { ...car, pos: lerpV3(prevPos, car.pos, alpha), q: blendQuat(prevQ, car.q, alpha) } : car;
+    const braking = shown ? shown.braking : car.gear > 0 ? c.brake > 0.1 : c.throttle > 0.1;
+    const boosting = (shown ? shown.boost : c.boost) && !paused;
+    const thrust = shown ? shown.thrust : c.flight.thrust;
+    const g = shown ? shown.g : gLoad;
+    /** The jet is gone: a crash playing out, now or in the replay. */
+    const gone = shown ? !shown.shown : wreck > 0;
+    if (shown && shown.shown !== replayShown) {
+      model.group.visible = replayShown = shown.shown;
+      if (!shown.shown) explosion.burst(model.group.position, carVel);
+    }
+    model.update(view, braking, extent, thrust, boosting, camera, shown && paused ? 0 : dt);
     carPos.copy(model.group.position);
     // Follow the way the car is travelling when it slides, its nose when it is slow.
-    const moving = Math.hypot(car.vel[0], car.vel[1]);
-    const travel = Math.atan2(car.vel[0], car.vel[1]);
-    const followHeading = moving > 4 && (car.speed > 0 || car.flying) ? travel : car.heading;
+    const moving = Math.hypot(view.vel[0], view.vel[1]);
+    const travel = Math.atan2(view.vel[0], view.vel[1]);
+    const followHeading = moving > 4 && (view.speed > 0 || view.flying) ? travel : view.heading;
     // Hovering, the chase camera only drops back a little: there's no wingspan to fit in.
-    carVel.set(car.vel[0], car.vel[2], -car.vel[1]);
-    if (wreck > 0) carVel.set(0, 0, 0); // the camera settles on the wreck
+    carVel.set(view.vel[0], view.vel[2], -view.vel[1]);
+    if (gone) carVel.set(0, 0, 0); // the camera settles on the wreck
     // The Jet buffets through the sound barrier and skimming the ground; the airbrake shakes it too.
-    const groundZ = terrain.heightAt(car.pos[0], car.pos[1]);
-    const agl = car.pos[2] - spec.cgHeight - Math.max(groundZ, 0);
-    const jetBuffet = isJet(spec) && car.flying ? buffet(car.mach, agl, car.airspeed) : 0;
+    const groundZ = terrain.heightAt(view.pos[0], view.pos[1]);
+    const agl = view.pos[2] - spec.cgHeight - Math.max(groundZ, 0);
+    const jetBuffet = isJet(spec) && view.flying ? buffet(view.mach, agl, view.airspeed) : 0;
     // Crashed, the camera backs well off from the fireball.
-    const reach = wreck > 0 ? 3 : car.wings * (isJet(spec) ? JET_CAMERA : spec.wings ? 1 : 0.3);
+    const reach = gone ? 3 : view.wings * (isJet(spec) ? JET_CAMERA : spec.wings ? 1 : 0.3);
     rig.eye = isJet(spec) ? JET_EYE : BONNET_EYE;
     rig.update(dt, model.group, carVel, followHeading, ground, reach, boosting,
-      Math.min(car.airbrake * Math.min(car.airspeed / 250, 1) + jetBuffet + wreck / WRECK_S, 1));
+      Math.min(view.airbrake * Math.min(view.airspeed / 250, 1) + jetBuffet + (gone ? (live ? wreck / WRECK_S : 0.5) : 0), 1));
     jetFx.update(paused ? 0 : dt, {
-      body: model.group, on: isJet(spec) && car.flying && !welcome.isOpen && wreck <= 0, altitude: car.pos[2], agl, airspeed: car.airspeed,
-      g: gLoad, alpha: car.alpha, groundY: Math.max(groundZ, 0), sea: groundZ < 0, vel: carVel,
+      body: model.group, on: isJet(spec) && view.flying && !welcome.isOpen && !gone, altitude: view.pos[2], agl, airspeed: view.airspeed,
+      g, alpha: view.alpha, groundY: Math.max(groundZ, 0), sea: groundZ < 0, vel: carVel,
     }, camera);
     explosion.update(paused ? 0 : dt, camera, ground);
     // Fighting HUD on wings. PULL UP when the line it's flying meets the ground within 5 s at a
     // speed or sink rate that would crash rather than land.
-    const plane = car.flying && !!spec.wings && !welcome.isOpen && wreck <= 0;
-    const pullUp = plane && (car.airspeed > LANDING.speed || -car.vel[2] > LANDING.sink)
-      && secondsToGround([car.pos[0], car.pos[1], car.pos[2] - spec.cgHeight], car.vel, (x, y) => terrain.heightAt(x, y)) < 5;
-    hud.setVeil(welcome.isOpen ? 0 : pilot.grey, welcome.isOpen ? 0 : pilot.red);
-    audio.setMuffle(welcome.isOpen ? 0 : pilot.grey);
-    flightHud.update(camera, plane && hudShown ? { vel: carVel, heading: followHeading, g: gLoad, alpha: car.alpha, pullUp, airbrake: car.airbrake } : null, now / 1000);
+    const plane = view.flying && !!spec.wings && !welcome.isOpen && !gone;
+    const pullUp = plane && (view.airspeed > LANDING.speed || -view.vel[2] > LANDING.sink)
+      && secondsToGround([view.pos[0], view.pos[1], view.pos[2] - spec.cgHeight], view.vel, (x, y) => terrain.heightAt(x, y)) < 5;
+    // The pilot's eyes are the live drive's: a replay is watched with clear ones.
+    const eyes = welcome.isOpen || shown ? { grey: 0, red: 0, out: false, felt: 1 } : pilot;
+    hud.setVeil(eyes.grey, eyes.red);
+    audio.setMuffle(eyes.grey);
+    flightHud.update(camera, plane && hudShown ? { vel: carVel, heading: followHeading, g, alpha: view.alpha, pullUp, airbrake: view.airbrake } : null, now / 1000);
     sunlight.follow(carPos);
     sunlight.setViewHeight(camera.position.y);
     const t1 = performance.now();
-    terrainView.update(camera.position, camera.position.y - ground(camera.position), Math.hypot(...car.vel));
+    terrainView.update(camera.position, camera.position.y - ground(camera.position), Math.hypot(...view.vel));
     perf.terrain += performance.now() - t1;
 
-    const road = onRoad(site.roads, car.pos[0], car.pos[1], 2);
+    const road = onRoad(site.roads, view.pos[0], view.pos[1], 2);
     balloonsView.update(dt, field.balloons);
     hud.setScore(settings.balloons, field.score, field.popped, best);
     hud.update(dt, {
-      speedKmh: (car.flying ? car.airspeed : car.speed) * 3.6, rpmShare: car.rpm / spec.engine.redline,
-      gear: car.flying ? '✈' : car.gear < 0 ? 'R' : spec.engine.electric ? 'D' : String(car.gear),
-      road, x: car.pos[0], y: car.pos[1], heading: car.heading,
-      flying: car.flying, boost: boosting, mach: isJet(spec) ? car.mach : undefined,
-      throttle: input.plane ? input.controls.flight.thrust : undefined, airbrake: !!input.controls.flight.airbrake && !!spec.wings?.airbrake, balloons: settings.balloons ? field.balloons : [], agl: car.pos[2] - spec.cgHeight - terrain.heightAt(car.pos[0], car.pos[1]),
+      speedKmh: (view.flying ? view.airspeed : view.speed) * 3.6, rpmShare: view.rpm / spec.engine.redline,
+      gear: view.flying ? '✈' : view.gear < 0 ? 'R' : spec.engine.electric ? 'D' : String(view.gear),
+      road, x: view.pos[0], y: view.pos[1], heading: view.heading,
+      flying: view.flying, boost: boosting, mach: isJet(spec) ? view.mach : undefined,
+      throttle: view.flying && spec.wings ? thrust : undefined, airbrake: view.airbrake > 0.5 && !!spec.wings?.airbrake, balloons: settings.balloons ? field.balloons : [], agl: view.pos[2] - spec.cgHeight - terrain.heightAt(view.pos[0], view.pos[1]),
     });
-    const slip = Math.max(...car.wheels.map((w) => (w.contact ? w.slip : 0)));
-    const pedal = car.flying ? input.controls.flight.thrust : car.gear > 0 ? input.controls.throttle : input.controls.brake;
+    if (replayAt !== null) {
+      replayBar.style.width = `${(100 * (replayAt - replay.start)) / Math.max(replay.end - replay.start, 1e-6)}%`;
+      if (replayAt >= replay.end) setReplay(false);
+    }
+    const slip = Math.max(...view.wheels.map((w) => (w.contact ? w.slip : 0)));
+    const pedal = shown ? shown.pedal : car.flying ? c.flight.thrust : car.gear > 0 ? c.throttle : c.brake;
     audio.setPaused(paused || welcome.isOpen);
     // A wreck makes no engine noise.
-    audio.update(car.rpm, wreck > 0 ? 0 : pedal, slip, wreck > 0 ? 0 : Math.abs(car.speed), boosting && wreck <= 0, car.lift);
-    audio.airbrake(welcome.isOpen ? 0 : car.airbrake, car.airspeed);
+    audio.update(view.rpm, gone ? 0 : pedal, slip, gone ? 0 : Math.abs(view.speed), boosting && !gone, view.lift);
+    audio.airbrake(welcome.isOpen ? 0 : view.airbrake, view.airspeed);
     // The horn sounds at the wing's angle-of-attack limit: the flight computer's, or the stall.
     const alphaLimit = spec.wings ? spec.wings.fbw?.alphaMax ?? spec.wings.stall : Infinity;
     audio.warnings({
-      pullUp, out: pilot.out,
-      stall: plane && agl > 5 && car.airspeed > 5 && Math.abs(car.alpha) > 0.92 * alphaLimit,
-      strain: plane ? Math.min(Math.max((pilot.felt - 4) / (PILOT.blackAt - 4), 0), 1) : 0,
+      pullUp, out: eyes.out,
+      stall: plane && agl > 5 && view.airspeed > 5 && Math.abs(view.alpha) > 0.92 * alphaLimit,
+      strain: plane ? Math.min(Math.max((eyes.felt - 4) / (PILOT.blackAt - 4), 0), 1) : 0,
     });
 
     const t2 = performance.now();

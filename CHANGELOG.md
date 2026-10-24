@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-25 07:38
+
+- Instant replay. Press I to watch the last 30 seconds again, crashes and all. C changes the camera
+  and P pauses it. The end of the replay, or I again, puts you back where you were. It keeps 30
+  poses a second in memory (position, orientation, and what the wheels, wings, engine and HUD were
+  doing) and draws between them. It runs no physics and records no inputs, so physics changes
+  can't knock it off the line you drove. A reset or a respawn is a cut, not a slide across the map.
+  On a phone it's the REPLAY button.
+
 ## 2026-10-24 23:20
 
 - On the jet the arrow keys are now a hard stick and W A S D the fine one. W A S D keep the
@@ -15,6 +24,7 @@
   used to start selecting text and pop up the copy/look-up callout; the page now turns
   selection and the iOS callout off, leaving input fields selectable.
 
+||||||| parent of 95c5f68 (feat: instant replay on I - the last 30 s play back from memory, crashes included; it keeps 30 poses a second (position, orientation, wheels, wings, engine, HUD numbers) and draws between them with no physics, so a physics change can't knock it off the line that was driven; the live drive holds still under it and carries on after; a reset or respawn is a cut, a vehicle swap clears it; C changes the camera, P pauses, REPLAY button on touch)
 ## 2026-10-24 16:24
 
 - The Jet pulls out of dives. Pitch now asks the fly-by-wire for how fast the flight path turns

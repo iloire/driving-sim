@@ -431,3 +431,25 @@ camera, so it's true in chase, bonnet and orbit views alike:
 - **PULL UP**, flashing, when the straight line the plane is flying passes under the ground
   within 5 s (`secondsToGround`, sampled every 0.25 s, so it sees ridges ahead as well as the
   ground below), at a speed or sink rate that `main.ts` would call a crash rather than a landing.
+
+## Instant replay (`src/game/replay.ts`)
+
+I plays back the last 30 s. The replay keeps **poses, not inputs**: 30 times a second of drive
+time, `main.ts` pushes the car's position, orientation and velocity, the few numbers its model
+animates (steer, wings, lift, airbrake, control surfaces, each wheel's strut, spin, contact and
+slip), and what the HUD and sound read (gear, revs, airspeed, Mach, α, g, pedal, thrust, boost,
+braking). It also notes whether the jet was showing, so a crash replays with its explosion. A pose is
+a couple of hundred bytes, so the 900 of them come to a few hundred KB.
+
+Playback runs no physics. `ReplayBuffer.at(t)` blends the two poses either side of `t` (positions
+and numbers lerped, the orientation nlerped, on/off values taken from the nearer pose), and
+`applyPose` lays the result over the live `CarState` so the model, camera, HUD and sound draw it
+exactly as they draw the live car. Replaying inputs would have been smaller, but the physics changes
+almost every commit and the floating point isn't bit-identical across browsers, so a recorded drive
+would drift off the line that was driven.
+
+While it plays, the live drive holds still: no physics steps, no recording, the crash timer frozen.
+When it ends (I again, the end of the buffer, the menu, a reset or a new place) the physics carries
+on from where it stopped. `place()` marks a **cut**, so a reset or a respawn after a crash jumps
+instead of sliding the car across the island. A change of vehicle clears the buffer, since the old
+poses would be drawn in the new body.

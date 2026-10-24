@@ -74,6 +74,9 @@ A shared link skips the menu and puts you straight into the moment someone share
   ×5 when pops come within 4 s of each other. They show as dots on the map, and your best score is
   remembered in your browser. It's off until you press **B**. The settings panel can also turn it
 on or start a new round.
+- **Instant replay**: press **I** to watch the last 30 seconds again from the start, crashes
+  included. C changes the camera and P pauses it; I again, or the end of the replay, puts you back
+  where you were.
 - **Surfaces**: tarmac grips, gravel tracks slide, and picón and lava slide more.
 - **The road you're on** as a sign plate, a heading-up map, and sound for the engine and tyres.
 - **Time of day**: from sunrise to sunset, with the sun where it really is over Lanzarote today.
