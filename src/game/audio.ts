@@ -1,6 +1,7 @@
 // Engine and tyres, synthesised: a four-cylinder's firing note (two pulses a revolution) through
 // a filter that opens with the throttle, band-passed noise for the tyres when they slide, and a
-// low roar of the same noise while the turbo is lit. The Jet has its own turbine instead (`jet`).
+// low roar of the same noise while the turbo is lit. The Jet has its own turbine instead (`jet`),
+// and its airbrake clunks out and rumbles in the airflow.
 // Browsers only start audio after a user gesture, so it wakes on the first key or touch.
 // Everything runs through a low-pass at the end that muffles it as the pilot greys out under g.
 
@@ -11,7 +12,9 @@ export class CarAudio {
   electric = false;
   /** A turbine instead of a piston engine: roar, whine, afterburner rumble and wind. */
   jet = false;
-  private turbine?: { roar: GainNode; roarFilter: BiquadFilterNode; whine: OscillatorNode[]; whineGain: GainNode; burner: GainNode; wind: GainNode; windFilter: BiquadFilterNode };
+  private turbine?: { roar: GainNode; roarFilter: BiquadFilterNode; whine: OscillatorNode[]; whineGain: GainNode; burner: GainNode; wind: GainNode; windFilter: BiquadFilterNode; buffet: GainNode };
+  /** How far the airbrake was out last frame, to hear it start out or stow. */
+  private brakeOut = 0;
   private tyres?: GainNode;
   private roar?: GainNode;
   private master?: GainNode;
@@ -105,7 +108,7 @@ export class CarAudio {
       g.connect(out);
       return g;
     };
-    const roar = silent(), burner = silent(), wind = silent(), whineGain = silent();
+    const roar = silent(), burner = silent(), wind = silent(), whineGain = silent(), buffet = silent();
     const roarFilter = ctx.createBiquadFilter();
     roarFilter.type = 'lowpass';
     roarFilter.Q.value = 0.8;
@@ -139,7 +142,20 @@ export class CarAudio {
       o.start();
       return o;
     });
-    return { roar, roarFilter, whine, whineGain, burner, wind, windFilter };
+    // The airbrake's buffet: a low band of the noise fluttering at about 11 Hz as the wake breaks off the panel.
+    const thud = ctx.createBiquadFilter();
+    thud.type = 'bandpass';
+    thud.frequency.value = 180;
+    thud.Q.value = 0.9;
+    const flutter = ctx.createGain();
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 11;
+    const depth = ctx.createGain();
+    depth.gain.value = 0.45;
+    lfo.connect(depth).connect(flutter.gain);
+    lfo.start();
+    loop(noise).connect(thud).connect(flutter).connect(buffet);
+    return { roar, roarFilter, whine, whineGain, burner, wind, windFilter, buffet };
   }
 
   /** A balloon going: a bright snap, then a falling squeak; higher on a bigger combo. */
@@ -211,6 +227,48 @@ export class CarAudio {
       thump.start(t + at);
       thump.stop(t + at + 0.32);
     }
+  }
+
+  /**
+   * The airbrake `out` 0..1 at airspeed `speed` (m/s): a heavy clunk as it starts out, a lighter
+   * one as it stows, and a rumble while it's out that grows with the square of the speed.
+   */
+  airbrake(out: number, speed: number): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.master || !this.turbine) return;
+    const t = ctx.currentTime;
+    if (out > 0 && this.brakeOut === 0) this.clunk(t, 1);
+    else if (out === 0 && this.brakeOut > 0) this.clunk(t, 0.5);
+    this.brakeOut = out;
+    const air = Math.min(speed / 250, 1.2);
+    this.turbine.buffet.gain.setTargetAtTime(this.jet ? out * air * air * 0.6 : 0, t, 0.08);
+  }
+
+  /** A hydraulic clunk: a short knock of low noise over a dropping sine, `weight` 0..1. */
+  private clunk(t: number, weight: number): void {
+    const ctx = this.ctx!;
+    const n = Math.floor(ctx.sampleRate * 0.12);
+    const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (n * 0.15));
+    const knock = ctx.createBufferSource();
+    knock.buffer = buf;
+    const low = ctx.createBiquadFilter();
+    low.type = 'lowpass';
+    low.frequency.value = 900;
+    const kg = ctx.createGain();
+    kg.gain.value = 0.5 * weight;
+    knock.connect(low).connect(kg).connect(this.master!);
+    knock.start(t);
+    const body = ctx.createOscillator();
+    body.frequency.setValueAtTime(140, t);
+    body.frequency.exponentialRampToValueAtTime(55, t + 0.12);
+    const bg = ctx.createGain();
+    bg.gain.setValueAtTime(0.5 * weight, t);
+    bg.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    body.connect(bg).connect(this.master!);
+    body.start(t);
+    body.stop(t + 0.16);
   }
 
   /** 0..1: how muffled everything sounds, from open (0) to a dull thud through the blood (1). */

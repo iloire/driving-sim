@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-24 15:02
+
+- The airbrake sounds. A heavy hydraulic clunk as it goes out and a lighter one as it stows, and
+  while it's out a low rumble fluttering at about 11 Hz that grows with the square of the airspeed.
+
 ## 2026-10-24 14:59
 
 - The air thins with height (the International Standard Atmosphere). Up high there's less drag

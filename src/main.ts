@@ -553,6 +553,7 @@ async function boot(): Promise<void> {
     const pedal = car.flying ? input.controls.flight.thrust : car.gear > 0 ? input.controls.throttle : input.controls.brake;
     audio.setPaused(paused || welcome.isOpen);
     audio.update(car.rpm, pedal, slip, Math.abs(car.speed), boosting, car.lift);
+    audio.airbrake(welcome.isOpen ? 0 : car.airbrake, car.airspeed);
 
     const t2 = performance.now();
     renderer.render(scene, camera);
