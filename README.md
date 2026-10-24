@@ -46,7 +46,7 @@ A shared link skips the menu and puts you straight into the moment someone share
   on picón and gravel.
 - **A Jet** (Settings → Vehicle, or `?car=jet`): an original grey delta fighter that starts 600 m up and
   only flies. Fly-by-wire turns the stick into g (S pulls up to 9 g) and a roll rate (A/D), so it
-  handles the same at any speed. Shift and Ctrl work a throttle lever. Dry, it tops out just under the sound barrier. Hold Shift at full and the
+  handles the same at any speed. W A S D work the stick finely, the arrows hard. Shift and Ctrl work a throttle lever. Dry, it tops out just under the sound barrier. Hold Shift at full and the
   afterburner pushes it through, with a vapour cone and a boom, on to about 1,470 km/h (Mach 1.2), which puts the
   island's whole length (about 60 km) under three minutes away. The air thins with height, so up
   high it's faster still (Mach 2 from 8 km up on the afterburner) and runs out of air near 18 km. Above 8 km it draws a

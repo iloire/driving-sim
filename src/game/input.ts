@@ -2,7 +2,7 @@
 // their targets instead of snapping; the pad's stick and triggers are analog and used as they are.
 // The same keys fly the plane: W/S push and pull the stick, A/D roll, Q/E rudder. On wings the keys
 // work the stick gently at first and harder the longer they're held (a tap is a nudge, a hold is
-// full stick), and the jet has a throttle lever: Shift opens it, Ctrl closes it, 1–4 jump to idle,
+// full stick) while the arrows work it hard (full almost at once), and the jet has a throttle lever: Shift opens it, Ctrl closes it, 1–4 jump to idle,
 // cruise, 80 % and full, and holding Shift at full lights the afterburner; Space is the airbrake.
 // Hovering on thrusters, W/S tilt, A/D turn, Space climbs and Ctrl sinks. Shift is the turbo
 // everywhere else: nitro on the road, tail thrusters when hovering.
@@ -18,6 +18,8 @@ const STICK_RATE = 3;
 export const PLANE_STICK_RATE = 1.5;
 /** Roll asks the fly-by-wire for a roll rate, which can't overshoot, so it goes out faster on a softer curve (squared: full in 0.5 s). */
 export const PLANE_ROLL_RATE = 2;
+/** On wings the arrows are the hard stick: linear, full in an eighth of a second, for snapping into a turn. */
+export const PLANE_ARROW_RATE = 8;
 export const CRUISE_THRUST = 0.6;
 const IDLE_THRUST = 0.1;
 /** Throttle lever travel per second on Shift / Ctrl, and the 1–4 presets. */
@@ -66,6 +68,8 @@ export class Input {
   private keyBrake = 0;
   private keyPitch = 0;
   private keyRoll = 0;
+  private arrowPitch = 0;
+  private arrowRoll = 0;
   touch: (() => TouchControls) | null = null;
   /** Set while the on-screen BOOST button is held. */
   boostHeld = false;
@@ -99,10 +103,17 @@ export class Input {
     this.keyThrottle = ramp(this.keyThrottle, this.down('KeyW', 'ArrowUp'));
     this.keyBrake = ramp(this.keyBrake, this.down('KeyS', 'ArrowDown'));
 
-    // On wings the stick goes out slowly and snaps back; otherwise it moves the same both ways.
+    // On wings W A S D work the stick gently (out slowly, snapping back) and the arrows hard;
+    // otherwise the arrows are W A S D and the stick moves the same both ways.
     const [out, back] = this.plane ? [PLANE_STICK_RATE, CENTRE_RATE] : [STICK_RATE, STICK_RATE];
-    this.keyPitch = stepKey(this.keyPitch, (this.down('KeyS', 'ArrowDown') ? 1 : 0) - (this.down('KeyW', 'ArrowUp') ? 1 : 0), out, back, dt);
-    this.keyRoll = stepKey(this.keyRoll, (this.down('KeyD', 'ArrowRight') ? 1 : 0) - (this.down('KeyA', 'ArrowLeft') ? 1 : 0), this.plane ? PLANE_ROLL_RATE : out, back, dt);
+    const axis = (pos: string, neg: string) => (this.down(pos) ? 1 : 0) - (this.down(neg) ? 1 : 0);
+    const pitchW = axis('KeyS', 'KeyW'), rollW = axis('KeyD', 'KeyA');
+    const pitchA = axis('ArrowDown', 'ArrowUp'), rollA = axis('ArrowRight', 'ArrowLeft');
+    const merge = (a: number, b: number) => Math.max(-1, Math.min(1, a + b));
+    this.keyPitch = stepKey(this.keyPitch, this.plane ? pitchW : merge(pitchW, pitchA), out, back, dt);
+    this.keyRoll = stepKey(this.keyRoll, this.plane ? rollW : merge(rollW, rollA), this.plane ? PLANE_ROLL_RATE : out, back, dt);
+    this.arrowPitch = this.plane ? stepKey(this.arrowPitch, pitchA, PLANE_ARROW_RATE, PLANE_ARROW_RATE, dt) : 0;
+    this.arrowRoll = this.plane ? stepKey(this.arrowRoll, rollA, PLANE_ARROW_RATE, PLANE_ARROW_RATE, dt) : 0;
     const [shape, shapeR] = this.plane ? [shapeStick, shapeRoll] : [(v: number) => v, (v: number) => v];
 
     let padSteer = 0, padThrottle = 0, padBrake = 0, padHand = false, padPitch = 0, padYaw = 0, padBoost = false;
@@ -143,8 +154,8 @@ export class Input {
 
     const f = c.flight;
     const clamp1 = (v: number) => Math.max(-1, Math.min(1, v));
-    f.pitch = clamp1(shape(this.keyPitch) + padPitch + (t ? t.brake - t.throttle : 0));
-    f.roll = clamp1(shapeR(this.keyRoll) - padSteer - (t?.steer ?? 0));
+    f.pitch = clamp1(shape(this.keyPitch) + this.arrowPitch + padPitch + (t ? t.brake - t.throttle : 0));
+    f.roll = clamp1(shapeR(this.keyRoll) + this.arrowRoll - padSteer - (t?.steer ?? 0));
     f.yaw = clamp1((this.down('KeyE') ? 1 : 0) - (this.down('KeyQ') ? 1 : 0) + padYaw);
     if (this.plane) f.thrust = c.boost ? 1 : this.lever;
     else f.thrust = ctrl || padBrake > 0.5 ? IDLE_THRUST : CRUISE_THRUST + (1 - CRUISE_THRUST) * (c.boost ? 1 : padThrottle);

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-24 23:20
+
+- On the jet the arrow keys are now a hard stick and W A S D the fine one. W A S D keep the
+  gentle curves (pitch cubed, full in 0.67 s; roll squared, full in 0.5 s) for small corrections,
+  while the arrows go straight out, linear, full in an eighth of a second, to snap into a turn or
+  a pull. In the car and on thrusters the arrows still work as W A S D.
+
 ## 2026-10-24 22:59
 
 - No more accidental text selection on phones. A held thumb on the HUD, a button or the menu

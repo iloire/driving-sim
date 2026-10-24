@@ -102,7 +102,7 @@ const en = {
   'ctl.menu': 'Menu',
   'ctl.menu.more': 'or Esc; N jumps to the next place',
   'ctl.hide': 'Hide',
-  'ctl.arrows': 'Arrow keys work as W A S D.',
+  'ctl.arrows': 'Arrow keys work as W A S D. On the jet they are the hard stick: W A S D for fine control, arrows to snap into a turn.',
   'ctl.gamepad': 'Gamepad',
   'ctl.gamepad.keys': 'RT throttle · LT brake · stick steers · A handbrake · X fly · stick click turbo · Y camera',
 
@@ -246,7 +246,7 @@ const es: Record<Key, string> = {
   'ctl.menu': 'Menú',
   'ctl.menu.more': 'o Esc; N salta al siguiente lugar',
   'ctl.hide': 'Ocultar',
-  'ctl.arrows': 'Las flechas funcionan como W A S D.',
+  'ctl.arrows': 'Las flechas funcionan como W A S D. En el caza son la palanca brusca: W A S D para el control fino, flechas para entrar de golpe en un viraje.',
   'ctl.gamepad': 'Mando',
   'ctl.gamepad.keys': 'RT acelera · LT frena · el stick gira · A freno de mano · X volar · clic del stick turbo · Y cámara',
 

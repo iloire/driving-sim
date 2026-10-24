@@ -188,7 +188,9 @@ as the struts and tyres, scaled by how far out they are, and the wheel drive swi
   enough to get out of a dive. Roll is the exception: it asks the fly-by-wire for a roll
   rate, which stops when you let go, so A/D go out at 2 a second on a square (`shapeRoll`) and
   start the roll straight away: a quarter stick (about 65°/s) at 0.25 s, full at 0.5 s.
-  `src/game/input.test.ts` pins both curves.
+  On wings the arrows are a second, hard stick: linear, out and back at 8 a second
+  (`PLANE_ARROW_RATE`, full in 0.125 s), for snapping into a turn or a pull, while W A S D keep
+  the fine curves. Off wings the arrows are just W A S D. `src/game/input.test.ts` pins the curves.
 
 With the truck's heavier mass its wings are bigger (15 m², 9.4 m span) and its jet stronger
 (13,000 N). It rotates at about 210 km/h after a 9 s run and climbs at about 11° on full thrust. Hands-off
