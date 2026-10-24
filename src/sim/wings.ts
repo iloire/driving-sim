@@ -21,6 +21,8 @@ const SEA_RHO = 1.225;
 const TROPOPAUSE_RHO = 0.36392;
 /** Below the tropopause jet thrust falls with the density to this power; above it, in step with it. */
 const THRUST_LAPSE = 0.7;
+/** Ram air: at Mach M the intake packs thin air up to (1 + RAM·M²) times as dense, never past the sea's. */
+const RAM = 0.3;
 
 /** The air at some height: density (kg/m³) and the speed of sound (m/s). */
 export interface Air {
@@ -41,10 +43,14 @@ export function atmosphere(h: number): Air {
 
 export const SEA_LEVEL = atmosphere(0);
 
-/** A jet's thrust in this air as a share of its sea-level thrust. */
-export function thrustLapse(air: Air): number {
-  const low = (Math.max(air.rho, TROPOPAUSE_RHO) / SEA_RHO) ** THRUST_LAPSE;
-  return air.rho >= TROPOPAUSE_RHO ? low : low * (air.rho / TROPOPAUSE_RHO);
+/**
+ * A jet's thrust in this air at Mach `mach` as a share of its standing thrust at sea level: it
+ * falls with the density the engine breathes, which ram air at speed packs back towards the sea's.
+ */
+export function thrustLapse(air: Air, mach: number): number {
+  const rho = Math.min(air.rho * (1 + RAM * mach * mach), SEA_RHO);
+  const low = (Math.max(rho, TROPOPAUSE_RHO) / SEA_RHO) ** THRUST_LAPSE;
+  return rho >= TROPOPAUSE_RHO ? low : low * (rho / TROPOPAUSE_RHO);
 }
 
 /** A fighter's flight computer: what the stick asks for, and how hard it chases it. */
@@ -169,8 +175,8 @@ export function aero(w: WingSpec, q: Quat, vel: V3, omega: V3, c: FlightControls
   const V = length(vel);
   const force: V3 = [0, 0, 0];
   const tb: V3 = [0, 0, 0]; // body-frame torque
-  const thrust = rotate(q, [w.thrust * c.thrust * out * thrustLapse(air), 0, 0]);
   const mach = V / air.sound;
+  const thrust = rotate(q, [w.thrust * c.thrust * out * thrustLapse(air, mach), 0, 0]);
   if (V < 1) return { force: thrust, torque: [0, 0, 0], alpha: 0, airspeed: V, mach };
 
   const alpha = Math.atan2(-vb[2], vb[0]);

@@ -485,7 +485,7 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
   apply(scale(s.vel, -0.5 * air.rho * spec.cdA * speed), s.pos);
   // Turbo: the nitro rocket fades into the afterburner as the wings come out (an afterburner
   // loses thrust in thin air like the jet it sits on).
-  const airBoost = w ? w.afterburner * thrustLapse(air) : th?.boost ?? 0;
+  const airBoost = w ? w.afterburner * thrustLapse(air, s.mach) : th?.boost ?? 0;
   if (c.boost) force = add(force, scale(nose, spec.nitro * (1 - s.wings) + airBoost * s.wings));
   if (s.wings > 0 && w) {
     const stick = w.fbw ? flyByWire(w, w.fbw, spec.mass, s.q, s.vel, s.w, c.flight, air) : c.flight;

@@ -195,9 +195,15 @@ the afterburner. Two additions make it a fighter rather than a fast light plane:
   11 km, 0.09 at 20 km), and the speed of sound falls from 340 to 295 m/s. Lift, drag, the flight
   computer and the body's own drag all use the local density, and Mach (`CarState.mach`, shown on the
   HUD and driving the boom and the vapour cone) uses the local speed of sound. Jet thrust and the
-  afterburner fall with the density to the 0.7 power up to 11 km, and in step with it above
-  (`thrustLapse()`). So up high the Jet is faster (past Mach 1.5 at 11 km on the afterburner) and
-  has a ceiling near 18 km, where the afterburner can no longer make up the drag of holding it up.
+  afterburner fall with the density the engine breathes, to the 0.7 power up to 11 km and in step
+  with it above (`thrustLapse()`). At speed the intake rams the air in, packing it to (1 + 0.3 M²)
+  times as dense, never past the sea's: that leaves low level as it was and wins back much of what
+  the height took. So on the afterburner the Jet tops out at Mach 1.2 (about 1,480 km/h) low down,
+  Mach 1.6 at 4 km and Mach 2.05 (about 2,250 km/h) from 8 km up, while dry it stays near Mach 1
+  at any height; it has a ceiling near 18 km, where the afterburner can no longer make up the drag
+  of holding it up. Nose down, gravity adds to the thrust: a 45° dive held from 8 km is over 30 %
+  faster after 20 s than level flight, and a vertical one passes 1,900 km/h. Hands-off, the flight
+  computer holds 1 g, which bends a dive back towards level, so a dive needs the stick held forward.
 
 Low down (the tests fly at 500 m) it cruises at about 920 km/h, does Mach 0.94 dry, and on the afterburner passes Mach 1 about 18 s
 from cruise and tops out at Mach 1.2 (about 1,470 km/h). It pulls 9 g above about 180 m/s and mushes downwards below about 60 m/s.
@@ -205,7 +211,7 @@ Crossing Mach 1 plays a sonic boom (`CarAudio.boom`, the N-wave's two cracks 0.1
 so; it re-arms below Mach 0.97. The model wraps a vapour cone round the fuselage between about
 Mach 0.95 and 1.03, thickest at 0.99 and flickering as the shock moves. `src/sim/jet.test.ts`
 pins those, as well as an equal roll rate at 250 and 300 m/s, no stall even at full pull at 80 m/s, the airbrake,
-the standard atmosphere's values, the speed at 11 km and the ceiling (by energy height, since the
+the standard atmosphere's values, the top speed low down and at 8 km, dry and on the afterburner, a held dive and the ceiling (by energy height, since the
 flight computer trades speed for height). Taking
 out the fly-by-wire fails eight of them.
 

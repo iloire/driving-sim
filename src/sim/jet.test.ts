@@ -121,11 +121,34 @@ describe('the jet', () => {
     expect(stalled(wings, s.alpha)).toBe(false);
   });
 
-  it('is faster up high, where the thin air drags less: past Mach 1.5 at 11 km on the afterburner', () => {
-    const s = airborne(280, 11000);
-    fly(s, controls(0, 0, 1, true), 120);
-    expect(s.mach).toBeGreaterThan(1.5);
-    expect(s.pos[2]).toBeGreaterThan(10000);
+  it('is faster up high, where the thin air drags less: Mach 1.2 at the sea, past Mach 1.9 at 8 km on the afterburner', () => {
+    const sea = airborne(280, 300), high = airborne(280, 8000);
+    fly(sea, controls(0, 0, 1, true), 150);
+    fly(high, controls(0, 0, 1, true), 150);
+    expect(sea.mach).toBeLessThan(1.3);
+    expect(high.mach).toBeGreaterThan(1.9);
+    expect(high.airspeed).toBeGreaterThan(sea.airspeed * 1.35);
+    expect(high.pos[2]).toBeGreaterThan(7500);
+  });
+
+  it('stays near Mach 1 on dry thrust at any height: only the afterburner pushes well through', () => {
+    for (const height of [300, 8000]) {
+      const s = airborne(280, height);
+      fly(s, controls(0, 0, 1), 150);
+      expect(s.mach).toBeLessThan(1.2);
+    }
+  });
+
+  it('gathers speed nose down: a held 45° dive from 8 km runs far past what it flew level', () => {
+    const level = airborne(250, 8000), dive = airborne(250, 8000);
+    const pitch = Math.PI / 4;
+    // Northbound with the nose 45° down, and the stick pushed to the load that holds the path.
+    dive.q = [Math.SQRT1_2 * Math.cos(pitch / 2), -Math.SQRT1_2 * Math.sin(pitch / 2), Math.SQRT1_2 * Math.sin(pitch / 2), Math.SQRT1_2 * Math.cos(pitch / 2)];
+    dive.vel = [0, 250 * Math.cos(pitch), -250 * Math.sin(pitch)];
+    fly(level, controls(), 20);
+    fly(dive, controls((Math.cos(pitch) - 1) / (1 - wings.fbw!.gMin)), 20);
+    expect(dive.airspeed).toBeGreaterThan(level.airspeed * 1.3);
+    expect(dive.pos[2]).toBeLessThan(level.pos[2] - 3000);
   });
 
   it('has a ceiling near 18 km: at 20 km even the afterburner loses energy, at 17 km it still gains', () => {

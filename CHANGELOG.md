@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-24 15:23
+
+- The Jet is properly faster up high. The engine had been losing thrust to the thin air as if it
+  were standing still. Now its intake rams the air in at speed, so on the afterburner it does about
+  2,250 km/h (Mach 2) from 8 km up against about 1,480 km/h (Mach 1.2) low down, where nothing has
+  changed. Dry it still stays near Mach 1. Tests pin the speed at both heights and that a held dive
+  runs well past level flight.
+
 ## 2026-10-24 15:20
 
 - A better crash. Fly the Jet into the ground or a building and it explodes: a white flash, a
