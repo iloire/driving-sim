@@ -256,6 +256,21 @@ Here all 105 land tiles have detail (about 74 MB of heights), so they load lazil
   centre line on main roads, and bare worn tarmac on minor ones. A segment belongs to the chunk
   holding its start, so chunks never double up.
 
+## Welcome screen (`src/game/welcome.ts`, `camera.ts`)
+
+The page opens on a menu laid over the live scene. You pick a place (← → or the Places tab), a vehicle and
+a named time of day (`timesOfDay` clamps Dawn…Sunset to the day's daylight), then Drive. Under it the
+physics stops and the audio is paused. The HUD, the settings panel and the touch buttons are hidden by
+`body.in-menu`. `CameraRig.showcase()` circles the car slowly, wider and higher with the wings out. A
+place far across the island is a cut, not a sweep over the mountains. `drive()` blends into the camera
+mode over 1.4 s. **M** / **Esc** reopens it from a drive with **Resume**, and **Drive** then starts
+over at the chosen place. The place and the vehicle stay in the URL (`?spawn=`, `?car=`), so a deep link
+opens the menu already set. A shared moment (`?at=`) skips the menu entirely. The menu replaces the old
+spawn picker.
+
+The loading screen comes before it: the name rises in over a slow Timanfaya glow, a road's centre
+line runs under it, and the status line follows the boot (terrain, photo, a road for the car).
+
 ## HUD (`src/game/hud.ts`)
 
 - **The road plate.** An OSM `ref` like `LZ-67` goes in a green plate, with the name beside it,

@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-24 13:42
+
+- A welcome screen over the live island. The camera circles your car slowly while you pick a place
+  (← → or the Places list), the Roadster, the 4×4 or the Jet, and Dawn, Morning, Midday, Afternoon or
+  Sunset. Then **Drive** (or **Fly** in the Jet) sweeps the camera into the chase view. **M** or **Esc**
+  brings it back, with **Resume**. It replaces the place picker. A shared link skips it and starts
+  straight in the shared moment.
+- The loading screen moves now. The name rises in over a slow lava glow, a road's centre line runs
+  beneath it, and the status line says what is loading.
+
 ## 2026-10-23 11:31
 
 - A Jet to fly the island fast: Settings → Vehicle or `?car=jet`. It's an original delta fighter that

@@ -12,11 +12,11 @@ import { formatHour, readMoment, writeMoment, type Moment } from './game/share';
 import { Input, type Action } from './game/input';
 import { createJetModel } from './game/jet-model';
 import { createRoadsterModel } from './game/roadster-model';
-import { SpawnPicker } from './game/picker';
 import { RoadView } from './game/road-view';
 import { loadSite, type Spawn } from './game/site';
 import { TerrainView } from './game/terrain-view';
 import { TouchPad } from './game/touch';
+import { timesOfDay, Welcome } from './game/welcome';
 import { createSurround, Sunlight } from './game/world';
 import { BalloonField } from './sim/balloons';
 import { createCar, JET, ROADSTER, TRUCK, stepCar, type CarEnv, type CarSpec, type CarState, type Surface } from './sim/car';
@@ -41,10 +41,10 @@ const START_HINT = (spec: CarSpec) => isJet(spec)
   : (TOUCH ? 'right thumb up to drive' : 'W to drive, A/D to steer');
 
 /** The cars on offer: the default Roadster, which hovers on thrusters, the 4×4, which unfolds wings, and the Jet, which only flies. */
-const VEHICLES: Record<string, { name: string; spec: CarSpec; model: (spec: CarSpec) => CarModel }> = {
-  roadster: { name: 'Roadster', spec: ROADSTER, model: createRoadsterModel },
-  '4x4': { name: 'Armoured 4×4', spec: TRUCK, model: createCarModel },
-  jet: { name: 'Jet', spec: JET, model: createJetModel },
+const VEHICLES: Record<string, { name: string; line: string; spec: CarSpec; model: (spec: CarSpec) => CarModel }> = {
+  roadster: { name: 'Roadster', line: 'electric, 1,400 N·m · F lights the thrusters', spec: ROADSTER, model: createRoadsterModel },
+  '4x4': { name: 'Armoured 4×4', line: 'V8 on all-terrain tyres · F unfolds wings', spec: TRUCK, model: createCarModel },
+  jet: { name: 'Jet', line: 'delta fighter, 9 g · starts 600 m up', spec: JET, model: createJetModel },
 };
 /** The Jet starts this high above the ground, already at cruise. */
 const JET_START = { agl: 600, speed: 230 };
@@ -93,10 +93,17 @@ function parseHour(q: URLSearchParams): number | undefined {
   return m ? Number(m[1]) + Number(m[2]) / 60 : undefined;
 }
 
+/** What the loading screen says it is doing. */
+function loading(text: string): void {
+  const line = document.querySelector('.loading-line');
+  if (line) line.textContent = text;
+}
+
 async function boot(): Promise<void> {
   initAnalytics();
   const query = new URLSearchParams(location.search);
   const site = await loadSite(SITE);
+  loading('Painting the lava fields…');
   const terrain = site.terrain;
   const extent = terrain.extent;
 
@@ -121,6 +128,7 @@ async function boot(): Promise<void> {
     dress: (t, level) => dresser.dress(t, level),
   });
   scene.add(terrainView.group, createSurround(extent));
+  loading('Finding the car a road…');
 
   // The balloon game is off until B (or the settings panel, or the phone's button) turns it on.
   const vehicleId = VEHICLES[query.get('car') ?? ''] ? query.get('car')! : 'roadster';
@@ -204,8 +212,9 @@ async function boot(): Promise<void> {
     q.delete('fly');
     history.replaceState(null, '', `?${q}`);
     await place(s.x, s.y, s.heading);
-    hud.say(s.spec.name);
+    if (!welcome.isOpen) hud.say(s.spec.name);
     track('place', { spawn: s.spec.id });
+    refreshMenu();
   }
 
   /** Puts the car back into a shared moment: there, pointing that way, at that speed, in the air if it was. */
@@ -231,14 +240,66 @@ async function boot(): Promise<void> {
     hud.say('Back on the road');
   }
 
-  const picker = new SpawnPicker(site.spawns, (s) => void goTo(s));
+  // The welcome screen: the car holds still under it while the camera circles it.
+  let canResume = false;
+  const welcome = new Welcome({
+    place: (id) => {
+      const s = site.spawns.find((x) => x.spec.id === id);
+      if (!s) return;
+      canResume = false; // the paused drive was somewhere else
+      void goTo(s);
+    },
+    vehicle: (id) => {
+      settings.vehicle = VEHICLES[id].name;
+      gui.controllersRecursive().forEach((c) => c.updateDisplay());
+      switchVehicle();
+    },
+    time: (name) => {
+      sky.hour = times()[name];
+      gui.controllersRecursive().forEach((c) => c.updateDisplay());
+      applySun();
+      refreshMenu();
+    },
+    drive: () => {
+      if (canResume) { canResume = false; void goTo(spawn).then(leaveMenu); } // start over at the place
+      else leaveMenu();
+    },
+    resume: leaveMenu,
+  }, ['#help table', '#help p'].map((sel) => document.querySelector(sel)?.outerHTML ?? '').join(''));
+
+  /** From a drive the menu offers to carry on; at boot there is nothing to carry on. */
+  function openMenu(fromDrive = true): void {
+    if (!welcome.isOpen) canResume = fromDrive;
+    setPaused(false);
+    refreshMenu();
+    welcome.open();
+    rig.showcase();
+  }
+
+  function leaveMenu(): void {
+    welcome.close();
+    rig.drive();
+    track('start', { shared: false, spawn: spawn.spec.id, car: vehicleKey(), touch: TOUCH, resume: canResume });
+    if (!canResume) hud.say(`${spawn.spec.name} — ${START_HINT(spec)}`, 5);
+  }
+
+  function refreshMenu(): void {
+    const t = times();
+    welcome.render({
+      places: site.spawns.map((s) => ({ id: s.spec.id, name: s.spec.name })), place: spawn.spec.id,
+      vehicles: Object.entries(VEHICLES).map(([id, v]) => ({ id, name: v.name, line: v.line })), vehicle: vehicleKey(),
+      times: Object.keys(t), time: Object.keys(t).find((k) => Math.abs(t[k] - sky.hour) < 0.01) ?? '',
+      canResume, flies: isJet(spec),
+    });
+  }
+
   const actions: Record<Action, () => void> = {
     reset: () => { track('reset'); void recover(); },
     camera: () => hud.say(`Camera: ${rig.next()}`, 1.5),
     mute: () => { audio.setMuted(!audio.muted); hud.say(audio.muted ? 'Sound off' : 'Sound on', 1.5); },
     pause: () => { setPaused(!paused); if (!paused) hud.say('Go', 1.5); },
     help: () => document.getElementById('help')!.classList.toggle('collapsed'),
-    spawns: () => picker.toggle(spawn),
+    menu: () => { if (!welcome.isOpen) openMenu(); else if (canResume) leaveMenu(); },
     next: () => void goTo(site.spawns[(site.spawns.indexOf(spawn) + 1) % site.spawns.length]),
     map: () => document.getElementById('minimap')!.classList.toggle('hidden'),
     balloons: () => setBalloons(!settings.balloons),
@@ -250,7 +311,8 @@ async function boot(): Promise<void> {
       else hud.say(car.flying ? `Wings out — the jet's on. Past 160 km/h, ${KEY.pull}` : 'Wings folded — back to a car', 3);
     },
   };
-  const input = new Input((a) => actions[a]());
+  // Under the menu only M / Esc (back to the drive) and mute mean anything.
+  const input = new Input((a) => { if (!welcome.isOpen || a === 'menu' || a === 'mute') actions[a](); });
   if (TOUCH) {
     document.body.classList.add('touch');
     const pad = new TouchPad(canvas);
@@ -268,6 +330,7 @@ async function boot(): Promise<void> {
   const day = dayOfYear(new Date());
   const hours = daylightHours(lat, day);
   const sky = { hour: Math.min(Math.max(parseHour(query) ?? DEFAULT_HOUR, hours.first), hours.last) };
+  const times = () => timesOfDay(hours.first, hours.last);
   const applySun = () => {
     const sun = sunPosition(lat, day, sky.hour);
     sunlight.set(sun.dir, sun.elevationDeg);
@@ -298,7 +361,10 @@ async function boot(): Promise<void> {
     const q = new URLSearchParams(location.search);
     if (id === 'roadster') q.delete('car'); else q.set('car', id);
     history.replaceState(null, '', `?${q}`);
-    void place(car.pos[0], car.pos[1], car.heading).then(() => hud.say(VEHICLES[id].name, 2));
+    void place(car.pos[0], car.pos[1], car.heading).then(() => {
+      if (!welcome.isOpen) hud.say(VEHICLES[id].name, 2);
+      refreshMenu();
+    });
   };
   gui.add(settings, 'vehicle', Object.values(VEHICLES).map((v) => v.name)).name('Vehicle').onChange(switchVehicle);
   gui.add(settings, 'drivetrain', Object.keys(DRIVETRAINS)).name('Drivetrain').onChange(applyDrivetrain);
@@ -321,6 +387,7 @@ async function boot(): Promise<void> {
     );
   });
 
+  // A shared link is an invitation to that exact moment: straight in, no menu.
   const moment = readMoment(query);
   if (moment && moment.x > 0 && moment.y > 0 && moment.x < extent && moment.y < extent) {
     await resume(moment);
@@ -328,8 +395,7 @@ async function boot(): Promise<void> {
     hud.say(`A shared drive — ${START_HINT(spec)}`, 5);
   } else {
     await place(spawn.x, spawn.y, spawn.heading);
-    track('start', { shared: false, spawn: spawn.spec.id, car: vehicleId, touch: TOUCH });
-    hud.say(`${spawn.spec.name} — ${START_HINT(spec)}`, 5);
+    openMenu(false);
   }
 
   // Dev builds expose the live state for poking at from the console.
@@ -344,7 +410,7 @@ async function boot(): Promise<void> {
     const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
     input.update(dt);
-    if (!paused && !picker.open) {
+    if (!paused && !welcome.isOpen) {
       acc += dt;
       const t0 = performance.now();
       while (acc >= STEP) {
@@ -425,7 +491,7 @@ async function boot(): Promise<void> {
     });
     const slip = Math.max(...car.wheels.map((w) => (w.contact ? w.slip : 0)));
     const pedal = car.flying ? input.controls.flight.thrust : car.gear > 0 ? input.controls.throttle : input.controls.brake;
-    audio.setPaused(paused || picker.open);
+    audio.setPaused(paused || welcome.isOpen);
     audio.update(car.rpm, pedal, slip, Math.abs(car.speed), boosting, car.lift);
 
     const t2 = performance.now();

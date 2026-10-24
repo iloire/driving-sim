@@ -16,8 +16,9 @@
     <canvas id="view"></canvas>
 
     <div id="loading">
-      <div class="brand">LANZAROTE <span>DRIVE</span></div>
-      <div class="loading-line">Loading the island…</div>
+      <div class="brand"><b>LANZAROTE</b> <span>DRIVE</span></div>
+      <div class="loading-road" aria-hidden="true"><i></i></div>
+      <div class="loading-line" role="status">Loading the island…</div>
     </div>
 
     <div id="plate" aria-live="polite">
@@ -54,15 +55,9 @@
       <button type="button" data-action="transform">FLY</button>
       <button type="button" data-action="balloons">BALLOONS</button>
       <button type="button" data-action="reset">RESET</button>
-      <button type="button" data-action="spawns">PLACES</button>
+      <button type="button" data-action="menu">MENU</button>
       <button type="button" data-action="pause">PAUSE</button>
     </nav>
-
-    <div id="picker" hidden tabindex="-1">
-      <h2>Start from</h2>
-      <div id="picker-list"></div>
-      <p>↑ ↓ to choose · Esc to close</p>
-    </div>
 
     <div id="paused" hidden>
       <h2>Paused</h2>
@@ -85,7 +80,7 @@
         <tr><td>Jet</td><td>Settings → Vehicle: W/S pull to 9 g · A/D roll · Shift afterburner</td></tr>
         <tr><td>B</td><td>Balloon game on/off: fly through them, chain pops for a combo</td></tr>
         <tr><td>R</td><td>Back on the nearest road</td></tr>
-        <tr><td>M · N</td><td>Places · next place</td></tr>
+        <tr><td>M / Esc · N</td><td>Menu: place, vehicle, time · next place</td></tr>
         <tr><td>C · G</td><td>Camera · map</td></tr>
         <tr><td>V · P · H</td><td>Mute · pause · help</td></tr>
       </table>

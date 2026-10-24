@@ -1,5 +1,6 @@
 // Three camera modes: chase (behind and above, swinging round after the car, the default),
 // bonnet (on the nose, rolling and pitching with the body) and orbit (drag the mouse round the car).
+// Behind the welcome screen it circles the car slowly instead, and sweeps into the mode on leaving.
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -15,6 +16,13 @@ const FLY_UP = 4.5;
 /** Field of view at rest and at full turbo: widening it sells the speed. */
 const FOV = 60;
 const BOOST_FOV = 80;
+/**
+ * The menu's circle round the car: metres out and up (more with wings out, to fit the span),
+ * radians per second, and how far the car may jump before the circle cuts there instead of gliding.
+ */
+const SHOWCASE = { radius: 10, wideRadius: 22, height: 2.6, wideHeight: 6, rate: 0.12, cutAt: 300 };
+/** Seconds to sweep between the showcase and a driving camera. */
+const BLEND_S = 1.4;
 
 export class CameraRig {
   mode: CameraMode = 'chase';
@@ -28,6 +36,15 @@ export class CameraRig {
   private wings = 0;
   /** 0 … 1, easing in and out with the turbo. */
   private boost = 0;
+  private showing = false;
+  private readonly center = new THREE.Vector3();
+  private angle = 0;
+  /** While blending, the camera shows a mix of `from` and the pose its mode wants (`true*`). */
+  private blend = 0;
+  private readonly fromPos = new THREE.Vector3();
+  private readonly fromQuat = new THREE.Quaternion();
+  private readonly truePos = new THREE.Vector3();
+  private readonly trueQuat = new THREE.Quaternion();
 
   constructor(readonly camera: THREE.PerspectiveCamera, dom: HTMLElement) {
     this.orbit = new OrbitControls(camera, dom);
@@ -35,6 +52,42 @@ export class CameraRig {
     this.orbit.enableDamping = true;
     this.orbit.maxDistance = 400;
     this.orbit.minDistance = 3;
+  }
+
+  /**
+   * Circles the car for the welcome screen, easing out from wherever the camera is. It starts
+   * ahead of the car and off to one side, so the first view is of its face and the road behind.
+   */
+  showcase(): void {
+    this.showing = true;
+    this.orbit.enabled = false;
+    this.center.copy(this.lastTarget);
+    this.angle = Math.atan2(Math.sin(this.heading), -Math.cos(this.heading)) + 0.7;
+    this.startBlend();
+  }
+
+  /** Leaves the showcase for the current mode, sweeping in over BLEND_S. */
+  drive(): void {
+    if (!this.showing) return;
+    this.showing = false;
+    this.startBlend();
+    this.orbit.enabled = this.mode === 'orbit';
+    if (this.mode === 'orbit') {
+      this.chaseTarget(this.lastTarget);
+      this.camera.position.copy(this.desired);
+      this.orbit.target.copy(this.lastTarget);
+      this.orbit.update();
+      this.truePos.copy(this.camera.position);
+      this.trueQuat.copy(this.camera.quaternion);
+    }
+  }
+
+  private startBlend(): void {
+    this.fromPos.copy(this.camera.position);
+    this.fromQuat.copy(this.camera.quaternion);
+    this.truePos.copy(this.fromPos);
+    this.trueQuat.copy(this.fromQuat);
+    this.blend = BLEND_S;
   }
 
   next(): CameraMode {
@@ -55,6 +108,11 @@ export class CameraRig {
   snap(car: THREE.Object3D, heading: number): void {
     this.heading = heading;
     this.lastTarget.copy(car.position);
+    if (this.showing) {
+      // A new place across the island: cut there rather than sweep over the mountains.
+      if (this.center.distanceTo(car.position) > SHOWCASE.cutAt) this.center.copy(car.position);
+      return;
+    }
     this.chaseTarget(car.position);
     this.camera.position.copy(this.desired);
     this.camera.lookAt(this.look);
@@ -81,7 +139,19 @@ export class CameraRig {
       cam.fov = fov;
       cam.updateProjectionMatrix();
     }
-    if (this.mode === 'orbit') {
+    if (this.blend > 0) {
+      cam.position.copy(this.truePos);
+      cam.quaternion.copy(this.trueQuat);
+    }
+    if (this.showing) {
+      this.center.lerp(car.position, 1 - Math.exp(-dt * 2));
+      this.angle += SHOWCASE.rate * dt;
+      const r = SHOWCASE.radius + SHOWCASE.wideRadius * wings, h = SHOWCASE.height + SHOWCASE.wideHeight * wings;
+      cam.position.set(this.center.x + Math.sin(this.angle) * r, this.center.y + h, this.center.z + Math.cos(this.angle) * r);
+      cam.position.y = Math.max(cam.position.y, groundAt(cam.position) + 1.2);
+      cam.up.set(0, 1, 0);
+      cam.lookAt(this.center.x, this.center.y + 0.5, this.center.z);
+    } else if (this.mode === 'orbit') {
       cam.position.add(new THREE.Vector3().subVectors(car.position, this.lastTarget));
       this.orbit.target.copy(car.position);
       this.orbit.update();
@@ -104,5 +174,13 @@ export class CameraRig {
       cam.quaternion.copy(car.quaternion).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2));
     }
     this.lastTarget.copy(car.position);
+    if (this.blend > 0) {
+      this.truePos.copy(cam.position);
+      this.trueQuat.copy(cam.quaternion);
+      this.blend = Math.max(0, this.blend - dt);
+      const t = THREE.MathUtils.smootherstep(1 - this.blend / BLEND_S, 0, 1);
+      cam.position.lerpVectors(this.fromPos, this.truePos, t);
+      cam.quaternion.slerpQuaternions(this.fromQuat, this.trueQuat, t);
+    }
   }
 }

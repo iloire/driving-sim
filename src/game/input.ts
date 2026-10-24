@@ -13,10 +13,10 @@ const PEDAL_RATE = 4;
 const STICK_RATE = 3;
 const CRUISE_THRUST = 0.6;
 
-export type Action = 'reset' | 'camera' | 'mute' | 'pause' | 'help' | 'spawns' | 'next' | 'map' | 'transform' | 'balloons';
+export type Action = 'reset' | 'camera' | 'mute' | 'pause' | 'help' | 'menu' | 'next' | 'map' | 'transform' | 'balloons';
 
 const ACTION_KEYS: Record<string, Action> = {
-  KeyR: 'reset', KeyC: 'camera', KeyV: 'mute', KeyP: 'pause', KeyH: 'help', KeyM: 'spawns', KeyN: 'next', KeyG: 'map', KeyF: 'transform', KeyB: 'balloons',
+  KeyR: 'reset', KeyC: 'camera', KeyV: 'mute', KeyP: 'pause', KeyH: 'help', KeyM: 'menu', Escape: 'menu', KeyN: 'next', KeyG: 'map', KeyF: 'transform', KeyB: 'balloons',
 };
 // Standard-mapping gamepad buttons.
 const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, L3: 10, R3: 11 };
@@ -49,10 +49,11 @@ export class Input {
   constructor(private readonly onAction: (a: Action) => void) {
     window.addEventListener('keydown', (e) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
-      if (e.target instanceof Element && e.target.closest('#picker')) return; // the picker reads its own keys
       if (!e.repeat && ACTION_KEYS[e.code]) onAction(ACTION_KEYS[e.code]);
       this.keys.add(e.code);
-      if (e.code.startsWith('Arrow') || e.code === 'Space') e.preventDefault();
+      // On the welcome screen Space and the arrows keep their jobs: pressing and scrolling.
+      const inMenu = e.target instanceof Element && e.target.closest('#welcome');
+      if ((e.code.startsWith('Arrow') || e.code === 'Space') && !inMenu) e.preventDefault();
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());

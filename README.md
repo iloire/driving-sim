@@ -17,6 +17,12 @@ Airport's runway.
 
 It runs in a desktop browser, or on a phone held sideways. Nothing to install.
 
+It opens on a welcome screen over the live island, with the camera circling your car. Pick a place,
+a ride and the time of day, then **Drive**. **M** or **Esc** brings the menu back, with **Resume**.
+A shared link skips the menu and puts you straight into the moment someone shared.
+
+![The welcome screen: Lanzarote Drive over the Roadster on the LZ-67 in Timanfaya](docs/screenshots/welcome.png)
+
 ![Driving the LZ-30 through La Geria in the late afternoon](docs/screenshots/la-geria.png)
 
 ## What's in it
@@ -87,7 +93,7 @@ npm run dev        # http://localhost:5173
 | **F** | Fly: the Roadster lights its thrusters, the 4×4 unfolds its wings (again to land as a car) |
 | **B** | Balloon game on/off |
 | **R** | Back on the nearest paved road, facing the way you were going |
-| **M** · **N** | Pick a place to start · next place |
+| **M** / **Esc** · **N** | Menu (place, vehicle, time of day) · next place |
 | **C** | Camera: chase, bonnet, orbit (drag the mouse) |
 | **G** · **V** · **P** · **H** | Map · mute · pause · help |
 
@@ -106,8 +112,8 @@ stick, RT boosts, LT idles, and LB/RB are the rudder. On a phone, hold BOOST.
 **Phone**, held sideways: slide the left thumb sideways to steer. Push the right thumb up to
 accelerate, and pull it down to brake or back up.
 
-The settings panel swaps the vehicle (Roadster, armoured 4×4 or Jet) and sets the solar time and the
-drivetrain (AWD, RWD, FWD).
+The welcome screen and the settings panel both swap the vehicle (Roadster, armoured 4×4 or Jet) and
+set the time of day. The settings panel also has the exact solar time and the drivetrain (AWD, RWD, FWD).
 
 **Balloons:** press **B** (BALLOONS on a phone) to fill the sky with them, take off (from the
 airport, say), find the coloured dots on the map, and fly through them. Chain them for the combo.
