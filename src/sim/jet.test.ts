@@ -86,6 +86,17 @@ describe('the jet', () => {
     expect(rate(100)).toBeGreaterThan(1.5);
   });
 
+  it('sheds speed on the airbrake: from 830 km/h at idle, under 600 within 10 s, where the clean jet keeps over 700', () => {
+    const clean = airborne(230), braked = airborne(230);
+    fly(clean, controls(0, 0, 0.1), 10);
+    const c = controls(0, 0, 0.1);
+    c.flight.airbrake = true;
+    fly(braked, c, 10);
+    expect(clean.airspeed * 3.6).toBeGreaterThan(700);
+    expect(braked.airspeed * 3.6).toBeLessThan(600);
+    expect(braked.pos[2]).toBeGreaterThan(2900);
+  });
+
   it('sinks when it is too slow to fly, nose held under the stall', () => {
     const s = airborne(55);
     fly(s, controls(1, 0, 0.1), 6);

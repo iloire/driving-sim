@@ -213,6 +213,7 @@ export const JET: CarSpec = {
     unfoldRate: 10,
     fbw: { gMax: 9, gMin: -3, alphaMax: 0.38, rollRate: 4.5, kAlpha: 3, kPitch: 0.5, kRoll: 0.4, rudderFade: 120 },
     mach: { crit: 0.85, rise: 3 },
+    airbrake: 0.08,
   },
 };
 

@@ -5,7 +5,8 @@
 // pushes along the nose. All of it scales with how far the wings are out, so a half-unfolded
 // wing half-flies. A fighter adds fly-by-wire on top (`flyByWire`): the stick asks for g and a roll
 // rate, and the computer moves the surfaces to get them, inside an angle-of-attack limit, so the
-// jet handles the same at 300 m/s as at 100. Near the speed of sound the drag climbs steeply.
+// jet handles the same at 300 m/s as at 100. Near the speed of sound the drag climbs steeply. An
+// airbrake, where fitted, adds drag while it's out.
 // Body frame as in car.ts: X forward, Y left, Z up.
 
 import { cross, length, normalize, rotate, scale, unrotate, type Quat, type V3 } from './vec';
@@ -67,6 +68,8 @@ export interface WingSpec {
   fbw?: FlyByWire;
   /** Transonic drag rise: past Mach `crit`, the drag coefficient grows by `rise` × (M − crit)². */
   mach?: { crit: number; rise: number };
+  /** Drag coefficient the airbrake adds while it's out. */
+  airbrake?: number;
 }
 
 export const WINGS: WingSpec = {
@@ -105,6 +108,8 @@ export interface FlightControls {
   thrust: number;
   /** −1..1, hovering only: sink or climb (Space up, Ctrl down). */
   lift: number;
+  /** The airbrake out (Space on wings). */
+  airbrake?: boolean;
 }
 
 /** Lift coefficient: linear to the stall, then the flat-plate fall-off. */
@@ -140,7 +145,7 @@ export function aero(w: WingSpec, q: Quat, vel: V3, omega: V3, c: FlightControls
   const S = w.area * out;
   const cl = liftCoefficient(w, alpha);
   const over = w.mach ? Math.max(V / SPEED_OF_SOUND - w.mach.crit, 0) : 0;
-  const cd = w.cd0 + w.cdInduced * cl * cl + (w.mach?.rise ?? 0) * over * over;
+  const cd = w.cd0 + w.cdInduced * cl * cl + (w.mach?.rise ?? 0) * over * over + (c.airbrake ? w.airbrake ?? 0 : 0);
   const along = scale(vel, 1 / V);
   const left = rotate(q, [0, 1, 0]);
   const liftDir = normalize(cross(along, left));

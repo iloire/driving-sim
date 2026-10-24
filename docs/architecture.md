@@ -150,7 +150,12 @@ as the struts and tyres, scaled by how far out they are, and the wheel drive swi
   nose-up trim, plus the elevator and pitch damping. In roll, the ailerons and roll damping. In
   yaw, a weathervane on sideslip, the rudder and yaw damping. All damping scales with rate × size
   / airspeed.
-- **Jet.** Along the nose: cruise at 60 %, full on Shift, 10 % on Ctrl.
+- **Jet.** Along the nose, at the throttle lever's setting (`Input.lever`, 10–100 %, cruise 60 %).
+  Shift and Ctrl move it at 80 % a second, 1–4 set it, and the pad's triggers move it as far as
+  they're pressed. Shift held at full is the afterburner: a detent, so a tap of Shift no longer
+  lights it. The keys also work the stick differently on wings (`Input.plane`): out at 1.2 a
+  second, back at 4, squared on the way out (`shapeStick`). A 0.15 s tap is under 5 % stick, so under
+  1.4 g in the Jet, and a second's hold is full. `src/game/input.test.ts` pins that curve.
 
 With the truck's heavier mass its wings are bigger (15 m², 9.4 m span) and its jet stronger
 (13,000 N). It rotates at about 210 km/h after a 9 s run and climbs at about 11° on full thrust. Hands-off
@@ -174,10 +179,12 @@ the afterburner. Two additions make it a fighter rather than a fast light plane:
   Deflections clamp at full travel, so below about 150 m/s it runs out of authority as the bare wing would.
   The rudder's travel shrinks with (120 / V)².
 - **Transonic drag** (`WingSpec.mach`): past Mach 0.85, CD grows by 3 (M − 0.85)².
+- **Airbrake** (`WingSpec.airbrake`, Space): adds 0.08 to CD while it's out. At idle from 830 km/h it
+  sheds about 260 km/h in 10 s where the clean jet sheds 90.
 
 It cruises at about 820 km/h, does about 1,070 km/h dry and about 1,140 km/h on the afterburner (Mach
 0.93), pulls 9 g above about 180 m/s and mushes downwards below about 60 m/s. `src/sim/jet.test.ts`
-pins those, as well as an equal roll rate at 250 and 300 m/s, and no stall even at full pull at 80 m/s. Taking
+pins those, as well as an equal roll rate at 250 and 300 m/s, no stall even at full pull at 80 m/s, and the airbrake. Taking
 out the fly-by-wire fails eight of them.
 
 `main.ts` checks for a crash each frame: low over the ground while too fast (110 m/s), sinking

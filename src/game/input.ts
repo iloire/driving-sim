@@ -1,8 +1,11 @@
 // Keyboard + gamepad + touch → Controls. Keys are digital, so steering and pedals ramp towards
 // their targets instead of snapping; the pad's stick and triggers are analog and used as they are.
-// The same keys fly the plane: W/S push and pull the stick, A/D roll, Q/E rudder; the jet sits at
-// cruise thrust, Ctrl for idle. Hovering on thrusters, W/S tilt, A/D turn, Space climbs and Ctrl
-// sinks. Shift is the turbo every way: nitro on the road, afterburner or tail thrusters in the air.
+// The same keys fly the plane: W/S push and pull the stick, A/D roll, Q/E rudder. On wings the keys
+// work the stick gently at first and harder the longer they're held (a tap is a nudge, a hold is
+// full stick), and the jet has a throttle lever: Shift opens it, Ctrl closes it, 1–4 jump to idle,
+// cruise, 80 % and full, and holding Shift at full lights the afterburner; Space is the airbrake.
+// Hovering on thrusters, W/S tilt, A/D turn, Space climbs and Ctrl sinks. Shift is the turbo
+// everywhere else: nitro on the road, tail thrusters when hovering.
 
 import type { Controls } from '../sim/car';
 
@@ -11,7 +14,25 @@ const STEER_RATE = 2.2;
 const CENTRE_RATE = 4;
 const PEDAL_RATE = 4;
 const STICK_RATE = 3;
-const CRUISE_THRUST = 0.6;
+/** On wings, a key's stick travel per second (it is squared on the way out, so 0.4 s is a quarter). */
+const PLANE_STICK_RATE = 1.2;
+export const CRUISE_THRUST = 0.6;
+const IDLE_THRUST = 0.1;
+/** Throttle lever travel per second on Shift / Ctrl, and the 1–4 presets. */
+const LEVER_RATE = 0.8;
+const LEVER_PRESETS: Record<string, number> = { Digit1: IDLE_THRUST, Digit2: CRUISE_THRUST, Digit3: 0.8, Digit4: 1 };
+
+/**
+ * One step of a key-driven control `v` towards `target` (−1, 0 or 1): out at `rate`, and back to
+ * centre (or through it, reversing) at `back`.
+ */
+export function stepKey(v: number, target: number, rate: number, back: number, dt: number): number {
+  const r = target === 0 || target * v < 0 ? back : rate;
+  return v + Math.max(-r * dt, Math.min(r * dt, target - v));
+}
+
+/** The plane's stick curve: fine near the middle, full at the end. */
+export const shapeStick = (v: number) => v * Math.abs(v);
 
 export type Action = 'reset' | 'camera' | 'mute' | 'pause' | 'help' | 'menu' | 'next' | 'map' | 'transform' | 'balloons';
 
@@ -45,11 +66,16 @@ export class Input {
   touch: (() => TouchControls) | null = null;
   /** Set while the on-screen BOOST button is held. */
   boostHeld = false;
+  /** Flying on wings: the keys work the throttle lever, the gentle stick and the airbrake. */
+  plane = false;
+  /** The jet's throttle lever, IDLE_THRUST..1. */
+  lever = CRUISE_THRUST;
 
   constructor(private readonly onAction: (a: Action) => void) {
     window.addEventListener('keydown', (e) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
       if (!e.repeat && ACTION_KEYS[e.code]) onAction(ACTION_KEYS[e.code]);
+      if (this.plane && LEVER_PRESETS[e.code] !== undefined) this.lever = LEVER_PRESETS[e.code];
       this.keys.add(e.code);
       // On the welcome screen Space and the arrows keep their jobs: pressing and scrolling.
       const inMenu = e.target instanceof Element && e.target.closest('#welcome');
@@ -65,15 +91,16 @@ export class Input {
 
   update(dt: number): void {
     const target = (this.down('KeyA', 'ArrowLeft') ? 1 : 0) - (this.down('KeyD', 'ArrowRight') ? 1 : 0);
-    const rate = target === 0 || Math.sign(target) !== Math.sign(this.keySteer) ? CENTRE_RATE : STEER_RATE;
-    this.keySteer += Math.max(-rate * dt, Math.min(rate * dt, target - this.keySteer));
+    this.keySteer = stepKey(this.keySteer, target, STEER_RATE, CENTRE_RATE, dt);
     const ramp = (v: number, on: boolean) => Math.max(0, Math.min(1, v + (on ? PEDAL_RATE : -PEDAL_RATE * 2) * dt));
     this.keyThrottle = ramp(this.keyThrottle, this.down('KeyW', 'ArrowUp'));
     this.keyBrake = ramp(this.keyBrake, this.down('KeyS', 'ArrowDown'));
 
-    const toward = (v: number, t: number) => v + Math.max(-STICK_RATE * dt, Math.min(STICK_RATE * dt, t - v));
-    this.keyPitch = toward(this.keyPitch, (this.down('KeyS', 'ArrowDown') ? 1 : 0) - (this.down('KeyW', 'ArrowUp') ? 1 : 0));
-    this.keyRoll = toward(this.keyRoll, (this.down('KeyD', 'ArrowRight') ? 1 : 0) - (this.down('KeyA', 'ArrowLeft') ? 1 : 0));
+    // On wings the stick goes out slowly and snaps back; otherwise it moves the same both ways.
+    const [out, back] = this.plane ? [PLANE_STICK_RATE, CENTRE_RATE] : [STICK_RATE, STICK_RATE];
+    this.keyPitch = stepKey(this.keyPitch, (this.down('KeyS', 'ArrowDown') ? 1 : 0) - (this.down('KeyW', 'ArrowUp') ? 1 : 0), out, back, dt);
+    this.keyRoll = stepKey(this.keyRoll, (this.down('KeyD', 'ArrowRight') ? 1 : 0) - (this.down('KeyA', 'ArrowLeft') ? 1 : 0), out, back, dt);
+    const shape = this.plane ? shapeStick : (v: number) => v;
 
     let padSteer = 0, padThrottle = 0, padBrake = 0, padHand = false, padPitch = 0, padYaw = 0, padBoost = false;
     const pad = navigator.getGamepads?.().find((p) => p && p.connected);
@@ -101,16 +128,24 @@ export class Input {
     c.throttle = Math.max(this.keyThrottle, padThrottle, t?.throttle ?? 0);
     c.brake = Math.max(this.keyBrake, padBrake, t?.brake ?? 0);
     c.handbrake = this.down('Space') || padHand;
-    c.boost = this.down('ShiftLeft', 'ShiftRight') || padBoost || this.boostHeld;
+    const shift = this.down('ShiftLeft', 'ShiftRight');
+    const ctrl = this.down('ControlLeft', 'ControlRight');
+    if (this.plane) {
+      // Shift and Ctrl move the lever; so do the pad's triggers, as far as they're pressed.
+      const move = (shift ? 1 : 0) - (ctrl ? 1 : 0) + padThrottle - padBrake;
+      this.lever = Math.max(IDLE_THRUST, Math.min(1, this.lever + move * LEVER_RATE * dt));
+    }
+    // On wings Shift only lights the afterburner once the lever is at full: a detent.
+    c.boost = (this.plane ? shift && this.lever >= 1 : shift) || padBoost || this.boostHeld;
 
     const f = c.flight;
     const clamp1 = (v: number) => Math.max(-1, Math.min(1, v));
-    f.pitch = clamp1(this.keyPitch + padPitch + (t ? t.brake - t.throttle : 0));
-    f.roll = clamp1(this.keyRoll - padSteer - (t?.steer ?? 0));
+    f.pitch = clamp1(shape(this.keyPitch) + padPitch + (t ? t.brake - t.throttle : 0));
+    f.roll = clamp1(shape(this.keyRoll) - padSteer - (t?.steer ?? 0));
     f.yaw = clamp1((this.down('KeyE') ? 1 : 0) - (this.down('KeyQ') ? 1 : 0) + padYaw);
-    const boost = c.boost ? 1 : padThrottle;
-    const idle = this.down('ControlLeft', 'ControlRight') || padBrake > 0.5;
-    f.thrust = idle ? 0.1 : CRUISE_THRUST + (1 - CRUISE_THRUST) * boost;
+    if (this.plane) f.thrust = c.boost ? 1 : this.lever;
+    else f.thrust = ctrl || padBrake > 0.5 ? IDLE_THRUST : CRUISE_THRUST + (1 - CRUISE_THRUST) * (c.boost ? 1 : padThrottle);
+    f.airbrake = this.plane && this.down('Space');
     // Hovering: Space climbs, Ctrl sinks; on a pad the triggers, on a phone the left thumb up or down.
     f.lift = clamp1((this.down('Space') ? 1 : 0) - (this.down('ControlLeft', 'ControlRight') ? 1 : 0)
       + padThrottle - padBrake + (t?.lift ?? 0));

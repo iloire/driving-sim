@@ -9,7 +9,7 @@ import { TileDresser } from './game/dress';
 import { Hud } from './game/hud';
 import { initAnalytics, track } from './game/analytics';
 import { formatHour, readMoment, writeMoment, type Moment } from './game/share';
-import { Input, type Action } from './game/input';
+import { CRUISE_THRUST, Input, type Action } from './game/input';
 import { createJetModel } from './game/jet-model';
 import { createRoadsterModel } from './game/roadster-model';
 import { RoadView } from './game/road-view';
@@ -37,7 +37,7 @@ const KEY = TOUCH
   : { reset: 'R', pull: 'S to pull up', climb: 'Space to climb, Ctrl to sink' };
 /** What to do first, in whatever it is. */
 const START_HINT = (spec: CarSpec) => isJet(spec)
-  ? (TOUCH ? 'right thumb to pull and roll, BOOST for the afterburner' : 'S to pull, A/D to roll, Shift for the afterburner')
+  ? (TOUCH ? 'right thumb to pull and roll, BOOST for the afterburner' : 'S to pull, A/D to roll, Shift / Ctrl throttle, Space airbrake')
   : (TOUCH ? 'right thumb up to drive' : 'W to drive, A/D to steer');
 
 /** The cars on offer: the default Roadster, which hovers on thrusters, the 4×4, which unfolds wings, and the Jet, which only flies. */
@@ -197,6 +197,7 @@ async function boot(): Promise<void> {
       car.vel = [Math.sin(heading) * JET_START.speed, Math.cos(heading) * JET_START.speed, 0];
     }
     stuck = 0;
+    input.lever = CRUISE_THRUST;
     model.update(car, false, extent, 0, false, camera, 0);
     rig.snap(model.group, heading);
     lastPos.splice(0, 3, ...car.pos);
@@ -416,6 +417,7 @@ async function boot(): Promise<void> {
   function frame(now: number): void {
     const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
+    input.plane = car.flying && !!spec.wings;
     input.update(dt);
     if (!paused && !welcome.isOpen) {
       acc += dt;
@@ -500,7 +502,8 @@ async function boot(): Promise<void> {
       speedKmh: (car.flying ? car.airspeed : car.speed) * 3.6, rpmShare: car.rpm / spec.engine.redline,
       gear: car.flying ? '✈' : car.gear < 0 ? 'R' : spec.engine.electric ? 'D' : String(car.gear),
       road, x: car.pos[0], y: car.pos[1], heading: car.heading,
-      flying: car.flying, boost: boosting, mach: isJet(spec) ? car.airspeed / SPEED_OF_SOUND : undefined, balloons: settings.balloons ? field.balloons : [], agl: car.pos[2] - spec.cgHeight - terrain.heightAt(car.pos[0], car.pos[1]),
+      flying: car.flying, boost: boosting, mach: isJet(spec) ? car.airspeed / SPEED_OF_SOUND : undefined,
+      throttle: input.plane ? input.controls.flight.thrust : undefined, airbrake: !!input.controls.flight.airbrake && !!spec.wings?.airbrake, balloons: settings.balloons ? field.balloons : [], agl: car.pos[2] - spec.cgHeight - terrain.heightAt(car.pos[0], car.pos[1]),
     });
     const slip = Math.max(...car.wheels.map((w) => (w.contact ? w.slip : 0)));
     const pedal = car.flying ? input.controls.flight.thrust : car.gear > 0 ? input.controls.throttle : input.controls.brake;

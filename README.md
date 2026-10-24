@@ -44,8 +44,9 @@ A shared link skips the menu and puts you straight into the moment someone share
   on picón and gravel.
 - **A Jet** (Settings → Vehicle, or `?car=jet`): an original grey delta fighter that starts 600 m up and
   only flies. Fly-by-wire turns the stick into g (S pulls up to 9 g) and a roll rate (A/D), so it
-  handles the same at any speed. Shift lights the afterburner, which takes it to about 1,140 km/h,
-  Mach 0.93, and puts the island's whole length (about 60 km) under four minutes away.
+  handles the same at any speed. Shift and Ctrl work a throttle lever; hold Shift at full and the afterburner
+  takes it to about 1,140 km/h, Mach 0.93, and puts the island's whole length (about 60 km) under
+  four minutes away. Space puts out the airbrake.
 - **A car that is a rigid body**: four raycast struts, tyres with a slip-angle curve and a friction
   circle, a torque curve and an automatic six-speed. Weight transfer, power oversteer, handbrake
   turns and rollovers all come out of the physics.
@@ -89,7 +90,7 @@ npm run dev        # http://localhost:5173
 | **S / ↓** | Brake, and reverse once stopped |
 | **A / D** or **← / →** | Steer |
 | **Space** | Handbrake |
-| **Shift** | Turbo: a nitro rocket on the road (500+ km/h), an afterburner in the air |
+| **Shift** | Turbo: a nitro rocket on the road (500+ km/h), tail thrusters hovering; on wings it opens the throttle, and the afterburner lights at full |
 | **F** | Fly: the Roadster lights its thrusters, the 4×4 unfolds its wings (again to land as a car) |
 | **B** | Balloon game on/off |
 | **R** | Back on the nearest paved road, facing the way you were going |
@@ -101,13 +102,16 @@ npm run dev        # http://localhost:5173
 **W / S** tilt the nose down or up to fly forwards or back, **A / D** turn, and **Shift** fires the tail
 nozzles. On a phone the left thumb climbs and sinks.
 
-**In the air with wings** (the 4×4) the same keys fly it. **W / S** push and pull the stick (S pulls the nose up),
-**A / D** roll, and **Q / E** work the rudder. The jet sits at cruise thrust, **Shift** lights the
-full jet and the afterburner, and **Ctrl** idles it. To take off, transform, let it run past about 160 km/h, and pull **S**.
+**In the air with wings** (the 4×4 and the Jet) the same keys fly it. **W / S** push and pull the stick (S pulls the nose up),
+**A / D** roll, and **Q / E** work the rudder. On keys the stick goes out gently: a tap is a nudge, and it reaches
+full stick after about a second's hold. It snaps back when you let go. The jet has a throttle lever, starting at cruise (60 %):
+**Shift** opens it, **Ctrl** closes it, and **1–4** jump to idle, cruise, 80 % and full. Keep holding **Shift** at
+full to light the afterburner. On the Jet, **Space** is the airbrake. The HUD shows the throttle next to the height.
+To take off in the 4×4, transform, let it run past about 160 km/h, and pull **S**.
 
 **Gamepad** (standard mapping): RT throttle, LT brake, left stick steers, A/B handbrake, X transform,
 Y camera, either stick click turbo, Back reset, Start pause. In the air the left stick is the
-stick, RT boosts, LT idles, and LB/RB are the rudder. On a phone, hold BOOST.
+stick, RT and LT open and close the throttle, a stick click lights the afterburner, and LB/RB are the rudder. On a phone, hold BOOST.
 
 **Phone**, held sideways: slide the left thumb sideways to steer. Push the right thumb up to
 accelerate, and pull it down to brake or back up.

@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-24 14:24
+
+- Flying on the keyboard is finer now. On wings, the keys move the stick gently at first and harder
+  the longer they're held, so a tap is a nudge (under 1.4 g in the Jet) and a one-second hold is
+  full stick (9 g). Let go and it snaps back to centre. The jet has a throttle lever: Shift opens it
+  and Ctrl closes it, and 1–4 jump to idle, cruise, 80 % and full. Holding Shift at full lights the
+  afterburner. The Jet gets an airbrake on Space, which sheds about three times the speed of a
+  clean idle glide. The HUD shows the throttle (or AB) and BRAKE next to the height.
+
 ## 2026-10-24 14:16
 
 - The Jet holds still in the chase view now; the last fix only helped on perfectly even frames. The
