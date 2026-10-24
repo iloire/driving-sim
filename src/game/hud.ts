@@ -54,6 +54,8 @@ export class Hud {
     plateRef: document.getElementById('plate-ref')!,
     plateName: document.getElementById('plate-name')!,
     message: document.getElementById('message')!,
+    veil: document.getElementById('g-veil')!,
+    desat: document.getElementById('g-desat')!,
     score: document.getElementById('score')!,
     scoreValue: document.getElementById('score-value')!,
     scorePops: document.getElementById('score-pops')!,
@@ -106,6 +108,22 @@ export class Hud {
     t.classList.remove('show');
     void t.offsetWidth;
     t.classList.add('show');
+  }
+
+  /**
+   * The pilot's view under g: `grey` 0..1 drains the colour and closes a dark tunnel in from the
+   * edges to black; `red` 0..1 floods it red from the edges.
+   */
+  setVeil(grey: number, red: number): void {
+    const on = grey > 0 || red > 0;
+    this.el.veil.hidden = this.el.desat.hidden = !on;
+    if (!on) return;
+    this.el.desat.style.opacity = String(Math.min(grey * 1.4, 1));
+    const k = Math.max(grey, red);
+    const clear = 80 - 75 * k;
+    const edge = red > grey ? `rgba(120, 0, 0, ${0.6 + 0.35 * red})` : `rgba(0, 0, 0, ${0.55 + 0.45 * grey})`;
+    const wash = red > grey ? `rgba(170, 0, 0, ${0.35 * red})` : `rgba(0, 0, 0, ${Math.max((grey - 0.8) / 0.2, 0)})`;
+    this.el.veil.style.background = `radial-gradient(ellipse 80% 80% at 50% 50%, transparent ${clear}%, ${edge} ${clear + 40}%), linear-gradient(${wash}, ${wash})`;
   }
 
   say(text: string, seconds = 3.5): void {

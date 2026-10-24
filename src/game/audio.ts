@@ -2,6 +2,7 @@
 // a filter that opens with the throttle, band-passed noise for the tyres when they slide, and a
 // low roar of the same noise while the turbo is lit. The Jet has its own turbine instead (`jet`).
 // Browsers only start audio after a user gesture, so it wakes on the first key or touch.
+// Everything runs through a low-pass at the end that muffles it as the pilot greys out under g.
 
 export class CarAudio {
   private ctx: AudioContext | null = null;
@@ -14,6 +15,7 @@ export class CarAudio {
   private tyres?: GainNode;
   private roar?: GainNode;
   private master?: GainNode;
+  private muffle?: BiquadFilterNode;
   muted = false;
   private paused = false;
 
@@ -33,7 +35,10 @@ export class CarAudio {
     if (this.paused) void ctx.suspend();
     this.master = ctx.createGain();
     this.master.gain.value = this.muted ? 0 : 0.5;
-    this.master.connect(ctx.destination);
+    this.muffle = ctx.createBiquadFilter();
+    this.muffle.type = 'lowpass';
+    this.muffle.frequency.value = 18000;
+    this.master.connect(this.muffle).connect(ctx.destination);
 
     const osc = ctx.createOscillator();
     osc.type = 'sawtooth';
@@ -206,6 +211,11 @@ export class CarAudio {
       thump.start(t + at);
       thump.stop(t + at + 0.32);
     }
+  }
+
+  /** 0..1: how muffled everything sounds, from open (0) to a dull thud through the blood (1). */
+  setMuffle(k: number): void {
+    if (this.muffle && this.ctx) this.muffle.frequency.setTargetAtTime(18000 * Math.pow(300 / 18000, k), this.ctx.currentTime, 0.1);
   }
 
   setMuted(muted: boolean): void {

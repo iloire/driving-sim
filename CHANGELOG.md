@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-24 14:44
+
+- G-effects. The pilot's body lags the load: a quick 9 g snap is fine, and 6 g can be held for
+  ever. Hold 9 g and over about 8 s the colour drains, a tunnel closes in from the edges and the
+  sound goes dull, until the pilot blacks out. Blacked out, the hands come off the stick for at
+  least 3 s and the flight computer levels to 1 g. Sustained negative g floods the view red from
+  the edges instead.
+
 ## 2026-10-24 14:42
 
 - The Jet goes supersonic. Wave drag now builds to a hump just past Mach 1 and eases off beyond it,

@@ -20,6 +20,7 @@ import { TouchPad } from './game/touch';
 import { timesOfDay, Welcome } from './game/welcome';
 import { createSurround, Sunlight } from './game/world';
 import { BalloonField } from './sim/balloons';
+import { createPilot, PILOT, stepPilot } from './sim/pilot';
 import { createCar, JET, ROADSTER, TRUCK, stepCar, type CarEnv, type CarSpec, type CarState, type Surface } from './sim/car';
 import { isPaved, MAX_HALF_WIDTH, ROAD_WIDTH, type Road } from './sim/roads';
 import { dayOfYear, daylightHours, sunPosition } from './sim/sun';
@@ -186,6 +187,8 @@ async function boot(): Promise<void> {
   let detailTimer = 0;
   let helpFolded = false;
   let stallWarned = false;
+  /** The pilot's body under g: grey-out, red-out and blacking out. */
+  let pilot = createPilot();
   /** Past Mach 1; it re-arms the boom once back under Mach 0.97. */
   let supersonic = false;
   let crashing = false;
@@ -201,6 +204,7 @@ async function boot(): Promise<void> {
       car.vel = [Math.sin(heading) * JET_START.speed, Math.cos(heading) * JET_START.speed, 0];
     }
     stuck = 0;
+    pilot = createPilot();
     input.lever = CRUISE_THRUST;
     model.update(car, false, extent, 0, false, camera, 0);
     rig.snap(model.group, heading);
@@ -405,7 +409,7 @@ async function boot(): Promise<void> {
 
   // Dev builds expose the live state for poking at from the console.
   const perf = { physics: 0, terrain: 0, render: 0, frames: 0, worst: 0 };
-  if (import.meta.env.DEV) Object.assign(window, { drive: { car: () => car, controls: input.controls, terrain, site, perf, renderer, field } });
+  if (import.meta.env.DEV) Object.assign(window, { drive: { car: () => car, pilot: () => pilot, controls: input.controls, terrain, site, perf, renderer, field } });
 
   const carPos = new THREE.Vector3();
   const carVel = new THREE.Vector3();
@@ -426,6 +430,8 @@ async function boot(): Promise<void> {
     last = now;
     input.plane = car.flying && !!spec.wings;
     input.update(dt);
+    // Blacked out, the pilot's hands fall off the stick and the flight computer flies 1 g.
+    if (pilot.out) Object.assign(input.controls.flight, { pitch: 0, roll: 0, yaw: 0 });
     if (!paused && !welcome.isOpen) {
       acc += dt;
       const t0 = performance.now();
@@ -443,6 +449,12 @@ async function boot(): Promise<void> {
         const up = rotate(car.q, [0, 0, 1]);
         const a = car.vel.map((v, i) => (v - v0[i]) / (steps * STEP) + (i === 2 ? G : 0));
         gLoad += ((a[0] * up[0] + a[1] * up[1] + a[2] * up[2]) / G - gLoad) * (1 - Math.exp(-dt / 0.1));
+      }
+      const wasOut = pilot.out;
+      stepPilot(pilot, PILOT, car.flying ? gLoad : 1, dt);
+      if (pilot.out && !wasOut) {
+        hud.say('Blacked out — too much g for too long', 3);
+        track('blackout');
       }
       perf.physics += performance.now() - t0;
       if (settings.balloons) {
@@ -518,6 +530,8 @@ async function boot(): Promise<void> {
     const plane = car.flying && !!spec.wings && !welcome.isOpen;
     const pullUp = plane && (car.airspeed > LANDING.speed || -car.vel[2] > LANDING.sink)
       && secondsToGround([car.pos[0], car.pos[1], car.pos[2] - spec.cgHeight], car.vel, (x, y) => terrain.heightAt(x, y)) < 5;
+    hud.setVeil(welcome.isOpen ? 0 : pilot.grey, welcome.isOpen ? 0 : pilot.red);
+    audio.setMuffle(welcome.isOpen ? 0 : pilot.grey);
     flightHud.update(camera, plane ? { vel: carVel, heading: followHeading, g: gLoad, alpha: car.alpha, pullUp } : null, now / 1000);
     sunlight.follow(carPos);
     const t1 = performance.now();

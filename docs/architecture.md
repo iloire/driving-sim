@@ -199,6 +199,17 @@ faster than 6 m/s or not upright, or inside a building. A crash puts the jet bac
 same spot. The terrain view stops at the 10 m level above 150 m/s (`terrainView.update`'s
 `speed`), since the 5 m mesh would be built for a tile you pass in seconds.
 
+**The pilot under g** (`src/sim/pilot.ts`). Blood takes seconds to leave the head, so the g the
+eyes feel chases the load factor with a 4 s lag as it builds and 1.5 s as it eases. Felt g from
+5.5 greys the view, and at 8.3 it's black. So a 2 s snap to 9 g does almost nothing, 6 g can be held for
+ever with a hint of grey, and holding 9 g blacks out after about 8 s. Blacked out (G-LOC), the
+pilot lets go of the stick for at least 3 s, so the flight computer settles back to 1 g, and wakes once the grey is under
+0.6. Negative g reddens the view from −1.8 to −3.2. `main.ts` feeds it the same g as the HUD (any
+flying vehicle), `Hud.setVeil` draws it as a grey `mix-blend-mode: saturation` layer that drains
+the colour plus a tunnel closing in from the edges (dark red for red-out), and `CarAudio.setMuffle`
+low-passes all the sound from 18 kHz down to 300 Hz with it. `src/sim/pilot.test.ts` pins those
+timings.
+
 The airport's runway (OSM `aeroway=runway`) is a road kind: 45 m wide, carved, marked and tarmac.
 The `airport` spawn sits on its threshold, facing down runway 03 (a spawn with `toward` is placed
 exactly and not snapped to a road).
