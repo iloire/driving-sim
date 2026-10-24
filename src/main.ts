@@ -203,6 +203,8 @@ async function boot(): Promise<void> {
   let spawn: Spawn = site.spawns.find((s) => s.spec.id === query.get('spawn')) ?? site.spawns[0];
   let car: CarState = createCar(spec, spawn.x, spawn.y, terrain.heightAt(spawn.x, spawn.y), spawn.heading);
   let paused = false;
+  /** U hides the green flight HUD (and its PULL UP warning) for a clean view. */
+  let hudShown = true;
   const pausePanel = document.getElementById('paused')!;
   function setPaused(p: boolean): void {
     paused = p;
@@ -352,6 +354,7 @@ async function boot(): Promise<void> {
     next: () => void goTo(site.spawns[(site.spawns.indexOf(spawn) + 1) % site.spawns.length]),
     map: () => document.getElementById('minimap')!.classList.toggle('hidden'),
     balloons: () => setBalloons(!settings.balloons),
+    hud: () => { hudShown = !hudShown; },
     transform: () => {
       if (isJet(spec)) { hud.say(t('say.jet.only'), 2); return; }
       car.flying = !car.flying;
@@ -613,7 +616,7 @@ async function boot(): Promise<void> {
       && secondsToGround([car.pos[0], car.pos[1], car.pos[2] - spec.cgHeight], car.vel, (x, y) => terrain.heightAt(x, y)) < 5;
     hud.setVeil(welcome.isOpen ? 0 : pilot.grey, welcome.isOpen ? 0 : pilot.red);
     audio.setMuffle(welcome.isOpen ? 0 : pilot.grey);
-    flightHud.update(camera, plane ? { vel: carVel, heading: followHeading, g: gLoad, alpha: car.alpha, pullUp, airbrake: car.airbrake } : null, now / 1000);
+    flightHud.update(camera, plane && hudShown ? { vel: carVel, heading: followHeading, g: gLoad, alpha: car.alpha, pullUp, airbrake: car.airbrake } : null, now / 1000);
     sunlight.follow(carPos);
     sunlight.setViewHeight(camera.position.y);
     const t1 = performance.now();

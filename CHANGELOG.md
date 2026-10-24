@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-24 15:41
+
+- U shows or hides the green flight HUD, for a clean view of the plane and the ground. The
+  controls card lists it on wings and in the Jet.
+
 ## 2026-10-24 15:38
 
 - The Jet's nose comes to a point. From above it used to be a square chisel the full 1.7 m width
