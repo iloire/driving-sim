@@ -212,6 +212,19 @@ out the fly-by-wire fails eight of them.
 The haze (`Sunlight.setViewHeight`) thins with the camera's height above 1,000 m, at 1,500 / (h + 500)
 of its low-level density, since real haze lies in the low air: from 8 km the whole island reads clearly.
 
+**Cockpit warnings** (`src/game/warnings.ts`), all synthesised, into a headset bus that skips the
+grey-out muffle but still mutes and pauses:
+
+- **PULL UP** whenever the HUD shows it: two rising sawtooth "whoops" (320 to 1,150 Hz), then the
+  words in the browser's speech voice (`speechSynthesis`, in English like a real ground-proximity
+  warning, whatever the game's language), every 1.6 s while it holds.
+- **Stall horn**: a 760 Hz square tone gated at 7 Hz, past 92 % of the wing's angle-of-attack
+  limit: the flight computer's 22° in the Jet (it never lets the wing reach the stall itself), the
+  stall in the 4×4.
+- **Breathing**: from a felt 4 g up to the blackout, the anti-g strain: a short inhale and a held
+  grunt let out in a burst (`breath()`), noise through a band that drops for the grunt, quicker
+  (1.8 s down to 1 s a breath) and louder as the blackout nears, silent once out cold.
+
 **Showing the speed and the height** (`src/game/jet-effects.ts`). Up high nothing near the jet moves,
 and low down the ground blurs past without touching it, so the Jet leaves marks in the air:
 

@@ -611,6 +611,13 @@ async function boot(): Promise<void> {
     audio.setPaused(paused || welcome.isOpen);
     audio.update(car.rpm, pedal, slip, Math.abs(car.speed), boosting, car.lift);
     audio.airbrake(welcome.isOpen ? 0 : car.airbrake, car.airspeed);
+    // The horn sounds at the wing's angle-of-attack limit: the flight computer's, or the stall.
+    const alphaLimit = spec.wings ? spec.wings.fbw?.alphaMax ?? spec.wings.stall : Infinity;
+    audio.warnings({
+      pullUp, out: pilot.out,
+      stall: plane && agl > 5 && car.airspeed > 5 && Math.abs(car.alpha) > 0.92 * alphaLimit,
+      strain: plane ? Math.min(Math.max((pilot.felt - 4) / (PILOT.blackAt - 4), 0), 1) : 0,
+    });
 
     const t2 = performance.now();
     renderer.render(scene, camera);

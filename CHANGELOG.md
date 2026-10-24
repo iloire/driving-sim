@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-24 15:14
+
+- Cockpit warnings, all synthesised. PULL UP now sounds as well as flashes: two rising whoops,
+  then a voice says "Pull up". A stall horn beeps at the wing's angle-of-attack limit. As the g
+  builds towards a blackout, you hear the pilot straining, the breaths quicker and harder the
+  closer it gets. They play in the pilot's headset, so the grey-out doesn't muffle them.
+
 ## 2026-10-24 15:11
 
 - The Jet's speed and height show. Above about 8 km it lays a contrail that lingers and spreads

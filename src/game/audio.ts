@@ -3,7 +3,10 @@
 // low roar of the same noise while the turbo is lit. The Jet has its own turbine instead (`jet`),
 // and its airbrake clunks out and rumbles in the airflow.
 // Browsers only start audio after a user gesture, so it wakes on the first key or touch.
-// Everything runs through a low-pass at the end that muffles it as the pilot greys out under g.
+// Everything runs through a low-pass at the end that muffles it as the pilot greys out under g,
+// except the cockpit warnings (`warnings.ts`), which play into the pilot's headset.
+
+import { Warnings, type WarningState } from './warnings';
 
 export class CarAudio {
   private ctx: AudioContext | null = null;
@@ -19,6 +22,8 @@ export class CarAudio {
   private roar?: GainNode;
   private master?: GainNode;
   private muffle?: BiquadFilterNode;
+  private cockpit?: GainNode;
+  private warn?: Warnings;
   muted = false;
   private paused = false;
 
@@ -87,6 +92,10 @@ export class CarAudio {
     roarSrc.connect(low).connect(this.roar).connect(this.master);
     roarSrc.start();
     this.turbine = this.buildTurbine(ctx, noise, this.master);
+    this.cockpit = ctx.createGain();
+    this.cockpit.gain.value = this.muted ? 0 : 1;
+    this.cockpit.connect(ctx.destination);
+    this.warn = new Warnings(ctx, this.cockpit, noise);
   }
 
   /**
@@ -279,12 +288,20 @@ export class CarAudio {
   setMuted(muted: boolean): void {
     this.muted = muted;
     if (this.master && this.ctx) this.master.gain.setTargetAtTime(muted ? 0 : 0.5, this.ctx.currentTime, 0.05);
+    if (this.cockpit && this.ctx) this.cockpit.gain.setTargetAtTime(muted ? 0 : 1, this.ctx.currentTime, 0.05);
+    if (muted) this.warn?.hush();
+  }
+
+  /** The cockpit warnings for this frame: PULL UP, the stall horn and the pilot's breathing. */
+  warnings(s: WarningState): void {
+    this.warn?.update(s, this.muted);
   }
 
   /** Freezes every sound while the game is paused (the context stops its clock), and picks up again. */
   setPaused(paused: boolean): void {
     if (paused === this.paused) return;
     this.paused = paused;
+    if (paused) this.warn?.hush();
     if (this.ctx) void (paused ? this.ctx.suspend() : this.ctx.resume());
   }
 
