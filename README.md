@@ -137,9 +137,11 @@ and `orzola`.
 
 **Share a moment:** pause (**P**) and press **Share this moment**. That copies a link that starts the
 car exactly there, with the same heading and speed, at the same time of day and in the same car,
-in the air if you were flying. It opens already playing, so whoever opens it lands straight in the
+in the air if you were flying, and seen the way you had it: the same camera, flight HUD and map on or
+off, balloons and drivetrain. It opens already playing, so whoever opens it lands straight in the
 drive. The link looks like `?at=25256.0,11616.1,2.7,308,31` (x, y and z in site metres, heading in
-degrees, km/h) plus `&fly=1` in the air.
+degrees, km/h) plus `&fly=1` in the air, and only the view settings you changed from the defaults:
+`&cam=bonnet|orbit`, `&hud=0`, `&map=0`, `&balloons=1`, `&drive=RWD|FWD`.
 
 ## Check it
 

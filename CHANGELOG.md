@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-24 15:54
+
+- A shared moment now carries the view too: the camera (chase, bonnet or orbit), the flight HUD and
+  the map on or off, the balloon game and the drivetrain. Whoever opens the link sees it the way you
+  had it. Only settings changed from the defaults go into the link (`cam`, `hud=0`, `map=0`,
+  `balloons=1`, `drive`).
+
 ## 2026-10-24 15:45
 
 - Roll starts as soon as you press A/D. The gentler key stick slowed roll down along with pitch:

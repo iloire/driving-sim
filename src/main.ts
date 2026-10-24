@@ -10,7 +10,7 @@ import { createCarModel, type CarModel } from './game/car-model';
 import { TileDresser } from './game/dress';
 import { Hud } from './game/hud';
 import { initAnalytics, track } from './game/analytics';
-import { formatHour, readMoment, writeMoment, type Moment } from './game/share';
+import { formatHour, readMoment, readView, writeMoment, writeView, type Moment } from './game/share';
 import { CRUISE_THRUST, Input, type Action } from './game/input';
 import { FlightHud, secondsToGround } from './game/flight-hud';
 import { buffet, JetEffects } from './game/jet-effects';
@@ -206,6 +206,7 @@ async function boot(): Promise<void> {
   let paused = false;
   /** U hides the green flight HUD (and its PULL UP warning) for a clean view. */
   let hudShown = true;
+  const minimap = document.getElementById('minimap')!;
   const pausePanel = document.getElementById('paused')!;
   function setPaused(p: boolean): void {
     paused = p;
@@ -353,7 +354,7 @@ async function boot(): Promise<void> {
     help: () => helpFold.toggle(),
     menu: () => { if (!welcome.isOpen) openMenu(); else if (canResume) leaveMenu(); },
     next: () => void goTo(site.spawns[(site.spawns.indexOf(spawn) + 1) % site.spawns.length]),
-    map: () => document.getElementById('minimap')!.classList.toggle('hidden'),
+    map: () => minimap.classList.toggle('hidden'),
     balloons: () => setBalloons(!settings.balloons),
     hud: () => { hudShown = !hudShown; },
     transform: () => {
@@ -443,6 +444,7 @@ async function boot(): Promise<void> {
   document.getElementById('share-btn')!.addEventListener('click', () => {
     const q = new URLSearchParams(location.search);
     writeMoment({ x: car.pos[0], y: car.pos[1], z: car.pos[2], heading: car.heading, speed: car.speed, flying: car.flying }, q);
+    writeView({ cam: rig.mode, hud: hudShown, map: !minimap.classList.contains('hidden'), balloons: settings.balloons, drive: settings.drivetrain }, q);
     q.set('time', formatHour(sky.hour));
     const url = `${location.origin}${location.pathname}?${q.toString().replace(/%2C/g, ',').replace(/%3A/g, ':')}`;
     track('share', { flying: car.flying });
@@ -455,9 +457,17 @@ async function boot(): Promise<void> {
     );
   });
 
-  // A shared link is an invitation to that exact moment: straight in, no menu.
+  // A shared link is an invitation to that exact moment: straight in, no menu, seen as the sharer saw it.
   const moment = readMoment(query);
   if (moment && moment.x > 0 && moment.y > 0 && moment.x < extent && moment.y < extent) {
+    const view = readView(query, Object.keys(DRIVETRAINS));
+    while (rig.mode !== view.cam) rig.next();
+    hudShown = view.hud;
+    minimap.classList.toggle('hidden', !view.map);
+    settings.balloons = balloonsView.visible = view.balloons;
+    settings.drivetrain = view.drive;
+    applyDrivetrain();
+    gui.controllersRecursive().forEach((c) => c.updateDisplay());
     await resume(moment);
     track('start', { shared: true, car: vehicleId });
     hud.say(t('say.shared', { hint: START_HINT(spec) }), 5);

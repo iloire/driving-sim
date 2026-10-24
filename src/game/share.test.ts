@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatHour, readMoment, writeMoment } from './share';
+import { formatHour, readMoment, readView, writeMoment, writeView } from './share';
 
 describe('shared moments', () => {
   it('round-trips a car in the air, replacing the spawn', () => {
@@ -28,6 +28,19 @@ describe('shared moments', () => {
     expect(readMoment(new URLSearchParams())).toBeNull();
     expect(readMoment(new URLSearchParams('at=1,2,3'))).toBeNull();
     expect(readMoment(new URLSearchParams('at=1,2,x,4,5'))).toBeNull();
+  });
+
+  it('round-trips the view, leaving defaults out of the link', () => {
+    const drives = ['AWD', 'RWD', 'FWD'];
+    const q = new URLSearchParams('cam=orbit&balloons=1');
+    writeView({ cam: 'chase', hud: true, map: true, balloons: false, drive: 'AWD' }, q);
+    expect(q.toString()).toBe('');
+    writeView({ cam: 'bonnet', hud: false, map: false, balloons: true, drive: 'RWD' }, q);
+    expect(readView(q, drives)).toEqual({ cam: 'bonnet', hud: false, map: false, balloons: true, drive: 'RWD' });
+  });
+
+  it('reads an unknown camera or drivetrain as the default', () => {
+    expect(readView(new URLSearchParams('cam=drone&drive=4WD'), ['AWD', 'RWD'])).toMatchObject({ cam: 'chase', drive: 'AWD' });
   });
 
   it('writes the time as HH:MM', () => {

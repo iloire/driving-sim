@@ -6,7 +6,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 export type CameraMode = 'chase' | 'bonnet' | 'orbit';
-const MODES: CameraMode[] = ['chase', 'bonnet', 'orbit'];
+export const CAMERA_MODES: CameraMode[] = ['chase', 'bonnet', 'orbit'];
+const MODES = CAMERA_MODES;
 
 const CHASE_BACK = 7.8;
 const CHASE_UP = 2.8;

@@ -12,7 +12,7 @@ const en = {
   'rotate': 'Turn your phone sideways to drive',
   'paused.title': 'Paused',
   'paused.share': 'Share this moment',
-  'paused.note': 'A link that starts here: this place, heading, speed and time of day. P to go on.',
+  'paused.note': 'A link that starts here: this place, heading, speed, time of day and view. P to go on.',
   'score.popped': 'popped',
   'score.best': 'best',
 
@@ -160,7 +160,7 @@ const es: Record<Key, string> = {
   'rotate': 'Gira el móvil para conducir',
   'paused.title': 'Pausa',
   'paused.share': 'Compartir este momento',
-  'paused.note': 'Un enlace que empieza aquí: este lugar, rumbo, velocidad y hora del día. P para seguir.',
+  'paused.note': 'Un enlace que empieza aquí: este lugar, rumbo, velocidad, hora del día y vista. P para seguir.',
   'score.popped': 'reventados',
   'score.best': 'récord',
 

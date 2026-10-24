@@ -1,7 +1,10 @@
 // A shared moment of a drive, as a link: where the car is, which way it points and how fast it goes.
 // It rides in the query as ?at=x,y,z,heading,speed (site metres to the decimetre, compass degrees,
 // km/h along the nose) plus ?fly=1 while the car is in the air, next to the ?time and ?car the page
-// already reads.
+// already reads. The view rides along too, so the link looks as it did: ?cam=bonnet|orbit, ?hud=0
+// (flight HUD hidden), ?map=0 (minimap hidden), ?balloons=1 and ?drive=RWD|FWD; defaults are left out.
+
+import { CAMERA_MODES, type CameraMode } from './camera';
 
 export interface Moment {
   x: number;
@@ -29,6 +32,41 @@ export function readMoment(q: URLSearchParams): Moment | null {
   const v = (q.get('at') ?? '').split(',').map(Number);
   if (v.length !== 5 || !v.every(Number.isFinite)) return null;
   return { x: v[0], y: v[1], z: v[2], heading: (v[3] * Math.PI) / 180, speed: v[4] / 3.6, flying: q.get('fly') === '1' };
+}
+
+/** How the sharer had the screen and the car set up. */
+export interface View {
+  cam: CameraMode;
+  hud: boolean;
+  map: boolean;
+  balloons: boolean;
+  /** AWD, RWD or FWD. */
+  drive: string;
+}
+
+const DEFAULT_VIEW: View = { cam: 'chase', hud: true, map: true, balloons: false, drive: 'AWD' };
+
+/** Writes the view into `q`, leaving out whatever is at its default. */
+export function writeView(v: View, q: URLSearchParams): void {
+  const put = (key: string, value: string | null) => (value === null ? q.delete(key) : q.set(key, value));
+  put('cam', v.cam === DEFAULT_VIEW.cam ? null : v.cam);
+  put('hud', v.hud ? null : '0');
+  put('map', v.map ? null : '0');
+  put('balloons', v.balloons ? '1' : null);
+  put('drive', v.drive === DEFAULT_VIEW.drive ? null : v.drive);
+}
+
+/** The view in `q`; anything missing or unknown is the default. `drives` are the drivetrains on offer. */
+export function readView(q: URLSearchParams, drives: string[]): View {
+  const cam = q.get('cam') as CameraMode;
+  const drive = q.get('drive') ?? '';
+  return {
+    cam: CAMERA_MODES.includes(cam) ? cam : DEFAULT_VIEW.cam,
+    hud: q.get('hud') !== '0',
+    map: q.get('map') !== '0',
+    balloons: q.get('balloons') === '1',
+    drive: drives.includes(drive) ? drive : DEFAULT_VIEW.drive,
+  };
 }
 
 /** Solar time as the ?time value, HH:MM. */
