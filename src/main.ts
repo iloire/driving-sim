@@ -47,7 +47,7 @@ const START_HINT = (spec: CarSpec) => isJet(spec)
   : t(TOUCH ? 'start.car.touch' : 'start.car');
 
 /** The cars on offer: the default Roadster, which hovers on thrusters, the 4×4, which unfolds wings, and the Jet, which only flies. */
-const VEHICLES: Record<string, { name: string; line: 'car.roadster' | 'car.4x4' | 'car.jet'; spec: CarSpec; model: (spec: CarSpec) => CarModel }> = {
+const VEHICLES: Record<string, { name: string; line: 'car.roadster' | 'car.4x4' | 'car.jet'; spec: CarSpec; model: (spec: CarSpec, heightAt: (x: number, y: number) => number) => CarModel }> = {
   roadster: { name: 'Roadster', line: 'car.roadster', spec: ROADSTER, model: createRoadsterModel },
   '4x4': { name: 'Armoured 4×4', line: 'car.4x4', spec: TRUCK, model: createCarModel },
   jet: { name: 'Jet', line: 'car.jet', spec: JET, model: createJetModel },
@@ -159,7 +159,8 @@ async function boot(): Promise<void> {
   const vehicleId = VEHICLES[query.get('car') ?? ''] ? query.get('car')! : 'roadster';
   const settings = { vehicle: VEHICLES[vehicleId].name, drivetrain: 'AWD', balloons: false };
   let spec: CarSpec = { ...VEHICLES[vehicleId].spec };
-  let model = VEHICLES[vehicleId].model(spec);
+  const heightAt = (x: number, y: number) => terrain.heightAt(x, y);
+  let model = VEHICLES[vehicleId].model(spec, heightAt);
   scene.add(model.group);
   if (model.world) scene.add(model.world);
   // The balloon game: a field kept full around the car, scored as you pop them.
@@ -407,7 +408,7 @@ async function boot(): Promise<void> {
     if (model.world) scene.remove(model.world);
     spec = { ...VEHICLES[id].spec };
     applyDrivetrain();
-    model = VEHICLES[id].model(spec);
+    model = VEHICLES[id].model(spec, heightAt);
     scene.add(model.group);
     if (model.world) scene.add(model.world);
     audio.electric = !!spec.engine.electric;

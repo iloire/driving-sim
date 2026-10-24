@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-24 15:45
+
+- The Jet's gear only comes down when it is slow (under 400 km/h) and low (under 150 m over the
+  ground or sea), or when a wheel is on the ground. It used to hang out at any height once slow.
+
 ## 2026-10-24 15:41
 
 - U shows or hides the green flight HUD, for a clean view of the plane and the ground. The

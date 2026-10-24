@@ -1,7 +1,7 @@
 // The Jet's look: an original single-seat delta in two-tone grey. A long fuselage with a pointed
 // nose and a bubble canopy, a cropped delta wing, small tailplanes, twin fins canted outwards, and
 // one round nozzle whose flame grows with the throttle and turns blue-white on the afterburner.
-// The landing gear only shows when it is slow enough to need it. Around Mach 1 a vapour cone
+// The landing gear only shows when it is slow and low enough to need it, or on the ground. Around Mach 1 a vapour cone
 // wraps the fuselage from the canopy back, thickest right at the sound barrier. The airbrake is a
 // panel on the spine behind the canopy, hinged at its front edge, that swings up to 55° and
 // shudders in the airflow, opening a dark well beneath it. The control surfaces follow what the
@@ -15,8 +15,12 @@ import type { CarSpec } from '../sim/car';
 import type { CarModel } from './car-model';
 import { slab } from './shapes';
 
-/** Below this airspeed (m/s) the gear is down. */
-const GEAR_DOWN = 110;
+/** The gear is down below this airspeed (m/s) and this height over the ground or sea (m). */
+const GEAR_DOWN = { speed: 110, agl: 150 };
+
+/** Whether the gear is down: slow and low, or with a wheel on the ground (a fast takeoff roll too). */
+export const gearDown = (airspeed: number, agl: number, onGround: boolean) =>
+  onGround || (airspeed < GEAR_DOWN.speed && agl < GEAR_DOWN.agl);
 /** The vapour cone: Mach number where it's thickest, and how far either side it fades out. */
 const VAPOUR = { mach: 0.99, width: 0.035 };
 /** The airbrake panel fully up (rad), and how much it shudders at speed. */
@@ -86,7 +90,7 @@ function hinged(points: [number, number][], hinge: [[number, number], [number, n
   return { pivot, swing: (angle: number) => pivot.setRotationFromAxisAngle(axis, angle) };
 }
 
-export function createJetModel(spec: CarSpec): CarModel {
+export function createJetModel(spec: CarSpec, heightAt: (x: number, y: number) => number): CarModel {
   const group = new THREE.Group();
   const grey = new THREE.MeshStandardMaterial({ color: 0x8a939c, roughness: 0.55, metalness: 0.35 });
   const dark = new THREE.MeshStandardMaterial({ color: 0x4a525a, roughness: 0.6, metalness: 0.3 });
@@ -173,7 +177,8 @@ export function createJetModel(spec: CarSpec): CarModel {
       group.quaternion.copy(q);
       group.position.set(s.pos[0] - extent / 2, s.pos[2], extent / 2 - s.pos[1]);
 
-      gear.visible = s.airspeed < GEAR_DOWN;
+      const agl = s.pos[2] - spec.cgHeight - Math.max(heightAt(s.pos[0], s.pos[1]), 0);
+      gear.visible = gearDown(s.airspeed, agl, s.wheels.some((w) => w.contact));
       s.wheels.forEach((w, i) => {
         const hubY = w.mount[2] - w.strut;
         hubs[i].position.set(w.mount[0], hubY, -w.mount[1]);
