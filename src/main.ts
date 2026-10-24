@@ -54,7 +54,6 @@ const JET_START = { agl: 600, speed: 230 };
 const JET_CAMERA = 1.2;
 /** A jet touching down faster than this (m/s), or sinking faster, has crashed rather than landed. */
 const LANDING = { speed: 110, sink: 6 };
-const SPEED_OF_SOUND = 340;
 const G = 9.81;
 const isJet = (spec: CarSpec) => !!spec.wings?.fbw;
 
@@ -482,7 +481,7 @@ async function boot(): Promise<void> {
       if (isStalled && !stallWarned) hud.say('STALL — push the nose down', 2);
       stallWarned = isStalled;
       // Through the sound barrier: the boom, once a crossing.
-      const mach = car.airspeed / SPEED_OF_SOUND;
+      const mach = car.mach;
       if (isJet(spec) && !supersonic && mach > 1) {
         audio.boom();
         hud.say('Mach 1 — supersonic', 2);
@@ -535,6 +534,7 @@ async function boot(): Promise<void> {
     audio.setMuffle(welcome.isOpen ? 0 : pilot.grey);
     flightHud.update(camera, plane ? { vel: carVel, heading: followHeading, g: gLoad, alpha: car.alpha, pullUp, airbrake: car.airbrake } : null, now / 1000);
     sunlight.follow(carPos);
+    sunlight.setViewHeight(camera.position.y);
     const t1 = performance.now();
     terrainView.update(camera.position, camera.position.y - ground(camera.position), Math.hypot(...car.vel));
     perf.terrain += performance.now() - t1;
@@ -546,7 +546,7 @@ async function boot(): Promise<void> {
       speedKmh: (car.flying ? car.airspeed : car.speed) * 3.6, rpmShare: car.rpm / spec.engine.redline,
       gear: car.flying ? '✈' : car.gear < 0 ? 'R' : spec.engine.electric ? 'D' : String(car.gear),
       road, x: car.pos[0], y: car.pos[1], heading: car.heading,
-      flying: car.flying, boost: boosting, mach: isJet(spec) ? car.airspeed / SPEED_OF_SOUND : undefined,
+      flying: car.flying, boost: boosting, mach: isJet(spec) ? car.mach : undefined,
       throttle: input.plane ? input.controls.flight.thrust : undefined, airbrake: !!input.controls.flight.airbrake && !!spec.wings?.airbrake, balloons: settings.balloons ? field.balloons : [], agl: car.pos[2] - spec.cgHeight - terrain.heightAt(car.pos[0], car.pos[1]),
     });
     const slip = Math.max(...car.wheels.map((w) => (w.contact ? w.slip : 0)));

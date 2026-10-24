@@ -189,13 +189,27 @@ the afterburner. Two additions make it a fighter rather than a fast light plane:
   behind the canopy (`jet-model.ts`), an amber AIRBRAKE box on the flying HUD with a bar for how far
   out it is (flashing while it moves), and a buffet in the camera that grows with airspeed.
 
-It cruises at about 920 km/h, does Mach 0.94 dry, and on the afterburner passes Mach 1 about 18 s
+- **The air** (`atmosphere()`): the International Standard Atmosphere by height above the sea.
+  The temperature falls 6.5 °C a kilometre to −56.5 °C at 11 km, the density follows (0.36 kg/m³ at
+  11 km, 0.09 at 20 km), and the speed of sound falls from 340 to 295 m/s. Lift, drag, the flight
+  computer and the body's own drag all use the local density, and Mach (`CarState.mach`, shown on the
+  HUD and driving the boom and the vapour cone) uses the local speed of sound. Jet thrust and the
+  afterburner fall with the density to the 0.7 power up to 11 km, and in step with it above
+  (`thrustLapse()`). So up high the Jet is faster (past Mach 1.5 at 11 km on the afterburner) and
+  has a ceiling near 18 km, where the afterburner can no longer make up the drag of holding it up.
+
+Low down (the tests fly at 500 m) it cruises at about 920 km/h, does Mach 0.94 dry, and on the afterburner passes Mach 1 about 18 s
 from cruise and tops out at Mach 1.2 (about 1,470 km/h). It pulls 9 g above about 180 m/s and mushes downwards below about 60 m/s.
 Crossing Mach 1 plays a sonic boom (`CarAudio.boom`, the N-wave's two cracks 0.11 s apart) and says
 so; it re-arms below Mach 0.97. The model wraps a vapour cone round the fuselage between about
 Mach 0.95 and 1.03, thickest at 0.99 and flickering as the shock moves. `src/sim/jet.test.ts`
-pins those, as well as an equal roll rate at 250 and 300 m/s, no stall even at full pull at 80 m/s, and the airbrake. Taking
+pins those, as well as an equal roll rate at 250 and 300 m/s, no stall even at full pull at 80 m/s, the airbrake,
+the standard atmosphere's values, the speed at 11 km and the ceiling (by energy height, since the
+flight computer trades speed for height). Taking
 out the fly-by-wire fails eight of them.
+
+The haze (`Sunlight.setViewHeight`) thins with the camera's height above 1,000 m, at 1,500 / (h + 500)
+of its low-level density, since real haze lies in the low air: from 8 km the whole island reads clearly.
 
 `main.ts` checks for a crash each frame: low over the ground while too fast (110 m/s), sinking
 faster than 6 m/s or not upright, or inside a building. A crash puts the jet back in the air over the

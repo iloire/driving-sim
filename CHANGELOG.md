@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-24 14:59
+
+- The air thins with height (the International Standard Atmosphere). Up high there's less drag
+  and less thrust, and the sound barrier comes sooner, since the speed of sound falls from 340 to
+  295 m/s by 11 km. The Jet is faster up there, past Mach 1.5 at 11 km on the afterburner, and it
+  has a ceiling near 18 km. The HUD's Mach, the boom and the vapour cone all use the local speed of
+  sound. The haze thins as you climb, so from high up the whole island stands out against the sea.
+
 ## 2026-10-24 15:58
 
 - The minimap keeps zooming out at Jet speeds. The speed zoom used to stop at 160 km/h, so at

@@ -46,7 +46,8 @@ A shared link skips the menu and puts you straight into the moment someone share
   only flies. Fly-by-wire turns the stick into g (S pulls up to 9 g) and a roll rate (A/D), so it
   handles the same at any speed. Shift and Ctrl work a throttle lever. Dry, it tops out just under the sound barrier. Hold Shift at full and the
   afterburner pushes it through, with a vapour cone and a boom, on to about 1,470 km/h (Mach 1.2), which puts the
-  island's whole length (about 60 km) under three minutes away. Space puts out the airbrake. A fighter HUD (flight path marker, pitch ladder,
+  island's whole length (about 60 km) under three minutes away. The air thins with height, so up
+  high it's faster still (past Mach 1.5 at 11 km) and runs out of air near 18 km. Space puts out the airbrake. A fighter HUD (flight path marker, pitch ladder,
   heading tape, g, PULL UP) draws over the view on wings. Hold too much g for too long and the view
   greys from the edges, the sound goes dull, and you black out for a few seconds; push hard and it reddens.
 - **A car that is a rigid body**: four raycast struts, tyres with a slip-angle curve and a friction

@@ -15,7 +15,6 @@ import { slab } from './shapes';
 
 /** Below this airspeed (m/s) the gear is down. */
 const GEAR_DOWN = 110;
-const SPEED_OF_SOUND = 340;
 /** The vapour cone: Mach number where it's thickest, and how far either side it fades out. */
 const VAPOUR = { mach: 0.99, width: 0.035 };
 /** The airbrake panel fully up (rad), and how much it shudders at speed. */
@@ -147,7 +146,7 @@ export function createJetModel(spec: CarSpec): CarModel {
       well.visible = s.airbrake > 0.01;
 
       // The cone flickers as the shock shifts.
-      const near = Math.exp(-(((s.airspeed / SPEED_OF_SOUND - VAPOUR.mach) / VAPOUR.width) ** 2));
+      const near = Math.exp(-(((s.mach - VAPOUR.mach) / VAPOUR.width) ** 2));
       vapour.visible = near > 0.02;
       vapour.material.opacity = near * (0.55 + Math.random() * 0.2);
       vapour.scale.set(1, 0.95 + Math.random() * 0.1, 0.95 + Math.random() * 0.1);

@@ -8,10 +8,9 @@
 
 import { add, cross, dot, integrate, normalize, rotate, scale, sub, unrotate, type Quat, type V3 } from './vec';
 import { hover, THRUSTERS, type ThrusterSpec } from './thrusters';
-import { aero, flyByWire, WINGS, type FlightControls, type WingSpec } from './wings';
+import { aero, atmosphere, flyByWire, thrustLapse, WINGS, type FlightControls, type WingSpec } from './wings';
 
 const G = 9.81;
-const RHO = 1.225;
 /** Internal sub-steps per call: the tyres are stiff springs and want ~2 ms. */
 const SUBSTEPS = 4;
 /** Slip-angle curve (a lean Pacejka): B sets the peak (~8°), C how much grip a full slide keeps (~80 %). */
@@ -262,6 +261,8 @@ export interface CarState {
   /** Angle of attack (rad) and airspeed (m/s) while the wings are out. */
   alpha: number;
   airspeed: number;
+  /** Speed over the speed of sound in the air at its height. */
+  mach: number;
   /** How far the airbrake panel is up, 0..1, swinging towards the Space key over half a second. */
   airbrake: number;
 }
@@ -290,7 +291,7 @@ export function createCar(spec: CarSpec, x: number, y: number, groundZ: number, 
   return {
     pos: [x, y, groundZ + spec.cgHeight], vel: [0, 0, 0], q: [Math.cos(yaw / 2), 0, 0, Math.sin(yaw / 2)], w: [0, 0, 0],
     steer: 0, gear: 1, rpm: spec.engine.idle, shiftTimer: 0, wheels, speed: 0, heading, inWater: false,
-    flying: false, wings: 0, lift: 0, alpha: 0, airspeed: 0, airbrake: 0,
+    flying: false, wings: 0, lift: 0, alpha: 0, airspeed: 0, mach: 0, airbrake: 0,
   };
 }
 
@@ -479,13 +480,16 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
   }
 
   const speed = Math.hypot(...s.vel);
-  apply(scale(s.vel, -0.5 * RHO * spec.cdA * speed), s.pos);
-  // Turbo: the nitro rocket fades into the afterburner as the wings come out.
-  const airBoost = w?.afterburner ?? th?.boost ?? 0;
+  const air = atmosphere(s.pos[2]);
+  s.mach = speed / air.sound;
+  apply(scale(s.vel, -0.5 * air.rho * spec.cdA * speed), s.pos);
+  // Turbo: the nitro rocket fades into the afterburner as the wings come out (an afterburner
+  // loses thrust in thin air like the jet it sits on).
+  const airBoost = w ? w.afterburner * thrustLapse(air) : th?.boost ?? 0;
   if (c.boost) force = add(force, scale(nose, spec.nitro * (1 - s.wings) + airBoost * s.wings));
   if (s.wings > 0 && w) {
-    const stick = w.fbw ? flyByWire(w, w.fbw, spec.mass, s.q, s.vel, s.w, c.flight) : c.flight;
-    const a = aero(w, s.q, s.vel, s.w, stick, s.wings, s.airbrake);
+    const stick = w.fbw ? flyByWire(w, w.fbw, spec.mass, s.q, s.vel, s.w, c.flight, air) : c.flight;
+    const a = aero(w, s.q, s.vel, s.w, stick, s.wings, s.airbrake, air);
     force = add(force, a.force);
     torque = add(torque, a.torque);
     s.alpha = a.alpha;

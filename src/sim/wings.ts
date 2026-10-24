@@ -8,13 +8,44 @@
 // jet handles the same at 300 m/s as at 100. Near the speed of sound wave drag climbs to a hump
 // just past Mach 1 that the dry jet can't push through and the afterburner can. An
 // airbrake, where fitted, adds drag while it's out.
+// The air is the International Standard Atmosphere's (`atmosphere`): it thins with height, so up
+// high there's less drag, less lift for the same speed and less thrust from the engine, and the
+// speed of sound falls with the temperature, which moves the sound barrier.
 // Body frame as in car.ts: X forward, Y left, Z up.
 
 import { cross, length, normalize, rotate, scale, unrotate, type Quat, type V3 } from './vec';
 
-const RHO = 1.225;
 const G = 9.81;
-const SPEED_OF_SOUND = 340;
+const SEA_RHO = 1.225;
+/** Density at the tropopause (11 km), where the temperature stops falling. */
+const TROPOPAUSE_RHO = 0.36392;
+/** Below the tropopause jet thrust falls with the density to this power; above it, in step with it. */
+const THRUST_LAPSE = 0.7;
+
+/** The air at some height: density (kg/m³) and the speed of sound (m/s). */
+export interface Air {
+  rho: number;
+  sound: number;
+}
+
+/**
+ * The International Standard Atmosphere at `h` metres above the sea: the temperature falls 6.5 °C
+ * a kilometre to −56.5 °C at 11 km and holds there, and the density follows.
+ */
+export function atmosphere(h: number): Air {
+  const z = Math.max(h, 0);
+  const t = 288.15 - 0.0065 * Math.min(z, 11000);
+  const rho = z <= 11000 ? SEA_RHO * (t / 288.15) ** 4.2559 : TROPOPAUSE_RHO * Math.exp(-(z - 11000) / 6341.6);
+  return { rho, sound: Math.sqrt(1.4 * 287.05 * t) };
+}
+
+export const SEA_LEVEL = atmosphere(0);
+
+/** A jet's thrust in this air as a share of its sea-level thrust. */
+export function thrustLapse(air: Air): number {
+  const low = (Math.max(air.rho, TROPOPAUSE_RHO) / SEA_RHO) ** THRUST_LAPSE;
+  return air.rho >= TROPOPAUSE_RHO ? low : low * (air.rho / TROPOPAUSE_RHO);
+}
 
 /** A fighter's flight computer: what the stick asks for, and how hard it chases it. */
 export interface FlyByWire {
@@ -126,26 +157,28 @@ export interface AeroResult {
   force: V3;
   /** World-frame torque about the centre of mass. */
   torque: V3;
-  /** Angle of attack (rad) and airspeed (m/s), for the HUD. */
+  /** Angle of attack (rad), airspeed (m/s) and Mach number, for the HUD. */
   alpha: number;
   airspeed: number;
+  mach: number;
 }
 
-/** Aerodynamic force and torque on the body for wings `out` (0..1) unfolded and the airbrake `brake` (0..1) out. */
-export function aero(w: WingSpec, q: Quat, vel: V3, omega: V3, c: FlightControls, out: number, brake = 0): AeroResult {
+/** Aerodynamic force and torque on the body for wings `out` (0..1) unfolded and the airbrake `brake` (0..1) out, in `air`. */
+export function aero(w: WingSpec, q: Quat, vel: V3, omega: V3, c: FlightControls, out: number, brake = 0, air = SEA_LEVEL): AeroResult {
   const vb = unrotate(q, vel);
   const V = length(vel);
   const force: V3 = [0, 0, 0];
   const tb: V3 = [0, 0, 0]; // body-frame torque
-  const thrust = rotate(q, [w.thrust * c.thrust * out, 0, 0]);
-  if (V < 1) return { force: thrust, torque: [0, 0, 0], alpha: 0, airspeed: V };
+  const thrust = rotate(q, [w.thrust * c.thrust * out * thrustLapse(air), 0, 0]);
+  const mach = V / air.sound;
+  if (V < 1) return { force: thrust, torque: [0, 0, 0], alpha: 0, airspeed: V, mach };
 
   const alpha = Math.atan2(-vb[2], vb[0]);
   const beta = Math.atan2(vb[1], Math.abs(vb[0]) + 1e-6);
-  const qbar = 0.5 * RHO * V * V;
+  const qbar = 0.5 * air.rho * V * V;
   const S = w.area * out;
   const cl = liftCoefficient(w, alpha);
-  const wave = w.mach ? waveDrag(w.mach, V / SPEED_OF_SOUND) : 0;
+  const wave = w.mach ? waveDrag(w.mach, mach) : 0;
   const cd = w.cd0 + w.cdInduced * cl * cl + wave + (w.airbrake ?? 0) * brake;
   const along = scale(vel, 1 / V);
   const left = rotate(q, [0, 1, 0]);
@@ -165,7 +198,7 @@ export function aero(w: WingSpec, q: Quat, vel: V3, omega: V3, c: FlightControls
   tb[0] = qbar * S * w.span * (w.clAileron * c.roll - w.clDamping * wb[0] * w.span * damp);
   // Yaw about +Z is to the left: sideslip from the left turns it left, right rudder turns it right.
   tb[2] = qbar * S * w.span * (w.cnBeta * beta - w.cnRudder * c.yaw - w.cnDamping * wb[2] * w.span * damp);
-  return { force, torque: rotate(q, tb), alpha, airspeed: V };
+  return { force, torque: rotate(q, tb), alpha, airspeed: V, mach };
 }
 
 /** Mach number where the wave drag peaks, and how fast it eases off beyond. */
@@ -191,13 +224,13 @@ const clamp1 = (v: number) => Math.min(Math.max(v, -1), 1);
  * steady plus a correction for the error, clamped to full travel, so at low speed it runs out of
  * authority the way the bare wing would.
  */
-export function flyByWire(w: WingSpec, f: FlyByWire, mass: number, q: Quat, vel: V3, omega: V3, c: FlightControls): FlightControls {
+export function flyByWire(w: WingSpec, f: FlyByWire, mass: number, q: Quat, vel: V3, omega: V3, c: FlightControls, air = SEA_LEVEL): FlightControls {
   const V = length(vel);
   if (V < 1) return c;
   const vb = unrotate(q, vel);
   const wb = unrotate(q, omega);
   const alpha = Math.atan2(-vb[2], vb[0]);
-  const qbar = 0.5 * RHO * V * V;
+  const qbar = 0.5 * air.rho * V * V;
 
   const nz = 1 + c.pitch * (c.pitch > 0 ? f.gMax - 1 : 1 - f.gMin);
   const cl = (nz * mass * G) / (qbar * w.area);

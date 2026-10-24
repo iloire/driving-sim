@@ -46,6 +46,9 @@ function smoothstep(a: number, b: number, x: number): number {
   return t * t * (3 - 2 * t);
 }
 
+/** Fog density at low level (FogExp2). */
+const HAZE = 0.000032;
+
 /**
  * The sky, the sun's light, the fog and the ambient light, all set from where the sun is.
  * Near the horizon the sky shader's own scattering turns it orange; the light, fog and exposure
@@ -58,7 +61,7 @@ export class Sunlight {
   private readonly envScene = new THREE.Scene();
   private readonly pmrem: THREE.PMREMGenerator;
   private readonly light = new THREE.DirectionalLight(0xffffff, 3.2);
-  private readonly fog = new THREE.FogExp2(0xbfd3e0, 0.000032);
+  private readonly fog = new THREE.FogExp2(0xbfd3e0, HAZE);
   private env: THREE.WebGLRenderTarget | null = null;
   /** Unit vector towards the light, in scene axes. */
   private readonly toLight = new THREE.Vector3(0, 1, 0);
@@ -108,6 +111,14 @@ export class Sunlight {
     this.env = this.pmrem.fromScene(this.envScene);
     this.scene.environment = this.env.texture;
     this.scene.environmentIntensity = 0.3 + 0.3 * low;
+  }
+
+  /**
+   * Thins the haze for a camera `height` metres above the sea: the haze lies in the low air, so
+   * from high up the view down through it is clearer. Unchanged below 1,000 m.
+   */
+  setViewHeight(height: number): void {
+    this.fog.density = HAZE * Math.min(1, 1500 / (Math.max(height, 0) + 500));
   }
 
   /** Keeps the shadow box centred on a scene point (the car). */

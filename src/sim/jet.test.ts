@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createCar, JET, stepCar, type CarEnv, type CarState, type Controls } from './car';
-import { stalled } from './wings';
+import { atmosphere, stalled } from './wings';
 import { rotate, unrotate } from './vec';
 
 const STEP = 1 / 120;
@@ -11,8 +11,8 @@ function controls(pitch = 0, roll = 0, thrust = 0.6, boost = false): Controls {
   return { throttle: 0, brake: 0, steer: 0, handbrake: false, boost, flight: { pitch, roll, yaw: 0, thrust, lift: 0 } };
 }
 
-/** The jet flying level and north at `speed`, `height` metres up. */
-function airborne(speed: number, height = 3000): CarState {
+/** The jet flying level and north at `speed`, `height` metres up (low level by default). */
+function airborne(speed: number, height = 500): CarState {
   const s = createCar(JET, 0, 0, height, 0);
   s.flying = true;
   s.wings = 1;
@@ -58,7 +58,7 @@ describe('the jet', () => {
     let steepest = 0;
     fly(s, controls(), 60, () => { steepest = Math.max(steepest, Math.abs(s.vel[2])); });
     expect(steepest).toBeLessThan(10);
-    expect(s.pos[2]).toBeGreaterThan(2950);
+    expect(s.pos[2]).toBeGreaterThan(450);
   });
 
   for (const speed of [80, 150, 250, 300]) {
@@ -98,7 +98,7 @@ describe('the jet', () => {
     fly(braked, c, 10);
     expect(clean.airspeed * 3.6).toBeGreaterThan(700);
     expect(braked.airspeed * 3.6).toBeLessThan(600);
-    expect(braked.pos[2]).toBeGreaterThan(2900);
+    expect(braked.pos[2]).toBeGreaterThan(400);
   });
 
   it('swings the airbrake panel up over half a second and back down the same when Space lets go', () => {
@@ -121,10 +121,39 @@ describe('the jet', () => {
     expect(stalled(wings, s.alpha)).toBe(false);
   });
 
+  it('is faster up high, where the thin air drags less: past Mach 1.5 at 11 km on the afterburner', () => {
+    const s = airborne(280, 11000);
+    fly(s, controls(0, 0, 1, true), 120);
+    expect(s.mach).toBeGreaterThan(1.5);
+    expect(s.pos[2]).toBeGreaterThan(10000);
+  });
+
+  it('has a ceiling near 18 km: at 20 km even the afterburner loses energy, at 17 km it still gains', () => {
+    // Energy height: the height plus what the speed would buy in a zoom climb.
+    const energy = (s: CarState) => s.pos[2] + Math.hypot(...s.vel) ** 2 / (2 * 9.81);
+    const high = airborne(250, 20000), low = airborne(250, 17000);
+    const [high0, low0] = [energy(high), energy(low)];
+    fly(high, controls(0, 0, 1, true), 60);
+    fly(low, controls(0, 0, 1, true), 60);
+    expect(energy(high)).toBeLessThan(high0 - 500);
+    expect(energy(low)).toBeGreaterThan(low0 + 500);
+  });
+
   it('stays in one piece diving into the ground at full speed', () => {
     const s = airborne(300, 200);
     fly(s, controls(-1, 0, 1, true), 6);
     expect(s.pos.every(Number.isFinite)).toBe(true);
     expect(s.vel.every(Number.isFinite)).toBe(true);
+  });
+});
+
+describe('the atmosphere', () => {
+  it('matches the standard atmosphere at the sea, at 11 km and at 20 km', () => {
+    expect(atmosphere(0).rho).toBeCloseTo(1.225, 3);
+    expect(atmosphere(0).sound).toBeCloseTo(340.3, 0);
+    expect(atmosphere(11000).rho).toBeCloseTo(0.364, 2);
+    expect(atmosphere(11000).sound).toBeCloseTo(295.1, 0);
+    expect(atmosphere(20000).rho).toBeCloseTo(0.0889, 2);
+    expect(atmosphere(20000).sound).toBeCloseTo(295.1, 0);
   });
 });
