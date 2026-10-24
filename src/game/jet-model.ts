@@ -24,6 +24,29 @@ const AIRBRAKE = { angle: 0.95, shudder: 0.04 };
 /** Full travel of the tailplanes, ailerons and rudders (rad), and how fast they get there (1/s). */
 const SURFACES = { travel: 0.35, rate: 12 };
 
+/** The nose narrows from full width at `from` (m forward) to a point at `tip`, in `steps` along each edge. */
+const NOSE = { from: 2.5, tip: 7.72, steps: 8 };
+
+/** The profile with extra points along every edge ahead of `from`, so the nose can bend smoothly. */
+function subdivide(profile: [number, number][], from: number): [number, number][] {
+  return profile.flatMap(([x0, y0], i) => {
+    const [x1, y1] = profile[(i + 1) % profile.length];
+    if (Math.max(x0, x1) <= from) return [[x0, y0]];
+    return Array.from({ length: NOSE.steps }, (_, k): [number, number] => [x0 + (x1 - x0) * k / NOSE.steps, y0 + (y1 - y0) * k / NOSE.steps]);
+  });
+}
+
+/** Pinches a slab's width ahead of NOSE.from into an ogive, so from above the nose is a point, not a chisel. */
+function pointNose(g: THREE.BufferGeometry): THREE.BufferGeometry {
+  const pos = g.getAttribute('position');
+  for (let i = 0; i < pos.count; i++) {
+    const t = Math.min(Math.max((pos.getX(i) - NOSE.from) / (NOSE.tip - NOSE.from), 0), 1);
+    pos.setZ(i, pos.getZ(i) * Math.max(1 - t * t, 0.03));
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
 /**
  * A cone of condensation, apex at the canopy opening back over the wings: clear at the tip, densest
  * a third of the way back, feathered at the rim (alpha in the vertex colours).
@@ -71,10 +94,11 @@ export function createJetModel(spec: CarSpec): CarModel {
   const metal = new THREE.MeshStandardMaterial({ color: 0x2a2d31, roughness: 0.4, metalness: 0.8 });
   const rubber = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.9 });
 
-  // Fuselage: a side profile from the nose tip back to the nozzle, tapered in towards the spine.
-  const fuselage = new THREE.Mesh(slab([
+  // Fuselage: a side profile from the nose tip back to the nozzle, tapered in towards the spine,
+  // then pinched to a point ahead of the cockpit.
+  const fuselage = new THREE.Mesh(pointNose(slab(subdivide([
     [7.6, 0.05], [5.2, -0.45], [1, -0.7], [-6, -0.65], [-7, -0.35], [-7, 0.45], [-3, 0.75], [2.5, 0.65], [5.4, 0.35],
-  ], 1.7, 0.12, 0.35), grey);
+  ], NOSE.from), 1.7, 0.12, 0.35)), grey);
   const canopy = new THREE.Mesh(slab([[4.8, 0.4], [3.4, 1.15], [1.6, 1.05], [0.6, 0.7]], 0.85, 0.08, 0.3), glass);
   // Intakes either side under the wing root.
   const intakes = new THREE.Mesh(slab([[2.2, -0.65], [-3.5, -0.7], [-3.5, 0], [2.6, -0.05]], 2.5, 0.1), dark);

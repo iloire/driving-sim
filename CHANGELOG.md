@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-24 15:38
+
+- The Jet's nose comes to a point. From above it used to be a square chisel the full 1.7 m width
+  of the fuselage, a bright slab across the cockpit view. Ahead of the cockpit it now narrows
+  in a smooth curve to the tip.
+
 ## 2026-10-24 15:34
 
 - The Jet's control surfaces move. The tailplanes tilt together when you pull or push and against
