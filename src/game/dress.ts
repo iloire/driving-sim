@@ -30,19 +30,29 @@ const HOUSE_MIN = 3.5;
 /** Above it, a church: a plain box too, the towers being taller than any house. */
 const HOUSE_MAX = 8;
 
-/** A white wall (the building's colour multiplies it) with one window per bay, in one of the window styles. */
-function wallTexture(wood: string, style: WindowStyle, anisotropy: number): THREE.CanvasTexture {
+/**
+ * A white wall with one window per bay, in one of the window styles, and its mask: red where the
+ * wall is (the building's colour goes there, not on the woodwork), green on the glass (lit at dusk).
+ */
+function wallTextures(wood: string, style: WindowStyle, anisotropy: number): { map: THREE.CanvasTexture; mask: THREE.CanvasTexture } {
+  const map = drawWall(wood, '#1d2326', '#ffffff', style, false);
+  const mask = drawWall('#000000', '#00ff00', '#ff0000', style, true);
+  map.colorSpace = THREE.SRGBColorSpace;
+  for (const t of [map, mask]) t.anisotropy = anisotropy;
+  return { map, mask };
+}
+
+function drawWall(wood: string, glass: string, wall: string, style: WindowStyle, mask: boolean): THREE.CanvasTexture {
   const S = 128;
   const c = document.createElement('canvas');
   c.width = c.height = S;
   const g = c.getContext('2d')!;
-  g.fillStyle = '#ffffff';
+  g.fillStyle = wall;
   g.fillRect(0, 0, S, S);
-  for (let i = 0; i < 900; i++) {
+  for (let i = 0; i < 900 && !mask; i++) {
     g.fillStyle = `rgba(120, 110, 95, ${Math.random() * 0.06})`;
     g.fillRect(Math.random() * S, Math.random() * S, 2, 2);
   }
-  const glass = '#1d2326';
   // The texture's top is the top of a storey (v runs down from the roofline).
   if (style === 'shutters') {
     const wx = S * 0.36, ww = S * 0.28, wy = S * 0.28, wh = S * 0.4;
@@ -63,7 +73,7 @@ function wallTexture(wood: string, style: WindowStyle, anisotropy: number): THRE
     g.fillRect(wx, wy, ww, wh);
     g.fillStyle = wood;
     g.fillRect(wx, wy + wh / 2 - 1.5, ww, 3);
-    g.fillStyle = 'rgba(0, 0, 0, 0.12)';
+    g.fillStyle = mask ? wall : 'rgba(0, 0, 0, 0.12)';
     g.fillRect(wx - 8, wy + wh + 5, ww + 16, 4); // sill shadow
   } else if (style === 'arched') {
     // A tall window under a round arch, the kind on older town houses.
@@ -95,14 +105,40 @@ function wallTexture(wood: string, style: WindowStyle, anisotropy: number): THRE
       g.fillRect(wx, wy + wh * 0.35, ww, 3);
     }
   }
-  g.fillStyle = 'rgba(0, 0, 0, 0.08)';
-  g.fillRect(0, S - 6, S, 6); // a little grime at the floor line
+  if (!mask) {
+    g.fillStyle = 'rgba(0, 0, 0, 0.08)';
+    g.fillRect(0, S - 6, S, 6); // a little grime at the floor line
+  }
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.flipY = false;
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = anisotropy;
   return t;
+}
+
+/**
+ * The walls' extras, patched into the standard material so lighting and shadows stay as they are,
+ * and kept cheap: one more texture read and a hash per pixel, nothing in the shadow pass. The
+ * building's colour goes on the wall only (the mask's red), the foot of the wall darkens over its
+ * first metre and a half, each building's bays start at their own place along the wall, and at
+ * dusk about half the windows (the mask's green) light up, picked per bay and building.
+ * `shade` per vertex: the building's seed (0..1) and the height above its foot (m).
+ */
+function wallShader(material: THREE.MeshStandardMaterial, mask: THREE.Texture, glow: { value: number }): void {
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.wallMask = { value: mask };
+    shader.uniforms.glow = glow;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute vec2 shade;\nvarying vec2 vShade;')
+      .replace('#include <uv_vertex>', '#include <uv_vertex>\nvShade = shade;\nvMapUv.x += floor(shade.x * 8.0) * 0.37;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform sampler2D wallMask;\nuniform float glow;\nvarying vec2 vShade;')
+      .replace('#include <color_fragment>', `
+        vec2 wm = texture2D(wallMask, vMapUv).rg;
+        diffuseColor.rgb *= mix(vec3(1.0), vColor.rgb, wm.r) * mix(0.7, 1.0, smoothstep(0.0, 1.5, vShade.y));`)
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+        float bay = fract(sin(dot(floor(vMapUv) + vShade.x * 61.0, vec2(12.9898, 78.233))) * 43758.5453);
+        totalEmissiveRadiance += wm.g * step(0.5, bay) * glow * (0.5 + bay) * vec3(1.0, 0.7, 0.38);`);
+  };
 }
 
 /** A stable 0..1 sequence per building, from where it stands, so it looks the same on every load. */
@@ -125,8 +161,8 @@ interface Mesh {
 
 const mesh = (): Mesh => ({ pos: [], nor: [], uv: [] });
 
-/** The gathered triangles, every vertex in one colour. */
-function toGeometry(m: Mesh, color: THREE.Color): THREE.BufferGeometry {
+/** The gathered triangles, every vertex in one colour; walls also get their `shade` (see wallShader). */
+function toGeometry(m: Mesh, color: THREE.Color, shade?: { seed: number; base: number }): THREE.BufferGeometry {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(m.pos, 3));
   g.setAttribute('normal', new THREE.Float32BufferAttribute(m.nor, 3));
@@ -134,6 +170,11 @@ function toGeometry(m: Mesh, color: THREE.Color): THREE.BufferGeometry {
   const rgb = new Float32Array(m.pos.length);
   for (let i = 0; i < rgb.length; i += 3) [rgb[i], rgb[i + 1], rgb[i + 2]] = [color.r, color.g, color.b];
   g.setAttribute('color', new THREE.BufferAttribute(rgb, 3));
+  if (shade) {
+    const s = new Float32Array((m.pos.length / 3) * 2);
+    for (let i = 0; i < s.length; i += 2) [s[i], s[i + 1]] = [shade.seed, m.pos[(i / 2) * 3 + 1] - shade.base];
+    g.setAttribute('shade', new THREE.BufferAttribute(s, 2));
+  }
   return g;
 }
 
@@ -223,11 +264,12 @@ function buildingGeometry(b: Building, terrain: Heightmap, e: number, bay: numbe
   const tint = seeded(p.slice(2));
   const wallColor = new THREE.Color(style.walls[Math.floor(tint() * style.walls.length)]);
   const roofColor = new THREE.Color(style.roofs[Math.floor(tint() * style.roofs.length)]);
-  const done = () => ({ walls: toGeometry(w, wallColor), roof: toGeometry(r, roofColor) });
+  const seed = tint();
   // Measured from the low side, so a house on a slope doesn't gain a storey.
   const { low, high, top } = roofline(b, (x, y) => terrain.heightAt(x, y));
   const base = low - 0.5;
   const w = mesh(), r = mesh();
+  const done = () => ({ walls: toGeometry(w, wallColor, { seed, base: low }), roof: toGeometry(r, roofColor) });
   const house = b.height > HOUSE_MIN && b.height < HOUSE_MAX;
   const rows = Math.max(1, Math.round((b.height - 0.6) / BAY_H));
   if (!house) {
@@ -307,6 +349,8 @@ function postGeometry(): THREE.BufferGeometry {
 
 export class TileDresser {
   private readonly walls: THREE.MeshStandardMaterial[];
+  /** How lit the windows are: 0 by day, 1 once the sun is down. */
+  private readonly glow = { value: 0 };
   private readonly roofMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
   private readonly lampMat = new THREE.MeshStandardMaterial({ color: 0x8f949a, roughness: 0.5, metalness: 0.6 });
   private readonly postMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 });
@@ -317,8 +361,18 @@ export class TileDresser {
 
   constructor(private readonly terrain: Heightmap, private readonly roads: RoadView, private readonly tileM: number, anisotropy: number, private readonly style: BuildingStyle) {
     this.walls = WINDOWS.flatMap(({ style }) =>
-      WOODWORK.map((wood) => new THREE.MeshStandardMaterial({ map: wallTexture(wood, style, anisotropy), vertexColors: true, roughness: 0.92 })),
+      WOODWORK.map((wood) => {
+        const { map, mask } = wallTextures(wood, style, anisotropy);
+        const m = new THREE.MeshStandardMaterial({ map, vertexColors: true, roughness: 0.92 });
+        wallShader(m, mask, this.glow);
+        return m;
+      }),
     );
+  }
+
+  /** Lights the windows as the sun goes down. */
+  setSun(elevationDeg: number): void {
+    this.glow.value = 1 - THREE.MathUtils.smoothstep(elevationDeg, -2, 10);
   }
 
   dress(tile: DetailTile, level: number): THREE.Object3D | null {

@@ -373,7 +373,12 @@ track ×0.72 and 0.03, anywhere else (picón, lava, sand) ×0.62 and 0.06.
   above it (at least 2.6 m clear on the high side), so a slope doesn't add a storey. Only the real
   storeys get windows; where the ground falls away below them the wall is plain. The walls are
   the zone's colours, one wall and one roof colour picked per building from a seed of where it
-  stands and carried as vertex colours over a white canvas texture of one window bay per storey in one of four styles
+  stands and carried as vertex colours over a white canvas texture. A small patch to the standard
+  material (`wallShader`: one extra texture read and a hash a pixel, nothing in the shadow pass)
+  puts the colour on the wall only, through a mask drawn with the texture (red wall, green glass),
+  so the woodwork keeps its own; darkens the first metre and a half of wall; starts each building's
+  window bays at its own place along the wall; and as the sun goes down (from 10° above the horizon)
+  lights about half the windows warm, picked per bay and building of one window bay per storey in one of four styles
   (shuttered, small square, arched, a narrow pair) and three woodwork colours. Each house is varied
   from a seed of where it stands: most have a low parapet round the flat roof, some two-storey
   houses have the upper floor over only one end with a terrace over the rest, and roofs carry the

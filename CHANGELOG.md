@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-25 08:30
+
+- Lit windows at dusk: as the sun drops below 10°, about half the windows glow warm, picked per bay and
+  building. The wall colour now goes on the wall only (a mask drawn with the wall texture), so shutters
+  keep their green, blue or brown on an ochre or brick wall; the foot of each wall is a little darker,
+  and each building's window bays start at their own place. All of it is a small patch to the standard
+  material: one extra texture read and a hash a pixel, nothing added to the shadow pass or draw calls.
+
 ## 2026-10-25 08:28
 
 - Lanzarote labels its sights: Mirador del Río, Peñas del Chache, Jameos del Agua, Cueva de los Verdes,

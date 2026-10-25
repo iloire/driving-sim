@@ -437,6 +437,7 @@ async function boot(): Promise<void> {
   const applySun = () => {
     const sun = sunPosition(lat, day, sky.hour);
     sunlight.set(sun.dir, sun.elevationDeg);
+    dresser.setSun(sun.elevationDeg);
   };
   applySun();
   const gui = new GUI({ title: t('gui.title') });
