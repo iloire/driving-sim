@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-25 08:00
+
+- W/S are smooth too: W A S D are now one fine stick, out at 2 a second on a square and never past
+  40 %, however long they're held. Held S at cruise pulls at most about 4.3 g. The arrows are the
+  hard stick for the whole jet: ↓ pulls 9 g and levels a 60° dive at 800 km/h in under 500 m.
+
 ## 2026-10-25 07:46
 
 - A/D roll gently the whole time and the arrows roll hard. A/D now only ever give 40 % of the

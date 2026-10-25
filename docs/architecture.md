@@ -182,17 +182,14 @@ as the struts and tyres, scaled by how far out they are, and the wheel drive swi
 - **Jet.** Along the nose, at the throttle lever's setting (`Input.lever`, 10–100 %, cruise 60 %).
   Shift and Ctrl move it at 80 % a second, 1–4 set it, and the pad's triggers move it as far as
   they're pressed. Shift held at full is the afterburner: a detent, so a tap of Shift no longer
-  lights it. The keys also work the stick differently on wings (`Input.plane`): out at 1.5 a
-  second, back at 4, cubed on the way out (`shapeStick`). A 0.2 s tap is 3 % stick, a 0.4 s hold
-  about a fifth, and full takes 0.67 s: a tap is a fine correction, a held key pulls hard soon
-  enough to get out of a dive. Roll is the exception: it asks the fly-by-wire for a roll
-  rate, which stops when you let go, so A/D go out at 2 a second on a square (`shapeRoll`) and
-  start the roll straight away, but they only ever give 40 % of the stick (`KEY_ROLL_MAX`), gentle
-  however long they're held: on the Jet 40°/s by 0.5 s, so a one-second hold banks about 25° and
-  two seconds about 65°. The full 100°/s is on the arrows.
+  lights it. The keys also work the stick differently on wings (`Input.plane`). W A S D are the fine
+  stick: out at 2 a second on a square, back at 4, and never past 40 % (`shapeStick`,
+  `KEY_STICK_MAX`) however long they're held, so they start moving at once and stay gentle. On
+  the Jet A/D roll at most 40°/s (a one-second hold banks about 25°, two seconds about 65°), and
+  S held at cruise pulls at most about 4.3 g.
   On wings the arrows are a second, hard stick: linear, out and back at 8 a second
-  (`PLANE_ARROW_RATE`, full in 0.125 s), for snapping into a turn or a pull, while W A S D keep
-  the fine curves. Off wings the arrows are just W A S D. `src/game/input.test.ts` pins the curves.
+  (`PLANE_ARROW_RATE`, full in 0.125 s), for snapping into a turn or a pull out of a dive (from 60°
+  at 800 km/h the down arrow levels out in under 500 m), while W A S D keep the fine curve. Off wings the arrows are just W A S D. `src/game/input.test.ts` pins the curves.
 
 With the truck's heavier mass its wings are bigger (15 m², 9.4 m span) and its jet stronger
 (13,000 N). It rotates at about 210 km/h after a 9 s run and climbs at about 11° on full thrust. Hands-off

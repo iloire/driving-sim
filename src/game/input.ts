@@ -1,8 +1,8 @@
 // Keyboard + gamepad + touch → Controls. Keys are digital, so steering and pedals ramp towards
 // their targets instead of snapping; the pad's stick and triggers are analog and used as they are.
 // The same keys fly the plane: W/S push and pull the stick, A/D roll, Q/E rudder. On wings the keys
-// work the stick gently at first and harder the longer they're held (a tap is a nudge, a hold is
-// full stick) while the arrows work it hard (full almost at once), and the jet has a throttle lever: Shift opens it, Ctrl closes it, 1–4 jump to idle,
+// work the stick gently, however long they're held (a tap is a nudge, a hold a steady 40 %),
+// while the arrows work it hard (full almost at once), and the jet has a throttle lever: Shift opens it, Ctrl closes it, 1–4 jump to idle,
 // cruise, 80 % and full, and holding Shift at full lights the afterburner; Space is the airbrake.
 // Hovering on thrusters, W/S tilt, A/D turn, Space climbs and Ctrl sinks. Shift is the turbo
 // everywhere else: nitro on the road, tail thrusters when hovering.
@@ -14,13 +14,11 @@ const STEER_RATE = 2.2;
 const CENTRE_RATE = 4;
 const PEDAL_RATE = 4;
 const STICK_RATE = 3;
-/** On wings, a key's stick travel per second (it is cubed on the way out, so 0.4 s is a fifth and full takes 0.67 s). */
-export const PLANE_STICK_RATE = 1.5;
-/** Roll asks the fly-by-wire for a roll rate, which can't overshoot, so it goes out faster on a softer curve (squared: full in 0.5 s). */
-export const PLANE_ROLL_RATE = 2;
-/** A/D only ever give this much roll stick, gentle however long they're held; the arrows give it all. */
-export const KEY_ROLL_MAX = 0.4;
-/** On wings the arrows are the hard stick: linear, full in an eighth of a second, for snapping into a turn. */
+/** On wings, W A S D's stick travel per second (squared on the way out, so it reaches its cap in 0.5 s). */
+export const PLANE_STICK_RATE = 2;
+/** W A S D only ever give this much stick, gentle however long they're held; the arrows give it all. */
+export const KEY_STICK_MAX = 0.4;
+/** On wings the arrows are the hard stick: linear, full in an eighth of a second, for snapping into a turn or a pull. */
 export const PLANE_ARROW_RATE = 8;
 export const CRUISE_THRUST = 0.6;
 const IDLE_THRUST = 0.1;
@@ -37,9 +35,8 @@ export function stepKey(v: number, target: number, rate: number, back: number, d
   return v + Math.max(-r * dt, Math.min(r * dt, target - v));
 }
 
-/** The plane's stick curve: fine near the middle, full at the end. */
-export const shapeStick = (v: number) => v * v * v;
-export const shapeRoll = (v: number) => KEY_ROLL_MAX * v * Math.abs(v);
+/** The plane's gentle stick curve: fine near the middle, up to `KEY_STICK_MAX` at the end. */
+export const shapeStick = (v: number) => KEY_STICK_MAX * v * Math.abs(v);
 
 export type Action = 'reset' | 'camera' | 'mute' | 'pause' | 'help' | 'menu' | 'next' | 'map' | 'transform' | 'balloons' | 'hud' | 'replay';
 
@@ -113,10 +110,10 @@ export class Input {
     const pitchA = axis('ArrowDown', 'ArrowUp'), rollA = axis('ArrowRight', 'ArrowLeft');
     const merge = (a: number, b: number) => Math.max(-1, Math.min(1, a + b));
     this.keyPitch = stepKey(this.keyPitch, this.plane ? pitchW : merge(pitchW, pitchA), out, back, dt);
-    this.keyRoll = stepKey(this.keyRoll, this.plane ? rollW : merge(rollW, rollA), this.plane ? PLANE_ROLL_RATE : out, back, dt);
+    this.keyRoll = stepKey(this.keyRoll, this.plane ? rollW : merge(rollW, rollA), out, back, dt);
     this.arrowPitch = this.plane ? stepKey(this.arrowPitch, pitchA, PLANE_ARROW_RATE, PLANE_ARROW_RATE, dt) : 0;
     this.arrowRoll = this.plane ? stepKey(this.arrowRoll, rollA, PLANE_ARROW_RATE, PLANE_ARROW_RATE, dt) : 0;
-    const [shape, shapeR] = this.plane ? [shapeStick, shapeRoll] : [(v: number) => v, (v: number) => v];
+    const shape = this.plane ? shapeStick : (v: number) => v;
 
     let padSteer = 0, padThrottle = 0, padBrake = 0, padHand = false, padPitch = 0, padYaw = 0, padBoost = false;
     const pad = navigator.getGamepads?.().find((p) => p && p.connected);
@@ -157,7 +154,7 @@ export class Input {
     const f = c.flight;
     const clamp1 = (v: number) => Math.max(-1, Math.min(1, v));
     f.pitch = clamp1(shape(this.keyPitch) + this.arrowPitch + padPitch + (t ? t.brake - t.throttle : 0));
-    f.roll = clamp1(shapeR(this.keyRoll) + this.arrowRoll - padSteer - (t?.steer ?? 0));
+    f.roll = clamp1(shape(this.keyRoll) + this.arrowRoll - padSteer - (t?.steer ?? 0));
     f.yaw = clamp1((this.down('KeyE') ? 1 : 0) - (this.down('KeyQ') ? 1 : 0) + padYaw);
     if (this.plane) f.thrust = c.boost ? 1 : this.lever;
     else f.thrust = ctrl || padBrake > 0.5 ? IDLE_THRUST : CRUISE_THRUST + (1 - CRUISE_THRUST) * (c.boost ? 1 : padThrottle);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCar, JET, stepCar, type CarEnv, type CarState, type Controls } from './car';
 import { atmosphere, stalled } from './wings';
-import { PLANE_ARROW_RATE, PLANE_ROLL_RATE, PLANE_STICK_RATE, shapeRoll, shapeStick } from '../game/input';
+import { PLANE_ARROW_RATE, PLANE_STICK_RATE, shapeStick } from '../game/input';
 import { rotate, unrotate } from './vec';
 
 const STEP = 1 / 120;
@@ -28,8 +28,9 @@ function fly(s: CarState, c: Controls, seconds: number, each?: () => void): void
   }
 }
 
-/** Pitch on a held key, `t` s after it went down, as the keys work it on wings. */
+/** The stick on a held key, `t` s after it went down, as the keys work it on wings: W A S D gently, the arrows hard. */
 const keyed = (t: number) => shapeStick(Math.min(PLANE_STICK_RATE * t, 1));
+const arrowed = (t: number) => Math.min(PLANE_ARROW_RATE * t, 1);
 
 /** Nose above the horizon, degrees. */
 function noseUp(s: CarState): number {
@@ -85,7 +86,7 @@ describe('the jet', () => {
     });
   }
 
-  it('pulls out of a 60° dive at 800 km/h on a held key within 550 m, under 9 g', () => {
+  it('pulls out of a 60° dive at 800 km/h on the down arrow within 500 m, under 9 g', () => {
     const s = airborne(222, 6000);
     const pitch = Math.PI / 3;
     s.q = [Math.SQRT1_2 * Math.cos(pitch / 2), -Math.SQRT1_2 * Math.sin(pitch / 2), Math.SQRT1_2 * Math.sin(pitch / 2), Math.SQRT1_2 * Math.cos(pitch / 2)];
@@ -94,12 +95,25 @@ describe('the jet', () => {
     const g = gauge(s);
     let t = 0, most = 0;
     while (s.vel[2] < 0 && t < 10) {
-      c.flight.pitch = keyed(t);
+      c.flight.pitch = arrowed(t);
       fly(s, c, STEP, () => { most = Math.max(most, g()); });
       t += STEP;
     }
-    expect(6000 - s.pos[2]).toBeLessThan(550);
+    expect(6000 - s.pos[2]).toBeLessThan(500);
     expect(most).toBeLessThan(9.3);
+  });
+
+  it('S held at cruise stays gentle however long: under 5 g, where the arrow pulls 9', () => {
+    const peak = (stick: (t: number) => number) => {
+      const s = airborne(230, 3000);
+      const c = controls();
+      const g = gauge(s);
+      let most = 0;
+      for (let t = 0; t < 3; t += STEP) { c.flight.pitch = stick(t); fly(s, c, STEP, () => { most = Math.max(most, g()); }); }
+      return most;
+    };
+    expect(peak(keyed)).toBeLessThan(5);
+    expect(peak(arrowed)).toBeGreaterThan(8);
   });
 
   it('a short press at cruise nudges the nose a degree or two, and it stays there', () => {
@@ -139,13 +153,11 @@ describe('the jet', () => {
       const right = rotate(s.q, [0, -1, 0]), up = rotate(s.q, [0, 0, 1]);
       return (Math.atan2(-right[2], up[2]) * 180) / Math.PI;
     };
-    const d = (t: number) => shapeRoll(Math.min(PLANE_ROLL_RATE * t, 1));
-    const arrow = (t: number) => Math.min(PLANE_ARROW_RATE * t, 1);
-    expect(bank(d, 0.2)).toBeLessThan(2);
-    expect(bank(d, 1)).toBeGreaterThan(15);
-    expect(bank(d, 1)).toBeLessThan(35);
-    expect(bank(d, 2)).toBeLessThan(80);
-    expect(bank(arrow, 0.5)).toBeGreaterThan(35);
+    expect(bank(keyed, 0.2)).toBeLessThan(2);
+    expect(bank(keyed, 1)).toBeGreaterThan(15);
+    expect(bank(keyed, 1)).toBeLessThan(35);
+    expect(bank(keyed, 2)).toBeLessThan(80);
+    expect(bank(arrowed, 0.5)).toBeGreaterThan(35);
   });
 
   it('rolls at the same rate at 250 and 300 m/s, and slower when slow', () => {
