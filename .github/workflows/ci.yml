@@ -48,6 +48,6 @@ jobs:
         env:
           URL: ${{ steps.deployment.outputs.page_url }}
         run: |
-          curl -fsS "$URL" | grep -q '<title>Lanzarote Drive'
+          curl -fsS "$URL" | grep -q '<title>Driving Sim'
           curl -fsS "${URL}sites/lanzarote/site.json" | grep -q tileM
           curl -fsS -o /dev/null "${URL}sites/lanzarote/detail/7_3.jpg"
