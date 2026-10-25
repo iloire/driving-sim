@@ -25,6 +25,7 @@ import { TouchPad } from './game/touch';
 import { timesOfDay, Welcome } from './game/welcome';
 import { createSurround, Sunlight } from './game/world';
 import { BalloonField } from './sim/balloons';
+import { buildingStyle } from './sim/objects';
 import { createPilot, PILOT, stepPilot } from './sim/pilot';
 import { createCar, JET, ROADSTER, TRUCK, stepCar, type CarEnv, type CarSpec, type CarState, type Surface } from './sim/car';
 import { isPaved, MAX_HALF_WIDTH, ROAD_WIDTH, type Road } from './sim/roads';
@@ -150,7 +151,7 @@ async function boot(): Promise<void> {
   const ortho = await new THREE.TextureLoader().loadAsync(site.orthoUrl);
   const anisotropy = renderer.capabilities.getMaxAnisotropy();
   const roadView = new RoadView(site.roads.roads, terrain, anisotropy);
-  const dresser = new TileDresser(terrain, roadView, site.detailTileM, anisotropy);
+  const dresser = new TileDresser(terrain, roadView, site.detailTileM, anisotropy, buildingStyle(site.spec.buildings));
   const terrainView = new TerrainView(terrain, ortho, site.detailTileM, site.detailTiles, anisotropy, {
     load: (t) => site.loadTile(t),
     free: (t) => { dresser.free(t); site.freeTile(t); },

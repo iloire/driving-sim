@@ -1,14 +1,15 @@
 // What stands on a detail tile once it is close: its buildings and street furniture (from
 // objects/<col>_<row>.json, see src/sim/objects.ts) and, at the finest level, the road surfaces.
-// Buildings follow the island's own rules: lime-white walls and flat roofs, the woodwork green,
-// blue or brown, varied in window style, massing and what stands on the roof. Each tile's
-// buildings are merged into a few meshes (one per material), and the
-// furniture is instanced, so a town costs a handful of draw calls.
+// Buildings have flat roofs and the woodwork green, blue or brown, varied in window style, massing
+// and what stands on the roof; their walls and roofs take the zone's colours (site.json's
+// `buildings`: Lanzarote's lime-white by default), one picked per building and carried as vertex
+// colours over a white texture. Each tile's buildings are merged into a few meshes (one per
+// material), and the furniture is instanced, so a town costs a handful of draw calls.
 
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { area, inside, roofline, type Building } from '../sim/buildings';
-import type { TileObjects } from '../sim/objects';
+import type { BuildingStyle, TileObjects } from '../sim/objects';
 import type { Heightmap } from '../sim/terrain';
 import type { RoadView } from './road-view';
 import type { DetailTile } from './site';
@@ -29,13 +30,13 @@ const HOUSE_MIN = 3.5;
 /** Above it, a church: a plain box too, the towers being taller than any house. */
 const HOUSE_MAX = 8;
 
-/** Lime-washed wall with one window per bay, in one of the island's window styles. */
+/** A white wall (the building's colour multiplies it) with one window per bay, in one of the window styles. */
 function wallTexture(wood: string, style: WindowStyle, anisotropy: number): THREE.CanvasTexture {
   const S = 128;
   const c = document.createElement('canvas');
   c.width = c.height = S;
   const g = c.getContext('2d')!;
-  g.fillStyle = '#f3f1ea';
+  g.fillStyle = '#ffffff';
   g.fillRect(0, 0, S, S);
   for (let i = 0; i < 900; i++) {
     g.fillStyle = `rgba(120, 110, 95, ${Math.random() * 0.06})`;
@@ -124,11 +125,15 @@ interface Mesh {
 
 const mesh = (): Mesh => ({ pos: [], nor: [], uv: [] });
 
-function toGeometry(m: Mesh): THREE.BufferGeometry {
+/** The gathered triangles, every vertex in one colour. */
+function toGeometry(m: Mesh, color: THREE.Color): THREE.BufferGeometry {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(m.pos, 3));
   g.setAttribute('normal', new THREE.Float32BufferAttribute(m.nor, 3));
   g.setAttribute('uv', new THREE.Float32BufferAttribute(m.uv, 2));
+  const rgb = new Float32Array(m.pos.length);
+  for (let i = 0; i < rgb.length; i += 3) [rgb[i], rgb[i + 1], rgb[i + 2]] = [color.r, color.g, color.b];
+  g.setAttribute('color', new THREE.BufferAttribute(rgb, 3));
   return g;
 }
 
@@ -212,8 +217,13 @@ function frame(p: number[]) {
  * Most have a low parapet round the roof; some two-storey ones have the upper floor over only part
  * of the plan, the rest a roof terrace; and roofs carry a chimney or a little stair room.
  */
-function buildingGeometry(b: Building, terrain: Heightmap, e: number, bay: number): { walls: THREE.BufferGeometry; roof: THREE.BufferGeometry } {
+function buildingGeometry(b: Building, terrain: Heightmap, e: number, bay: number, style: BuildingStyle): { walls: THREE.BufferGeometry; roof: THREE.BufferGeometry } {
   const p = b.pts;
+  // Its colours from a sequence of their own, so the massing below stays as it was.
+  const tint = seeded(p.slice(2));
+  const wallColor = new THREE.Color(style.walls[Math.floor(tint() * style.walls.length)]);
+  const roofColor = new THREE.Color(style.roofs[Math.floor(tint() * style.roofs.length)]);
+  const done = () => ({ walls: toGeometry(w, wallColor), roof: toGeometry(r, roofColor) });
   // Measured from the low side, so a house on a slope doesn't gain a storey.
   const { low, high, top } = roofline(b, (x, y) => terrain.heightAt(x, y));
   const base = low - 0.5;
@@ -223,7 +233,7 @@ function buildingGeometry(b: Building, terrain: Heightmap, e: number, bay: numbe
   if (!house) {
     walls(w, p, base, top, e, bay, rows);
     slab(r, p, top, e);
-    return { walls: toGeometry(w), roof: toGeometry(r) };
+    return done();
   }
 
   const rand = seeded(p);
@@ -271,7 +281,7 @@ function buildingGeometry(b: Building, terrain: Heightmap, e: number, bay: numbe
     const [x, y] = f.at(f.s1 - 1.8, f.t0 + 1.6);
     if (inside(p, x, y)) box(r, x, y, f.angle, 2.4, 2.2, roof, 2.3, e);
   }
-  return { walls: toGeometry(w), roof: toGeometry(r) };
+  return done();
 }
 
 /** A street lamp, arm along +X: a galvanised pole, the arm, and the lantern. */
@@ -297,7 +307,7 @@ function postGeometry(): THREE.BufferGeometry {
 
 export class TileDresser {
   private readonly walls: THREE.MeshStandardMaterial[];
-  private readonly roofMat = new THREE.MeshStandardMaterial({ color: 0xe6e2d8, roughness: 0.95 });
+  private readonly roofMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
   private readonly lampMat = new THREE.MeshStandardMaterial({ color: 0x8f949a, roughness: 0.5, metalness: 0.6 });
   private readonly postMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 });
   private readonly lampGeo = lampGeometry();
@@ -305,9 +315,9 @@ export class TileDresser {
   /** Per tile: its buildings and furniture (built once), and with the road surfaces (finest level). */
   private readonly cache = new Map<DetailTile, { objects: THREE.Group; full?: THREE.Group }>();
 
-  constructor(private readonly terrain: Heightmap, private readonly roads: RoadView, private readonly tileM: number, anisotropy: number) {
+  constructor(private readonly terrain: Heightmap, private readonly roads: RoadView, private readonly tileM: number, anisotropy: number, private readonly style: BuildingStyle) {
     this.walls = WINDOWS.flatMap(({ style }) =>
-      WOODWORK.map((wood) => new THREE.MeshStandardMaterial({ map: wallTexture(wood, style, anisotropy), roughness: 0.92 })),
+      WOODWORK.map((wood) => new THREE.MeshStandardMaterial({ map: wallTexture(wood, style, anisotropy), vertexColors: true, roughness: 0.92 })),
     );
   }
 
@@ -342,7 +352,7 @@ export class TileDresser {
     const roofs: THREE.BufferGeometry[] = [];
     o.buildings.forEach((b, i) => {
       const k = (b.pts.length * 7 + i * 13) % walls.length; // a stable mix of window styles and woodwork
-      const { walls: w, roof } = buildingGeometry(b, this.terrain, e, WINDOWS[Math.floor(k / WOODWORK.length)].bay);
+      const { walls: w, roof } = buildingGeometry(b, this.terrain, e, WINDOWS[Math.floor(k / WOODWORK.length)].bay, this.style);
       walls[k].push(w);
       roofs.push(roof);
     });

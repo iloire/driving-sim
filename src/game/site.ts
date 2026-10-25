@@ -6,6 +6,7 @@
 
 import proj4 from 'proj4';
 import { BuildingIndex, roofline } from '../sim/buildings';
+import type { BuildingStyle } from '../sim/objects';
 import { parseObjects, type TileObjects, type TileObjectsFile } from '../sim/objects';
 import { isPaved, parseRoads, RoadIndex, type RoadsFile } from '../sim/roads';
 import { Heightmap } from '../sim/terrain';
@@ -44,8 +45,8 @@ export interface SiteSpec {
   bbox: [number, number, number, number];
   /** Inland: the height of the farmland around the site. Omitted = an island, sea all round. */
   plainM?: number;
-  /** Tallest a building gets (scripts/fetch-terrain.ts); omitted = two. */
-  maxStoreys?: number;
+  /** How tall the buildings get and what colours they are (src/sim/objects.ts); omitted = Lanzarote's. */
+  buildings?: Partial<BuildingStyle>;
   /** `unitM`: metres per stored step, omitted = 0.1. */
   heightmap: { file: string; size: number; unitM?: number };
   ortho: { file: string; size: number };

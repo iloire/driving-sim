@@ -13,7 +13,37 @@
     356000,
     3144000
   ],
-  "maxStoreys": 10,
+  "buildings": {
+    "maxStoreys": 10,
+    "storeys": [
+      0.3,
+      0.3,
+      0.18,
+      0.1,
+      0.06,
+      0.04,
+      0.02
+    ],
+    "walls": [
+      "#f1efe8",
+      "#f1efe8",
+      "#f1efe8",
+      "#ece0c2",
+      "#d9a75a",
+      "#e8cf7a",
+      "#c27650",
+      "#e2a58a",
+      "#c9d3b0",
+      "#bdb8ae",
+      "#b9cbd6"
+    ],
+    "roofs": [
+      "#9d9a93",
+      "#b5b0a5",
+      "#a85a3c",
+      "#ddd8cc"
+    ]
+  },
   "heightmap": {
     "file": "height.bin",
     "size": 2048,

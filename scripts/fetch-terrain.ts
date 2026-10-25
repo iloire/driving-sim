@@ -15,7 +15,7 @@ import { join } from 'node:path';
 import { fromArrayBuffer } from 'geotiff';
 import proj4 from 'proj4';
 import { area, BuildingIndex, type Building } from '../src/sim/buildings';
-import { buildingHeight, placeFurniture, type TileObjectsFile } from '../src/sim/objects';
+import { buildingHeight, buildingStyle, placeFurniture, type BuildingStyle, type TileObjectsFile } from '../src/sim/objects';
 import { carveRoads, parseRoads, type RoadKind, type RoadsFile } from '../src/sim/roads';
 import { Heightmap } from '../src/sim/terrain';
 
@@ -35,8 +35,8 @@ interface SiteFile {
   heightmap: { file: string; size: number; unitM?: number };
   ortho: { file: string; size: number };
   detail: { dir: string; tileM: number; orthoSize: number };
-  /** Tallest a building gets, in storeys; omitted = Lanzarote's two. */
-  maxStoreys?: number;
+  /** How tall the buildings get (src/sim/objects.ts); omitted = Lanzarote's. */
+  buildings?: Partial<BuildingStyle>;
 }
 
 /** OSM highway=* values worth driving, and what the game calls them. */
@@ -184,7 +184,11 @@ async function fetchOsm(site: SiteFile, filter: string): Promise<OsmWay[]> {
 function toBuildings(site: SiteFile, ways: OsmWay[]): Building[] {
   const [x0, y0] = site.bbox;
   const proj = proj4('EPSG:4326', site.proj4);
-  const out: Building[] = [];
+  const style = buildingStyle(site.buildings);
+  const kept: { way: OsmWay; pts: number[]; footprint: number; cell: [number, number] }[] = [];
+  // Neighbours are counted in 50 m cells, the building's own and the eight round it.
+  const CELL = 50;
+  const crowd = new Map<string, number>();
   for (const way of ways) {
     if (['construction', 'ruins', 'collapsed'].includes(way.tags.building)) continue;
     const pts: number[] = [];
@@ -195,9 +199,15 @@ function toBuildings(site: SiteFile, ways: OsmWay[]): Building[] {
     if (pts[0] === pts[pts.length - 2] && pts[1] === pts[pts.length - 1]) pts.length -= 2; // OSM closes the ring
     const footprint = Math.abs(area(pts));
     if (pts.length < 6 || footprint < 8) continue;
-    out.push({ pts, height: Math.round(buildingHeight(way.tags, way.id, footprint, site.maxStoreys) * 10) / 10 });
+    const cell: [number, number] = [Math.floor(pts[0] / CELL), Math.floor(pts[1] / CELL)];
+    crowd.set(`${cell}`, (crowd.get(`${cell}`) ?? 0) + 1);
+    kept.push({ way, pts, footprint, cell });
   }
-  return out;
+  return kept.map(({ way, pts, footprint, cell: [cx, cy] }) => {
+    let neighbours = -1;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) neighbours += crowd.get(`${cx + dx},${cy + dy}`) ?? 0;
+    return { pts, height: Math.round(buildingHeight(way.tags, way.id, footprint, style, neighbours) * 10) / 10 };
+  });
 }
 
 /** OSM ways → roads.json: site-frame coordinates to the decimetre, the private drives dropped. */

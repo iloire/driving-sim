@@ -30,24 +30,59 @@ export function parseObjects(f: TileObjectsFile): TileObjects {
 }
 
 const STOREY = 3.2;
-/** Lanzarote's planning rules keep the island low: two storeys at most, bar the church towers. A site sets its own as `maxStoreys`. */
-const MAX_STOREYS = 2;
+
+/** How a zone's buildings stand and look: site.json's `buildings`, any field left out taken from Lanzarote's. */
+export interface BuildingStyle {
+  /** The tallest a building gets, in storeys, whatever OSM says (church towers aside). */
+  maxStoreys: number;
+  /** Relative odds of one, two, three … storeys for a building OSM gives no height. */
+  storeys: number[];
+  /** Wall colours, one picked per building; list one twice to make it twice as common. */
+  walls: string[];
+  /** Roof colours, likewise. */
+  roofs: string[];
+}
+
+/** Lanzarote's planning rules keep the island low and white: two storeys at most, the walls lime-washed. */
+export const LANZAROTE: BuildingStyle = {
+  maxStoreys: 2,
+  storeys: [0.7, 0.3],
+  walls: ['#f3f1ea', '#f3f1ea', '#f3f1ea', '#f3f1ea', '#f6f5f1', '#f6f5f1', '#eeeae0', '#efe8d9'],
+  roofs: ['#e6e2d8', '#dedacf'],
+};
+
+export const buildingStyle = (s: Partial<BuildingStyle> = {}): BuildingStyle => ({ ...LANZAROTE, ...s });
+
+const SHEDS = ['garage', 'garages', 'shed', 'hut', 'roof', 'carport'];
+/** Kinds that are one storey, however big. */
+const LOW = ['industrial', 'warehouse', 'greenhouse', 'farm_auxiliary', 'barn', 'cowshed', 'stable', 'hangar', 'service'];
+/** Kinds that are a family's house: two storeys at most. */
+const HOUSES = ['house', 'detached', 'semidetached_house', 'bungalow', 'farm', 'cabin', 'villa', 'terrace'];
+/** Fewer neighbours than this within about 75 m and an untagged building is a farmhouse or a village house: two storeys at most. */
+export const SPARSE = 12;
 
 /**
- * A building's height from its OSM tags, capped at `maxStoreys`. Untagged ones (most of the island)
- * get one or two, picked by the OSM id so a house is the same height on every load; a big
- * footprint is likelier to be taller.
+ * A building's height from its OSM tags, capped at the zone's `maxStoreys`. Untagged ones (most of
+ * Lanzarote, a good part of the rest) are rolled from the zone's `storeys` odds by the OSM id, so a
+ * house is the same height on every load. A big footprint or a block of flats rolls from the taller
+ * half of the odds; a house, or anything out on its own (`neighbours` under SPARSE), stops at two.
  */
-export function buildingHeight(tags: Record<string, string>, id: number, footprint: number, maxStoreys = MAX_STOREYS): number {
+export function buildingHeight(tags: Record<string, string>, id: number, footprint: number, style: BuildingStyle = LANZAROTE, neighbours = Infinity): number {
   if (tags.building === 'church' || tags.building === 'cathedral') return 11;
-  const cap = maxStoreys * STOREY + 0.6;
+  const { maxStoreys } = style;
   const h = parseFloat(tags.height ?? '');
-  if (h > 0) return Math.min(h, cap);
+  if (h > 0) return Math.min(h, maxStoreys * STOREY + 0.6);
   const levels = parseFloat(tags['building:levels'] ?? '');
   if (levels > 0) return Math.min(levels, maxStoreys) * STOREY + 0.6;
-  if (['garage', 'garages', 'shed', 'hut', 'roof', 'carport'].includes(tags.building)) return 2.6;
+  if (SHEDS.includes(tags.building)) return 2.6;
+  if (LOW.includes(tags.building)) return STOREY + 0.6;
   const roll = ((id * 2654435761) >>> 0) / 2 ** 32;
-  return (roll < (footprint > 300 ? 0.35 : 0.7) ? 1 : 2) * STOREY + 0.6;
+  const r = footprint > 300 || tags.building === 'apartments' ? (1 + roll) / 2 : roll;
+  const total = style.storeys.reduce((a, b) => a + b, 0);
+  let n = 1;
+  for (let acc = style.storeys[0]; n < style.storeys.length && r * total >= acc; n++) acc += style.storeys[n];
+  if (HOUSES.includes(tags.building) || neighbours < SPARSE) n = Math.min(n, 2);
+  return Math.min(n, maxStoreys) * STOREY + 0.6;
 }
 
 const LAMP_EVERY = 28;

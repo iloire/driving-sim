@@ -36,7 +36,7 @@ Each zone is a folder with a `site.json`, which `scripts/fetch-terrain.ts` fills
 | `proj4`, `crs` | the map projection, and the code IGN's services know it by |
 | `bbox` | the square, in that projection's metres: a multiple of `detail.tileM` a side |
 | `plainM` | inland only: the farmland's height around the square. Omitted means an island with sea all round |
-| `maxStoreys` | the tallest a building gets (default two, Lanzarote's planning rule) |
+| `buildings` | how the buildings stand and look, every field optional, Lanzarote's by default: `maxStoreys` the tallest a building gets (two, the island's planning rule), `storeys` the relative odds of one, two, three … storeys for a building OSM gives no height (`[0.7, 0.3]`), `walls` and `roofs` the colours one is picked from per building (list one twice to make it twice as common; Lanzarote's are all near-whites) |
 | `heightmap.unitM` | metres per stored step. 0.1 (default) holds 3,276 m. Tenerife and Benasque use 0.2 for Teide and Aneto |
 | `spawns` | the places, as lat/lon, snapped to the nearest paved road; `toward` starts on a runway facing that way |
 
@@ -48,7 +48,7 @@ Each zone is a folder with a `site.json`, which `scripts/fetch-terrain.ts` fills
 | Benasque | 30 km | UTM 30 (`EPSG:25830`) | inland, plain at 1,100 m. It is in zone 31 by longitude, but IGN only serves the peninsula in 30 (about 0.06 % stretch, 2.4° grid convergence). The north edge stops short of France, where IGN's data has holes that would read as sea |
 
 The data is IGN's, so a zone has to be in Spain. Everything else (roads, buildings) is OSM.
-Buildings are drawn in Lanzarote's style (lime-white walls, flat roofs) everywhere.
+Buildings have flat roofs everywhere; their heights and colours are the zone's (`buildings` above).
 
 ## Frames
 
@@ -348,9 +348,12 @@ track ×0.72 and 0.03, anywhere else (picón, lava, sand) ×0.62 and 0.06.
 
 - **Buildings.** OSM `building=*` ways (about 27,500 on the island; OSM is incomplete outside the
   towns). Construction sites, ruins and footprints under 8 m² are dropped. The height comes from
-  `height` or `building:levels` when tagged, capped at two 3.2 m storeys as the island's planning
-  rules have it (churches get 11 m for their towers). Otherwise it is one or two storeys, picked
-  from the OSM id so it never changes, with bigger footprints likelier to be taller. Each building is
+  `height` or `building:levels` when tagged, capped at the zone's `maxStoreys` of 3.2 m (two on
+  Lanzarote, as the island's planning rules have it; churches get 11 m for their towers). Garages
+  and sheds are 2.6 m, warehouses, barns and the like one storey. Anything else is rolled from the
+  zone's `storeys` odds by the OSM id, so it never changes: a footprint over 300 m² or a block of
+  flats rolls from the taller half, and a house, or a building with fewer than 12 others in the
+  150 m square round it (a farm, a village), stops at two. Each building is
   filed under the tile holding its centroid in `objects/<col>_<row>.json`.
 - **Furniture**, placed offline from the roads and buildings. A road with a building within 30 m
   is in town and gets street lamps every 28 m, alternating sides, 1.4 m past the kerb, with their
@@ -359,12 +362,13 @@ track ×0.72 and 0.03, anywhere else (picón, lava, sand) ×0.62 and 0.06.
 - **Drawing.** Walls sit on the lowest ground under the footprint and rise the building's height
   above it (at least 2.6 m clear on the high side), so a slope doesn't add a storey. Only the real
   storeys get windows; where the ground falls away below them the wall is plain. The walls are
-  always lime white, with a canvas texture of one window bay per storey in one of four styles
+  the zone's colours, one wall and one roof colour picked per building from a seed of where it
+  stands and carried as vertex colours over a white canvas texture of one window bay per storey in one of four styles
   (shuttered, small square, arched, a narrow pair) and three woodwork colours. Each house is varied
   from a seed of where it stands: most have a low parapet round the flat roof, some two-storey
   houses have the upper floor over only one end with a terrace over the rest, and roofs carry the
   island's capped white chimney or a small stair room. A tile's buildings merge into thirteen
-  meshes (twelve wall textures and the white roofs and roof furniture), and its
+  meshes (twelve wall textures and the roofs and roof furniture), and its
   lamps and posts are instanced, so a town costs a handful of draw calls. A tile is dressed once
   it is within 4.5 km (about 20 ms for Arrecife's busiest tile) and freed with its heights.
 - **Collisions.** `BuildingIndex` buckets the loaded tiles' footprints in a 25 m grid, and

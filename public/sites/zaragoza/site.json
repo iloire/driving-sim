@@ -14,7 +14,40 @@
     4628000
   ],
   "plainM": 220,
-  "maxStoreys": 14,
+  "buildings": {
+    "maxStoreys": 14,
+    "storeys": [
+      0.15,
+      0.15,
+      0.12,
+      0.1,
+      0.1,
+      0.1,
+      0.09,
+      0.08,
+      0.06,
+      0.03,
+      0.02
+    ],
+    "walls": [
+      "#b0674a",
+      "#9e5a40",
+      "#c48a6a",
+      "#d8c3a0",
+      "#cbb38c",
+      "#e6dcc6",
+      "#b8b3aa",
+      "#9c9890",
+      "#ece9e1",
+      "#dfcf9e"
+    ],
+    "roofs": [
+      "#8f8b84",
+      "#a29d94",
+      "#a3563a",
+      "#7c7973"
+    ]
+  },
   "heightmap": {
     "file": "height.bin",
     "size": 2048

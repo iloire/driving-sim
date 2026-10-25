@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BuildingIndex } from './buildings';
-import { buildingHeight, parseObjects, placeFurniture } from './objects';
+import { buildingHeight, buildingStyle, parseObjects, placeFurniture, SPARSE } from './objects';
 import { ROAD_WIDTH, type Road } from './roads';
 
 const main = (pts: number[]): Road => ({ kind: 'secondary', name: 'LZ-1', bridge: false, pts });
@@ -15,8 +15,27 @@ describe('buildingHeight', () => {
   });
 
   it('lets a site raise the cap: a city keeps its blocks of flats', () => {
-    expect(buildingHeight({ 'building:levels': '8' }, 1, 100, 14)).toBeCloseTo(26.2);
-    expect(buildingHeight({ height: '60' }, 1, 100, 14)).toBeCloseTo(45.4);
+    const city = buildingStyle({ maxStoreys: 14 });
+    expect(buildingHeight({ 'building:levels': '8' }, 1, 100, city)).toBeCloseTo(26.2);
+    expect(buildingHeight({ height: '60' }, 1, 100, city)).toBeCloseTo(45.4);
+  });
+
+  const storeysOf = (h: number) => Math.round((h - 0.6) / 3.2);
+  const city = buildingStyle({ maxStoreys: 10, storeys: [1, 1, 1, 1, 1, 1, 1, 1] });
+  const rolls = (tags: Record<string, string>, footprint: number, neighbours: number) =>
+    Array.from({ length: 400 }, (_, id) => storeysOf(buildingHeight(tags, id + 1, footprint, city, neighbours)));
+
+  it("rolls an untagged building in town from the zone's odds, the big ones from the taller half", () => {
+    const small = rolls({ building: 'yes' }, 120, 50), big = rolls({ building: 'yes' }, 900, 50);
+    expect(new Set(small)).toEqual(new Set([1, 2, 3, 4, 5, 6, 7, 8]));
+    expect(Math.min(...big)).toBe(5);
+    expect(rolls({ building: 'apartments' }, 120, 50).every((n) => n >= 5)).toBe(true);
+  });
+
+  it('keeps a house, or a building out on its own, to two storeys, and a warehouse to one', () => {
+    expect(Math.max(...rolls({ building: 'house' }, 120, 50))).toBe(2);
+    expect(Math.max(...rolls({ building: 'yes' }, 900, SPARSE - 1))).toBe(2);
+    expect(new Set(rolls({ building: 'warehouse' }, 2000, 50))).toEqual(new Set([1]));
   });
 
   it('gives an untagged house one or two storeys, the same every time', () => {

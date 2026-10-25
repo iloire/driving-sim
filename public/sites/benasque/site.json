@@ -14,7 +14,29 @@
     4738000
   ],
   "plainM": 1100,
-  "maxStoreys": 4,
+  "buildings": {
+    "maxStoreys": 4,
+    "storeys": [
+      0.2,
+      0.35,
+      0.3,
+      0.15
+    ],
+    "walls": [
+      "#a9a49a",
+      "#8f8a80",
+      "#a9a49a",
+      "#e4ddcf",
+      "#d9cdb5",
+      "#eeebe3",
+      "#cdb48a"
+    ],
+    "roofs": [
+      "#4f5358",
+      "#5d6166",
+      "#454a4f"
+    ]
+  },
   "heightmap": {
     "file": "height.bin",
     "size": 2048,

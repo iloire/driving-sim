@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-25 08:05
+
+- Buildings take their zone's heights and colours: `site.json` has a `buildings` block (`maxStoreys`,
+  `storeys` odds for untagged buildings, `walls` and `roofs` palettes). Lanzarote stays two storeys
+  and near-white; Tenerife gets ochre, cream, terracotta and up to 10 storeys, Zaragoza brick, sand
+  and grey blocks up to 14, Benasque stone and slate up to 4. Untagged blocks of flats and big
+  footprints roll taller, houses and anything out on its own stop at two, warehouses at one. The
+  colours are vertex colours over a white wall texture, so no new draw calls; objects/ regenerated.
+
 ## 2026-10-25 08:00
 
 - W/S are smooth too: W A S D are now one fine stick, out at 2 a second on a square and never past
