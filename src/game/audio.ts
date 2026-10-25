@@ -241,13 +241,21 @@ export class CarAudio {
   }
 
   /**
-   * A sonic boom: the N-wave's two cracks a tenth of a second apart, each a low thump of noise
-   * with a falling sine under it, and a long rumble after.
+   * A sonic boom: the N-wave's two cracks a tenth of a second apart, each a sharp thump of noise
+   * with a falling sine under it, and a long rumble after. It rides its own limiter so it can be
+   * the loudest thing in the mix, and the cracks open up to 2.5 kHz so laptop speakers carry them.
    */
   boom(): void {
     const ctx = this.ctx;
     if (!ctx || !this.master) return;
     const t = ctx.currentTime;
+    const bus = ctx.createDynamicsCompressor();
+    bus.threshold.value = -6;
+    bus.knee.value = 0;
+    bus.ratio.value = 20;
+    bus.attack.value = 0.001;
+    bus.release.value = 0.2;
+    bus.connect(this.master);
     const n = Math.floor(ctx.sampleRate * 1.6);
     const buf = ctx.createBuffer(1, n, ctx.sampleRate);
     const d = buf.getChannelData(0);
@@ -260,10 +268,11 @@ export class CarAudio {
     src.buffer = buf;
     const low = ctx.createBiquadFilter();
     low.type = 'lowpass';
-    low.frequency.value = 380;
+    low.frequency.setValueAtTime(2500, t);
+    low.frequency.exponentialRampToValueAtTime(400, t + 0.25);
     const g = ctx.createGain();
-    g.gain.value = 1.6;
-    src.connect(low).connect(g).connect(this.master);
+    g.gain.value = 5;
+    src.connect(low).connect(g).connect(bus);
     src.start(t);
 
     for (const at of [0, 0.11]) {
@@ -271,9 +280,9 @@ export class CarAudio {
       thump.frequency.setValueAtTime(70, t + at);
       thump.frequency.exponentialRampToValueAtTime(28, t + at + 0.25);
       const tg = ctx.createGain();
-      tg.gain.setValueAtTime(0.9, t + at);
+      tg.gain.setValueAtTime(2.5, t + at);
       tg.gain.exponentialRampToValueAtTime(0.001, t + at + 0.3);
-      thump.connect(tg).connect(this.master);
+      thump.connect(tg).connect(bus);
       thump.start(t + at);
       thump.stop(t + at + 0.32);
     }
