@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatHour, readMoment, readView, writeMoment, writeView } from './share';
+import { formatHour, readMoment, readView, vehicleOf, writeMoment, writeView } from './share';
 
 describe('shared moments', () => {
   it('round-trips a car in the air, replacing the spawn', () => {
@@ -65,5 +65,14 @@ describe('shared moments', () => {
   it('writes the time as HH:MM', () => {
     expect(formatHour(17.5)).toBe('17:30');
     expect(formatHour(9.999)).toBe('10:00');
+  });
+
+  it('starts a newcomer in the Jet, and an old shared moment without ?car in the Roadster', () => {
+    const cars = ['roadster', '4x4', 'jet'];
+    expect(vehicleOf(new URLSearchParams(''), cars)).toBe('jet');
+    expect(vehicleOf(new URLSearchParams('spawn=timanfaya'), cars)).toBe('jet');
+    expect(vehicleOf(new URLSearchParams('at=1,2,3,90,50'), cars)).toBe('roadster');
+    expect(vehicleOf(new URLSearchParams('at=1,2,3,90,50&car=4x4'), cars)).toBe('4x4');
+    expect(vehicleOf(new URLSearchParams('car=nope'), cars)).toBe('jet');
   });
 });

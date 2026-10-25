@@ -113,10 +113,12 @@ kicking the tail out, keeping more grip on picón than plain tyres would, surviv
 
 ## The vehicles
 
-`ROADSTER` (the default), `TRUCK` and `JET` share everything above. They differ in their numbers, and in
+`ROADSTER`, `TRUCK` and `JET` share everything above. They differ in their numbers, and in
 how `flying` flies: `CarSpec.wings` unfolds into a plane, and `CarSpec.thrusters` hovers. Each has
 its own model (`roadster-model.ts`, `car-model.ts`, `jet-model.ts`), and Settings → Vehicle (or
-`?car=4x4`, `?car=jet`) swaps them where the car stands. The Jet is placed 600 m up at 230 m/s
+`?car=4x4`, `?car=jet`) swaps them where the car stands. A link without `?car` starts in the Jet, except a shared moment
+(`?at=`), which starts in the Roadster: those links were written before the page always set `?car`,
+when leaving it out meant the Roadster (`vehicleOf` in `share.ts`). The Jet is placed 600 m up at 230 m/s
 with its wings already out, and never drives (see [The Jet](#the-jet) below).
 
 The Roadster is electric (`engine.electric`). Its torque is flat at 1,400 N·m from a standstill

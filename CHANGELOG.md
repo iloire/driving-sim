@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-25 10:21
+
+- A first visit starts in the Jet: with no `?car` in the link the welcome screen has the Jet picked and
+  offers Fly. The URL now always carries `?car`, and a shared moment from before (`?at=` with no `?car`)
+  still opens in the Roadster it was shared from. `vehicleOf()` in share.ts decides, with a test.
+
 ## 2026-10-25 10:05
 
 - Welcome screen as a rally roadbook: the choices sit on a tilted paper sheet in numbered, ruled boxes

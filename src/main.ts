@@ -11,7 +11,7 @@ import { createCarModel, type CarModel } from './game/car-model';
 import { TileDresser } from './game/dress';
 import { Hud } from './game/hud';
 import { initAnalytics, track } from './game/analytics';
-import { formatHour, readMoment, readView, writeMoment, writeView, type Moment } from './game/share';
+import { formatHour, readMoment, readView, vehicleOf, writeMoment, writeView, type Moment } from './game/share';
 import { CRUISE_THRUST, Input, type Action } from './game/input';
 import { FlightHud, secondsToGround } from './game/flight-hud';
 import { buffet, JetEffects } from './game/jet-effects';
@@ -162,7 +162,7 @@ async function boot(): Promise<void> {
   loading(t('load.road'));
 
   // The balloon game is off until B (or the settings panel, or the phone's button) turns it on.
-  const vehicleId = VEHICLES[query.get('car') ?? ''] ? query.get('car')! : 'roadster';
+  const vehicleId = vehicleOf(query, Object.keys(VEHICLES));
   const settings = { vehicle: VEHICLES[vehicleId].name, drivetrain: 'AWD', balloons: false };
   let spec: CarSpec = { ...VEHICLES[vehicleId].spec };
   const heightAt = (x: number, y: number) => terrain.heightAt(x, y);
@@ -459,7 +459,7 @@ async function boot(): Promise<void> {
     audio.electric = !!spec.engine.electric;
     audio.jet = isJet(spec);
     const q = new URLSearchParams(location.search);
-    if (id === 'roadster') q.delete('car'); else q.set('car', id);
+    q.set('car', id);
     history.replaceState(null, '', `?${q}`);
     void place(car.pos[0], car.pos[1], car.heading).then(() => {
       if (!welcome.isOpen) hud.say(VEHICLES[id].name, 2);

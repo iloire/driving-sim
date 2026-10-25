@@ -71,6 +71,14 @@ export function readView(q: URLSearchParams, drives: string[], hudOn = DEFAULT_V
 }
 
 /** Solar time as the ?time value, HH:MM. */
+/** The car a link starts in. A newcomer gets the Jet; a shared moment with no ?car is from before
+ * the page always wrote one, when leaving it out meant the Roadster. */
+export function vehicleOf(q: URLSearchParams, known: string[]): string {
+  const car = q.get('car') ?? '';
+  if (known.includes(car)) return car;
+  return q.has('at') ? 'roadster' : 'jet';
+}
+
 export function formatHour(hour: number): string {
   const minutes = Math.round(hour * 60);
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;

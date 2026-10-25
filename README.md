@@ -24,11 +24,11 @@ zone, place and vehicle; **M** / **Esc** brings it back.
 - **Real roads**: ~13,000 OSM ways; paved ones graded, carved flat and marked Spanish-style.
 - **Rigid-body car physics**: raycast struts, slip-angle tyres, torque curve, six-speed auto.
   Oversteer, handbrake turns and rollovers come out of the physics.
-- **The Roadster**: an electric wedge hypercar, 0–100 in ~2 s, ~390 km/h. **F** turns it into a
+- **The Roadster** (`?car=roadster`): an electric wedge hypercar, 0–100 in ~2 s, ~390 km/h. **F** turns it into a
   hovering drone on floor thrusters.
 - **The armoured 4×4** (`?car=4x4`): lifted V8 pickup on lug tyres, grips on gravel. **F** unfolds
   wings and a jet, and it flies like a light plane.
-- **The Jet** (`?car=jet`): a fly-by-wire delta fighter, up to 9 g and Mach 1.2 on afterburner
+- **The Jet** (`?car=jet`, what a first visit starts in): a fly-by-wire delta fighter, up to 9 g and Mach 1.2 on afterburner
   (Mach 2 up high). Sonic boom, contrails, vapour, pull-up warnings, g blackout and a fighter HUD.
 - **Towns**: OSM buildings, solid, styled per zone (Lanzarote's white houses, Zaragoza's brick
   flats), lit at dusk, with street lamps and edge posts.
