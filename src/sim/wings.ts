@@ -70,6 +70,21 @@ export interface FlyByWire {
   kRoll: number;
   /** Airspeed (m/s) above which the rudder's travel shrinks, so a full boot doesn't skid it sideways. */
   rudderFade: number;
+  /**
+   * Past the limiter: stick beyond `from` (where W A S D stop) opens the g, angle-of-attack and
+   * roll-rate limits towards these, all the way at full stick, for the arrows' hard pulls and rolls.
+   */
+  override: { from: number; gMax: number; alphaMax: number; rollRate: number };
+}
+
+/** How far past the limiter stick `v` is: 0 up to `override.from`, 1 at full stick. */
+function past(f: FlyByWire, v: number): number {
+  return Math.max(0, (Math.abs(v) - f.override.from) / (1 - f.override.from));
+}
+
+/** The angle-of-attack limit the flight computer holds for pitch stick `pitch`. */
+export function alphaLimit(f: FlyByWire, pitch: number): number {
+  return f.alphaMax + (f.override.alphaMax - f.alphaMax) * past(f, pitch);
 }
 
 export interface WingSpec {
@@ -231,6 +246,8 @@ const clamp1 = (v: number) => Math.min(Math.max(v, -1), 1);
  * turns it that fast (1 g hands-off) kept between `gMin` and `gMax`, flown as the angle of attack
  * that gives it, capped at `alphaMax`. Fast, the g limit comes first, so a full pull is the hardest
  * recovery the jet has; slow, it only swings the path at `pitchRate`. Roll asks for a roll rate.
+ * Stick past `override.from` opens all three limits towards `override`'s, so a full pull on the
+ * arrows goes past 9 g and a full roll snaps over.
  * Each deflection is what holds it
  * steady plus a correction for the error, clamped to full travel, so at low speed it runs out of
  * authority the way the bare wing would.
@@ -243,9 +260,13 @@ export function flyByWire(w: WingSpec, f: FlyByWire, mass: number, q: Quat, vel:
   const alpha = Math.atan2(-vb[2], vb[0]);
   const qbar = 0.5 * air.rho * V * V;
 
-  const nz = Math.min(Math.max(1 + (V * c.pitch * f.pitchRate) / G, f.gMin), f.gMax);
+  const over = past(f, c.pitch);
+  const gMax = f.gMax + (f.override.gMax - f.gMax) * over;
+  const alphaMax = alphaLimit(f, c.pitch);
+  // Past the limiter the stick asks for a faster swing too, or slow it would never reach the new limits.
+  const nz = Math.min(Math.max(1 + (V * c.pitch * f.pitchRate * (1 + 2 * over)) / G, f.gMin), gMax);
   const cl = (nz * mass * G) / (qbar * w.area);
-  const want = Math.min(Math.max((cl - w.cl0) / w.clAlpha, -f.alphaMax), f.alphaMax);
+  const want = Math.min(Math.max((cl - w.cl0) / w.clAlpha, -alphaMax), alphaMax);
   // The elevator that holds `want` against the tail's stability, plus the error terms. A steady
   // pull pitches the nose up at g(n − 1)/V, for the g the wing can give at `want`; wb[1] is
   // nose-down, so that rate is negative.
@@ -255,7 +276,7 @@ export function flyByWire(w: WingSpec, f: FlyByWire, mass: number, q: Quat, vel:
   const pitch = clamp1(trim + f.kAlpha * (want - alpha) + f.kPitch * (wb[1] - rate));
 
   // Aileron that holds the asked-for roll rate against the roll damping, plus the error.
-  const p = c.roll * f.rollRate;
+  const p = c.roll * f.rollRate + Math.sign(c.roll) * past(f, c.roll) * (f.override.rollRate - f.rollRate);
   const hold = (p * w.clDamping * w.span) / (2 * Math.max(V, 10) * w.clAileron);
   const roll = clamp1(hold + f.kRoll * (p - wb[0]));
   const yaw = c.yaw * Math.min(1, (f.rudderFade / V) ** 2);

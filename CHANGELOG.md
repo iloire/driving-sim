@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-25 20:50
+
+- The Jet's arrows go past the limiter. W A S D stay the fine stick, but stick beyond what they
+  reach opens the flight computer's limits towards 12 g, 27° angle of attack and a 250°/s roll,
+  so a full arrow pull turns about 29°/s at 230 m/s, where it held 20°/s before. The wing stalls
+  at 30° now (was 24°) to leave room. Hold 12 g much past 4 s and the pilot blacks out.
+
 ## 2026-10-25 19:58
 
 - The minimap shows north. The map turns with you, so an "N" now rides its rim: at the top when

@@ -72,7 +72,7 @@ describe('the jet', () => {
   });
 
   for (const speed of [80, 150, 250, 300]) {
-    it(`pulls to the limit at ${speed} m/s without passing 9 g or stalling`, () => {
+    it(`pulls to the limit at ${speed} m/s without passing 12 g or stalling`, () => {
       const s = airborne(speed);
       const g = gauge(s);
       let most = 0, ever = false;
@@ -80,13 +80,24 @@ describe('the jet', () => {
         most = Math.max(most, g());
         ever ||= stalled(wings, s.alpha);
       });
-      expect(most).toBeLessThan(9.3);
+      expect(most).toBeLessThan(12.3);
       expect(ever).toBe(false);
-      if (speed >= 250) expect(most).toBeGreaterThan(8);
+      if (speed >= 250) expect(most).toBeGreaterThan(11);
     });
   }
 
-  it('pulls out of a 60° dive at 800 km/h on the down arrow within 500 m, under 9 g', () => {
+  it('W A S D at full stay inside the limiter: under 9 g and the 22° angle-of-attack limit at any speed', () => {
+    for (const speed of [80, 150, 250, 300]) {
+      const s = airborne(speed);
+      const g = gauge(s);
+      let most = 0, alpha = 0;
+      fly(s, controls(keyed(1), 0, 1, true), 4, () => { most = Math.max(most, g()); alpha = Math.max(alpha, s.alpha); });
+      expect(most).toBeLessThan(9);
+      expect(alpha).toBeLessThan(wings.fbw!.alphaMax + 0.04);
+    }
+  });
+
+  it('pulls out of a 60° dive at 800 km/h on the down arrow within 400 m, under 12 g', () => {
     const s = airborne(222, 6000);
     const pitch = Math.PI / 3;
     s.q = [Math.SQRT1_2 * Math.cos(pitch / 2), -Math.SQRT1_2 * Math.sin(pitch / 2), Math.SQRT1_2 * Math.sin(pitch / 2), Math.SQRT1_2 * Math.cos(pitch / 2)];
@@ -99,11 +110,11 @@ describe('the jet', () => {
       fly(s, c, STEP, () => { most = Math.max(most, g()); });
       t += STEP;
     }
-    expect(6000 - s.pos[2]).toBeLessThan(500);
-    expect(most).toBeLessThan(9.3);
+    expect(6000 - s.pos[2]).toBeLessThan(400);
+    expect(most).toBeLessThan(12.3);
   });
 
-  it('S held at cruise stays gentle however long: under 5 g, where the arrow pulls 9', () => {
+  it('S held at cruise stays gentle however long: under 5 g, where the arrow pulls past the limiter', () => {
     const peak = (stick: (t: number) => number) => {
       const s = airborne(230, 3000);
       const c = controls();
@@ -113,7 +124,7 @@ describe('the jet', () => {
       return most;
     };
     expect(peak(keyed)).toBeLessThan(5);
-    expect(peak(arrowed)).toBeGreaterThan(8);
+    expect(peak(arrowed)).toBeGreaterThan(10);
   });
 
   it('a short press at cruise nudges the nose a degree or two, and it stays there', () => {
@@ -131,7 +142,7 @@ describe('the jet', () => {
     expect(Math.abs(noseUp(s) - settled)).toBeLessThan(1);
   });
 
-  it('asks for a rate: full pull at 650 km/h turns the flight path at about 20°/s, under the g limit', () => {
+  it('asks for a rate: full pull at 650 km/h turns the flight path at about 26°/s, under the g limit', () => {
     // Slower the wing's angle-of-attack limit holds it back, faster the 9 g limit does.
     const s = airborne(180);
     const g = gauge(s);
@@ -140,9 +151,9 @@ describe('the jet', () => {
     const before = Math.atan2(s.vel[2], s.vel[1]);
     fly(s, controls(1, 0, 1, true), 0.5);
     const rate = (Math.atan2(s.vel[2], s.vel[1]) - before) / 0.5;
-    expect(rate).toBeGreaterThan(0.3);
-    expect(rate).toBeLessThan(0.4);
-    expect(most).toBeLessThan(8);
+    expect(rate).toBeGreaterThan(0.4);
+    expect(rate).toBeLessThan(0.52);
+    expect(most).toBeLessThan(10.5);
   });
 
   it('banks gently on D however long it is held, and briskly on the arrow', () => {
@@ -160,14 +171,15 @@ describe('the jet', () => {
     expect(bank(arrowed, 0.5)).toBeGreaterThan(35);
   });
 
-  it('rolls at the same rate at 250 and 300 m/s, and slower when slow', () => {
-    const rate = (speed: number) => {
+  it('rolls at the same rate at 250 and 300 m/s, and slower when slow; D at full rolls at the limiter\'s rate', () => {
+    const rate = (speed: number, stick = 1) => {
       const s = airborne(speed);
       let most = 0;
-      fly(s, controls(0, 1), 1.5, () => { most = Math.max(most, unrotate(s.q, s.w)[0]); });
+      fly(s, controls(0, stick), 1.5, () => { most = Math.max(most, unrotate(s.q, s.w)[0]); });
       return most;
     };
-    const fbw = wings.fbw!.rollRate;
+    const fbw = wings.fbw!.override.rollRate;
+    expect(rate(250, keyed(1))).toBeCloseTo(keyed(1) * wings.fbw!.rollRate, 1);
     expect(rate(250)).toBeCloseTo(fbw, 1);
     expect(rate(300)).toBeCloseTo(fbw, 1);
     expect(rate(100)).toBeLessThan(fbw);

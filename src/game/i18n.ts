@@ -40,7 +40,7 @@ const en = {
   'menu.places': 'Places',
   'car.roadster': 'electric, 1,400 N·m · F lights the thrusters',
   'car.4x4': 'V8 on all-terrain tyres · F unfolds wings',
-  'car.jet': 'delta fighter, 9 g · starts 600 m up',
+  'car.jet': 'delta fighter, 12 g · starts 600 m up',
 
   // Settings panel
   'gui.title': 'Settings',
@@ -72,7 +72,7 @@ const en = {
   'ctl.land': 'Land',
   'ctl.pitch': 'Pitch',
   'ctl.pitch.more': 'a tap nudges the stick, a hold pulls harder',
-  'ctl.pitch.jet.more': 'up to 9 g — hold it too long and you black out',
+  'ctl.pitch.jet.more': 'gentle on W S; the arrows go past the limiter, up to 12 g — hold it too long and you black out',
   'ctl.roll': 'Roll',
   'ctl.hardstick': 'Same, hard stick',
   'ctl.hardstick.more': 'W A S D move the stick finely; the arrows put it to full at once, to snap into a turn or a pull',
@@ -182,7 +182,7 @@ const es: Record<Key, string> = {
   'menu.places': 'Lugares',
   'car.roadster': 'eléctrico, 1.400 N·m · F enciende los propulsores',
   'car.4x4': 'V8 con neumáticos todoterreno · F despliega las alas',
-  'car.jet': 'caza de ala delta, 9 g · sale a 600 m de altura',
+  'car.jet': 'caza de ala delta, 12 g · sale a 600 m de altura',
 
   'gui.title': 'Ajustes',
   'gui.hour': 'Hora solar',
@@ -212,7 +212,7 @@ const es: Record<Key, string> = {
   'ctl.land': 'Aterrizar',
   'ctl.pitch': 'Cabeceo',
   'ctl.pitch.more': 'un toque mueve la palanca, mantenerla tira más',
-  'ctl.pitch.jet.more': 'hasta 9 g — si lo aguantas demasiado, pierdes el conocimiento',
+  'ctl.pitch.jet.more': 'suave con W S; las flechas se saltan el limitador, hasta 12 g — si lo aguantas demasiado, pierdes el conocimiento',
   'ctl.roll': 'Alabeo',
   'ctl.hardstick': 'Igual, palanca brusca',
   'ctl.hardstick.more': 'W A S D mueven la palanca con suavidad; las flechas la llevan a fondo al instante, para entrar de golpe en un viraje o un tirón',

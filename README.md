@@ -28,7 +28,7 @@ zone, place and vehicle; **M** / **Esc** brings it back.
   hovering drone on floor thrusters.
 - **The armoured 4×4** (`?car=4x4`): lifted V8 pickup on lug tyres, grips on gravel. **F** unfolds
   wings and a jet, and it flies like a light plane.
-- **The Jet** (`?car=jet`, what a first visit starts in): a fly-by-wire delta fighter, up to 9 g and Mach 1.2 on afterburner
+- **The Jet** (`?car=jet`, what a first visit starts in): a fly-by-wire delta fighter, up to 9 g (12 g past the limiter on the arrows) and Mach 1.2 on afterburner
   (Mach 2 up high). Sonic boom, contrails, vapour, pull-up warnings, g blackout and a fighter HUD.
 - **Towns**: OSM buildings, solid, styled per zone (Lanzarote's white houses, Zaragoza's brick
   flats), lit at dusk, with street lamps and edge posts.
@@ -70,7 +70,7 @@ npm run dev        # http://localhost:5173
 **Hovering** (Roadster): Space climbs, Ctrl sinks, W/S tilt, A/D turn, Shift fires the tail nozzles.
 
 **With wings** (4×4, Jet): W/S pitch, A/D roll, Q/E rudder. WASD is the fine stick, arrows the hard
-one. Shift/Ctrl move the throttle, 1–4 jump to idle/cruise/80 %/full; hold Shift at full for
+one (in the Jet they go past the limiter: 12 g and a 250°/s roll). Shift/Ctrl move the throttle, 1–4 jump to idle/cruise/80 %/full; hold Shift at full for
 afterburner. Space is the Jet's airbrake. The 4×4 takes off past ~160 km/h with S.
 
 **Gamepad**: RT/LT throttle and brake, left stick steers, A/B handbrake, X transform, Y camera,

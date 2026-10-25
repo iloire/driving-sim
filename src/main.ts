@@ -32,7 +32,7 @@ import { createCar, JET, ROADSTER, TRUCK, stepCar, type CarEnv, type CarSpec, ty
 import { isPaved, MAX_HALF_WIDTH, ROAD_WIDTH, type Road } from './sim/roads';
 import { dayOfYear, daylightHours, sunPosition } from './sim/sun';
 import { blendQuat, lerpV3, rotate, type Quat, type V3 } from './sim/vec';
-import { stalled } from './sim/wings';
+import { alphaLimit, stalled } from './sim/wings';
 import { CLEAR, CloudField, seedOf, type WeatherSpec } from './sim/weather';
 
 declare const __COMMIT_SHA__: string;
@@ -702,11 +702,11 @@ async function boot(): Promise<void> {
     // A wreck makes no engine noise.
     audio.update(view.rpm, gone ? 0 : pedal, slip, gone ? 0 : Math.abs(view.speed), boosting && !gone, view.lift);
     audio.airbrake(welcome.isOpen ? 0 : view.airbrake, view.airspeed);
-    // The horn sounds at the wing's angle-of-attack limit: the flight computer's, or the stall.
-    const alphaLimit = spec.wings ? spec.wings.fbw?.alphaMax ?? spec.wings.stall : Infinity;
+    // The horn sounds at the wing's angle-of-attack limit: the flight computer's for this stick, or the stall.
+    const aLimit = !spec.wings ? Infinity : spec.wings.fbw ? alphaLimit(spec.wings.fbw, c.flight.pitch) : spec.wings.stall;
     audio.warnings({
       pullUp, out: eyes.out,
-      stall: plane && agl > 5 && view.airspeed > 5 && Math.abs(view.alpha) > 0.92 * alphaLimit,
+      stall: plane && agl > 5 && view.airspeed > 5 && Math.abs(view.alpha) > 0.92 * aLimit,
       strain: plane ? Math.min(Math.max((eyes.felt - 4) / (PILOT.blackAt - 4), 0), 1) : 0,
     });
 

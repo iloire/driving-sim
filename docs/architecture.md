@@ -217,7 +217,8 @@ as the struts and tyres, scaled by how far out they are, and the wheel drive swi
   S held at cruise pulls at most about 4.3 g.
   On wings the arrows are a second, hard stick: linear, out and back at 8 a second
   (`PLANE_ARROW_RATE`, full in 0.125 s), for snapping into a turn or a pull out of a dive (from 60°
-  at 800 km/h the down arrow levels out in under 500 m), while W A S D keep the fine curve. Off wings the arrows are just W A S D. `src/game/input.test.ts` pins the curves.
+  at 800 km/h the down arrow levels out in under 400 m); on the Jet they also go past the
+  limiter (below), while W A S D keep the fine curve. Off wings the arrows are just W A S D. `src/game/input.test.ts` pins the curves.
 
 With the truck's heavier mass its wings are bigger (15 m², 9.4 m span) and its jet stronger
 (13,000 N). It rotates at about 210 km/h after a 9 s run and climbs at about 11° on full thrust. Hands-off
@@ -229,7 +230,7 @@ hands-off tests.
 ### The Jet
 
 `JET` is the same rigid body on the same wheels, with a fighter's `WingSpec`: 9 t, 28 m² of
-cropped delta (CL = 0.05 + 3.6α, stall at 24°), drag 0.022 + 0.12 CL² (the body's own `cdA` is
+cropped delta (CL = 0.05 + 3.6α, stall at 30°), drag 0.022 + 0.12 CL² (the body's own `cdA` is
 only 0.1 m², since the wing's 0.022 already counts the airframe), 52 kN dry and 45 kN more on
 the afterburner. Two additions make it a fighter rather than a fast light plane:
 
@@ -244,6 +245,12 @@ the afterburner. Two additions make it a fighter rather than a fast light plane:
   pitch-rate target is capped at the g the wing can reach, so a slow pull doesn't overshoot the cap.
   Deflections clamp at full travel, so below about 150 m/s it runs out of authority as the bare wing would.
   The rudder's travel shrinks with (120 / V)².
+  **Past the limiter** (`fbw.override`): stick beyond 40 %, which W A S D never reach, opens the
+  limits towards 12 g, 27° angle of attack and 4.4 rad/s (250°/s) of roll at full stick, and
+  asks for up to 3× the pitch rate, so the arrows (or a pad's full stick) snap the jet round:
+  about 29°/s of turn at 230 m/s where the limiter held 20°/s. The pilot pays for it (12 g greys
+  the view in about 2 s and blacks out after about 4.5 s). `alphaLimit()` gives the limit in
+  force, which the stall horn uses.
 - **Wave drag** (`WingSpec.mach`, `waveDrag()`): from Mach 0.85, CD climbs as the square to a
   0.015 hump at Mach 1.05, then eases off towards 0.005 past it. Full dry thrust can't push through
   the hump. The afterburner beats it by a few kN, so the run to Mach 1 is slow and dramatic, and once
@@ -276,7 +283,7 @@ the afterburner. Two additions make it a fighter rather than a fast light plane:
   computer holds 1 g, which bends a dive back towards level, so a dive needs the stick held forward.
 
 Low down (the tests fly at 500 m) it cruises at about 920 km/h, does Mach 0.94 dry, and on the afterburner passes Mach 1 about 18 s
-from cruise and tops out at Mach 1.2 (about 1,470 km/h). It pulls 9 g above about 180 m/s and mushes downwards below about 60 m/s.
+from cruise and tops out at Mach 1.2 (about 1,470 km/h). It pulls 9 g above about 180 m/s (12 g on the arrows above about 220 m/s) and mushes downwards below about 60 m/s.
 Crossing Mach 1 plays a sonic boom (`CarAudio.boom`, the N-wave's two cracks 0.11 s apart) and says
 so; it re-arms below Mach 0.97. The model wraps a vapour cone round the fuselage between about
 Mach 0.95 and 1.03, thickest at 0.99 and flickering as the shock moves. `src/sim/jet.test.ts`
@@ -339,7 +346,7 @@ shakes; then the jet is back in the air over the same spot. The terrain view sto
 **The pilot under g** (`src/sim/pilot.ts`). Blood takes seconds to leave the head, so the g the
 eyes feel chases the load factor with a 4 s lag as it builds and 1.5 s as it eases. Felt g from
 5.5 greys the view, and at 8.3 it's black. So a 2 s snap to 9 g does almost nothing, 6 g can be held for
-ever with a hint of grey, and holding 9 g blacks out after about 8 s. Blacked out (G-LOC), the
+ever with a hint of grey, holding 9 g blacks out after about 8 s, and the arrows' 12 g after about 4.5 s. Blacked out (G-LOC), the
 pilot lets go of the stick for at least 3 s, so the flight computer settles back to 1 g, and wakes once the grey is under
 0.6. Negative g reddens the view from −1.8 to −3.2. `main.ts` feeds it the same g as the HUD (any
 flying vehicle), `Hud.setVeil` draws it as a grey `mix-blend-mode: saturation` layer that drains
