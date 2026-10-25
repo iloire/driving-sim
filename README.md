@@ -26,7 +26,8 @@ zone, place and vehicle; **M** / **Esc** brings it back.
   Oversteer, handbrake turns and rollovers come out of the physics.
 - **The Roadster** (`?car=roadster`): an electric wedge hypercar, 0–100 in ~2 s, ~390 km/h. **F** turns it into a
   hovering drone on floor thrusters.
-- **The armoured 4×4** (`?car=4x4`): lifted V8 pickup on lug tyres, grips on gravel. **F** unfolds
+- **The Buggy** (`?car=4x4`): a wide, low V8 desert buggy with an open roll cage, long-travel arms
+  and spiked paddle tyres, wearing the Piratas Aéreos Lanzarote badge. Grips on gravel. **F** unfolds
   wings and a jet, and it flies like a light plane.
 - **The Jet** (`?car=jet`, what a first visit starts in): a fly-by-wire delta fighter, up to 9 g (12 g past the limiter on the arrows) and Mach 1.2 on afterburner
   (Mach 2 up high). Sonic boom, contrails, vapour, pull-up warnings, g blackout and a fighter HUD.
@@ -44,7 +45,7 @@ zone, place and vehicle; **M** / **Esc** brings it back.
 
 ![The Roadster hovering on its floor thrusters above the LZ-203 at dusk](docs/screenshots/roadster-hover.png)
 
-![The armoured 4×4 on the LZ-203 above the north cliffs: lift kit, solid axles, lug tyres, slatted cab](docs/screenshots/truck.png)
+![The Buggy on the LZ-67 in Timanfaya: roll cage, spiked wheels, the Piratas Aéreos badge on the nose and side](docs/screenshots/buggy.png)
 
 ![Calle Trinidad, Arrecife: the OSM buildings drawn as the island's white houses](docs/screenshots/arrecife.png)
 
@@ -66,7 +67,7 @@ npm run dev        # http://localhost:5173
 | **A / D** or **← / →** | Steer |
 | **Space** | Handbrake |
 | **Shift** | Turbo; in the air, throttle up (afterburner at full) |
-| **F** | Fly: Roadster thrusters, 4×4 wings (again to land) |
+| **F** | Fly: Roadster thrusters, Buggy wings (again to land) |
 | **L** · **I** | Labels · replay |
 | **R** | Back on the nearest paved road |
 | **M** / **Esc** · **N** | Menu · next place |
@@ -75,9 +76,9 @@ npm run dev        # http://localhost:5173
 
 **Hovering** (Roadster): Space climbs, Ctrl sinks, W/S tilt, A/D turn, Shift fires the tail nozzles.
 
-**With wings** (4×4, Jet): W/S pitch, A/D roll, Q/E rudder. WASD is the fine stick, arrows the hard
+**With wings** (Buggy, Jet): W/S pitch, A/D roll, Q/E rudder. WASD is the fine stick, arrows the hard
 one (in the Jet they go past the limiter: 12 g, −6 g pushing, and a 250°/s roll). Shift/Ctrl move the throttle, 1–4 jump to idle/cruise/80 %/full; hold Shift at full for
-afterburner. Space is the Jet's airbrake. The 4×4 takes off past ~160 km/h with S.
+afterburner. Space is the Jet's airbrake. The Buggy takes off past ~160 km/h with S.
 
 **Starship**: Space starts the countdown (by hand, it lights or cuts the booster), W/S tip the
 nose over or back, A/D tilt it sideways, Shift/Ctrl throttle, F autopilot on/off, T time warp

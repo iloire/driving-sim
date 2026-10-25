@@ -109,19 +109,19 @@ export interface CarSpec {
 }
 
 /**
- * A 1850 kg armoured 4×4 pickup: a 520 N m V8, permanent 50/50 four-wheel drive, 1 m tall
- * all-terrain tyres and long-travel suspension. It grips picón and gravel far better than a road
- * car, and its high centre of mass will roll it if it's thrown about. With the bigger mass, its
- * wings are bigger and its jet stronger too.
+ * A 1850 kg desert buggy: a 520 N m V8, permanent 50/50 four-wheel drive, 1.16 m tall spiked
+ * tyres and long-travel suspension. It grips picón and gravel far better than a road car, and its
+ * wide track and low centre of mass make it hard to roll. With the bigger mass, its wings are
+ * bigger and its jet stronger too.
  */
 export const TRUCK: CarSpec = {
   mass: 1850,
-  inertia: [950, 3300, 3600],
+  inertia: [1150, 3300, 3700],
   wheelbase: 2.9,
-  track: 1.86,
+  track: 2.24,
   frontWeight: 0.55,
-  cgHeight: 0.8,
-  wheelRadius: 0.5,
+  cgHeight: 0.68,
+  wheelRadius: 0.58,
   suspension: { rest: 0.45, travel: 0.3, k: 44000, c: 5200 },
   mu: 1.0,
   allTerrain: 0.45,
@@ -137,7 +137,7 @@ export const TRUCK: CarSpec = {
   brakeFront: 0.62,
   cdA: 1.25,
   nitro: 14000,
-  body: [2.35, 2.5, 1.0, 0.2, 1.15],
+  body: [2.35, 2.5, 1.0, 0.2, 1.2],
   wings: { ...WINGS, area: 15, span: 9.4, thrust: 13000, afterburner: 20000, inertia: [1700, 700, 2000] },
 };
 

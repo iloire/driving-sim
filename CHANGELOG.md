@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-25 22:12
+
+- The 4×4 is now the Buggy: an open roll cage over two bucket seats, a short nose, a V8 out in the
+  open at the back, and long-travel arms and red coilovers that follow the wheels. It is wider
+  (2.24 m track) and lower (centre of mass 0.68 m), so it is harder to roll, and it rides on bigger
+  1.16 m paddle tyres with steel spikes on the hubs, beadlock rings and tread. The Piratas Aéreos
+  Lanzarote badge is on the nose and both sides. `?car=4x4` still picks it.
+
 ## 2026-10-25 22:10
 
 - A Screenshot button on the pause panel. It saves the 3D view on its own as a PNG

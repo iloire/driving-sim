@@ -55,7 +55,7 @@ const START_HINT = (spec: CarSpec, rocket = false) => rocket ? t('start.rocket')
 /** The cars on offer: the Roadster, which hovers on thrusters, the 4×4, which unfolds wings, and the Jet, which only flies. */
 const VEHICLES: Record<string, { name: string; line: 'car.roadster' | 'car.4x4' | 'car.jet'; spec: CarSpec; model: (spec: CarSpec, heightAt: (x: number, y: number) => number) => CarModel }> = {
   roadster: { name: 'Roadster', line: 'car.roadster', spec: ROADSTER, model: createRoadsterModel },
-  '4x4': { name: 'Armoured 4×4', line: 'car.4x4', spec: TRUCK, model: createCarModel },
+  '4x4': { name: 'Buggy', line: 'car.4x4', spec: TRUCK, model: createCarModel },
   jet: { name: 'Jet', line: 'car.jet', spec: JET, model: createJetModel },
 };
 /** The Jet starts this high above the ground, already at cruise. */

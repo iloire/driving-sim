@@ -5,7 +5,7 @@ How it stays fast (merging, instancing, level of detail, streaming, offline work
 ```
 src/sim/    pure TypeScript, no three.js, no DOM — unit-tested
   car.ts      the car: rigid body, struts, tyres, engine, gearbox
-  wings.ts    the 4×4's plane half and the Jet: lift, drag, stability, control surfaces, jet, fly-by-wire
+  wings.ts    the Buggy's plane half and the Jet: lift, drag, stability, control surfaces, jet, fly-by-wire
   thrusters.ts  the Roadster's hover: lift on its exhaust, height hold, attitude assists
   starship.ts   Starship: the stack, staging, the booster flown home and caught, and its autopilot
   roads.ts    road model: profiles, carving, nearest-road index
@@ -112,11 +112,13 @@ One rigid body, integrated at 480 Hz (4
 sub-steps of each 120 Hz game step). Newton handles the centre of mass and Euler's equations the
 rotation.
 
-The car is `TRUCK`, an armoured 4×4 pickup: 1850 kg, its centre of mass 0.8 m up, a 2.9 m
-wheelbase and 1.86 m track, 0.5 m radius tyres on 45 cm struts with 30 cm of travel, and 50/50
+The car is `TRUCK`, the Buggy (still `?car=4x4`): 1850 kg, its centre of mass 0.68 m up, a 2.9 m
+wheelbase and a wide 2.24 m track, 0.58 m radius tyres on 45 cm struts with 30 cm of travel, and 50/50
 four-wheel drive. Its `allTerrain` of 0.45 wins back that share of the grip a loose surface takes
-away (picón 0.62 → 0.79, gravel 0.72 → 0.85) and halves the extra rolling drag. The model draws
-the shell on a 22 cm lift kit above where the physics puts it, so the wheels and solid axles show.
+away (picón 0.62 → 0.79, gravel 0.72 → 0.85) and halves the extra rolling drag. The model is an
+open-cage buggy sitting low between its wheels; its upper and lower arms and coilovers are re-aimed
+at the hubs every frame, and the Piratas Aéreos badge (`public/decals/piratas-aereos.png`, loaded
+by `logo.ts`) sits on the nose and both sides.
 
 - **Struts.** Each wheel casts down its strut from the mount. The strut length is the distance to
   the terrain minus the wheel radius, and the cast is capped at the strut's reach, so a steeply
@@ -306,7 +308,7 @@ grey-out muffle but still mutes and pauses:
   warning, whatever the game's language), every 1.6 s while it holds.
 - **Stall horn**: a 760 Hz square tone gated at 7 Hz, past 92 % of the wing's angle-of-attack
   limit: the flight computer's 22° in the Jet (it never lets the wing reach the stall itself), the
-  stall in the 4×4.
+  stall in the Buggy.
 - **Breathing**: from a felt 4 g up to the blackout, the anti-g strain: a short inhale and a held
   grunt let out in a burst (`breath()`), noise through a band that drops for the grunt, quicker
   (1.8 s down to 1 s a breath) and louder as the blackout nears, silent once out cold.
@@ -526,7 +528,7 @@ The palette is black picón, lime-wash white, Manrique's shutter green and Timan
 On wings, a 2D canvas over the view draws a fighter's HUD in phosphor green, each line on a dark
 halo so it reads against a white sky. Every symbol is a world direction projected through the live
 camera, so it's true in chase, bonnet and orbit views alike. **U** toggles it; the Jet starts with it
-off (and goes back to off whenever you swap into it), the 4×4 with it on:
+off (and goes back to off whenever you swap into it), the Buggy with it on:
 
 - **Flight path marker**: the velocity's direction, so where the plane is going, not where its nose points.
 - **Pitch ladder**: rungs every 5° within 22° of the flight path, built from the real horizon along
