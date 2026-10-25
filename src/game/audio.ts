@@ -15,6 +15,8 @@ export class CarAudio {
   electric = false;
   /** A turbine instead of a piston engine: roar, whine, afterburner rumble and wind. */
   jet = false;
+  /** No car to hear at all (flying Starship, which has its own voice). */
+  quiet = false;
   private turbine?: { roar: GainNode; roarFilter: BiquadFilterNode; whine: OscillatorNode[]; whineGain: GainNode; burner: GainNode; wind: GainNode; windFilter: BiquadFilterNode; buffet: GainNode };
   /** How far the airbrake was out last frame, to hear it start out or stow. */
   private brakeOut = 0;
@@ -24,6 +26,7 @@ export class CarAudio {
   private muffle?: BiquadFilterNode;
   private cockpit?: GainNode;
   private warn?: Warnings;
+  private rocketSound?: { rumble: GainNode; low: BiquadFilterNode; crackle: GainNode };
   muted = false;
   private paused = false;
 
@@ -92,6 +95,7 @@ export class CarAudio {
     roarSrc.connect(low).connect(this.roar).connect(this.master);
     roarSrc.start();
     this.turbine = this.buildTurbine(ctx, noise, this.master);
+    this.rocketSound = this.buildRocket(ctx, noise, this.master);
     this.cockpit = ctx.createGain();
     this.cockpit.gain.value = this.muted ? 0 : 1;
     this.cockpit.connect(ctx.destination);
@@ -315,6 +319,42 @@ export class CarAudio {
     this.warn?.update(s, this.muted);
   }
 
+  /** Starship's engines: the same noise as a deep rumble, and a crackle on top of it. */
+  private buildRocket(ctx: AudioContext, noise: AudioBuffer, out: AudioNode): NonNullable<CarAudio['rocketSound']> {
+    const voice = (type: BiquadFilterType, f: number, q: number) => {
+      const src = ctx.createBufferSource();
+      src.buffer = noise;
+      src.loop = true;
+      src.playbackRate.value = type === 'lowpass' ? 0.5 : 1;
+      const filter = ctx.createBiquadFilter();
+      filter.type = type;
+      filter.frequency.value = f;
+      filter.Q.value = q;
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      src.connect(filter).connect(gain).connect(out);
+      src.start();
+      return { filter, gain };
+    };
+    const rumble = voice('lowpass', 140, 0.9), crackle = voice('bandpass', 900, 0.6);
+    return { rumble: rumble.gain, low: rumble.filter, crackle: crackle.gain };
+  }
+
+  /**
+   * Starship heard from `distance` metres: `level` 0..1 is how hard its engines burn. Far off it
+   * fades and only the lowest rumble carries; close, the crackle tears at it.
+   */
+  rocket(level: number, distance: number): void {
+    const r = this.rocketSound;
+    if (!r || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const near = Math.min(1, 800 / (distance + 300));
+    r.rumble.gain.setTargetAtTime(level * Math.min(0.9, near * 1.4), t, 0.15);
+    r.low.frequency.setTargetAtTime(60 + 200 * near, t, 0.2);
+    // The crackle comes in bursts: a fresh random level every frame.
+    r.crackle.gain.setTargetAtTime(level * near * near * (0.15 + Math.random() * 0.35), t, 0.02);
+  }
+
   /** Freezes every sound while the game is paused (the context stops its clock), and picks up again. */
   setPaused(paused: boolean): void {
     if (paused === this.paused) return;
@@ -328,8 +368,8 @@ export class CarAudio {
     if (!this.ctx || !this.engine || !this.tyres || !this.roar) return;
     const t = this.ctx.currentTime;
     const e = this.engine;
-    if (this.turbine) this.updateTurbine(t, throttle, speed, boost);
-    if (this.jet) {
+    if (this.turbine) this.updateTurbine(t, this.quiet ? 0 : throttle, speed, boost);
+    if (this.jet || this.quiet) {
       e.gain.gain.setTargetAtTime(0, t, 0.05);
       this.roar.gain.setTargetAtTime(0, t, 0.05);
       this.tyres.gain.setTargetAtTime(0, t, 0.04);
@@ -354,7 +394,7 @@ export class CarAudio {
   /** The turbine follows the throttle slowly, as a real one spools; silent unless `jet`. */
   private updateTurbine(t: number, throttle: number, speed: number, boost: boolean): void {
     const j = this.turbine!;
-    const on = this.jet ? 1 : 0;
+    const on = this.jet && !this.quiet ? 1 : 0;
     const spool = 1.2; // seconds: how lazily the turbine chases the throttle
     j.roar.gain.setTargetAtTime(on * (0.08 + throttle * 0.32), t, spool);
     j.roarFilter.frequency.setTargetAtTime(250 + throttle * 1500, t, spool);

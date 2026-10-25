@@ -38,10 +38,10 @@ export function stepKey(v: number, target: number, rate: number, back: number, d
 /** The plane's gentle stick curve: fine near the middle, up to `KEY_STICK_MAX` at the end. */
 export const shapeStick = (v: number) => KEY_STICK_MAX * v * Math.abs(v);
 
-export type Action = 'reset' | 'camera' | 'mute' | 'pause' | 'help' | 'menu' | 'next' | 'map' | 'transform' | 'hud' | 'replay' | 'labels';
+export type Action = 'reset' | 'camera' | 'mute' | 'pause' | 'help' | 'menu' | 'next' | 'map' | 'transform' | 'hud' | 'replay' | 'labels' | 'warp';
 
 const ACTION_KEYS: Record<string, Action> = {
-  KeyR: 'reset', KeyC: 'camera', KeyV: 'mute', KeyP: 'pause', KeyH: 'help', KeyM: 'menu', Escape: 'menu', KeyN: 'next', KeyG: 'map', KeyF: 'transform', KeyU: 'hud', KeyI: 'replay', KeyL: 'labels',
+  KeyR: 'reset', KeyC: 'camera', KeyV: 'mute', KeyP: 'pause', KeyH: 'help', KeyM: 'menu', Escape: 'menu', KeyN: 'next', KeyG: 'map', KeyF: 'transform', KeyU: 'hud', KeyI: 'replay', KeyL: 'labels', KeyT: 'warp',
 };
 // Standard-mapping gamepad buttons.
 const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, L3: 10, R3: 11 };
@@ -61,6 +61,8 @@ export class Input {
     throttle: 0, brake: 0, steer: 0, handbrake: false, boost: false, flight: { pitch: 0, roll: 0, yaw: 0, thrust: CRUISE_THRUST, lift: 0 },
   };
   private keys = new Set<string>();
+  /** Keys pressed since they were last asked about, so a tap between two frames still counts. */
+  private presses = new Set<string>();
   private padPrev: boolean[] = [];
   private keySteer = 0;
   private keyThrottle = 0;
@@ -81,6 +83,7 @@ export class Input {
     window.addEventListener('keydown', (e) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
       if (!e.repeat && ACTION_KEYS[e.code]) onAction(ACTION_KEYS[e.code]);
+      if (!e.repeat) this.presses.add(e.code);
       if (this.plane && LEVER_PRESETS[e.code] !== undefined) this.lever = LEVER_PRESETS[e.code];
       this.keys.add(e.code);
       // On the welcome screen Space and the arrows keep their jobs: pressing and scrolling.
@@ -89,6 +92,11 @@ export class Input {
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
+  }
+
+  /** Whether `code` was pressed since the last time this asked (and forgets it). */
+  took(code: string): boolean {
+    return this.presses.delete(code);
   }
 
   private down(...codes: string[]): boolean {

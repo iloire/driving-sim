@@ -57,6 +57,8 @@ export interface SiteSpec {
   /** Native-resolution tiles with the roads carved in, written by scripts/fetch-terrain.ts. */
   detail: { dir: string; tileM: number; orthoSize: number };
   spawns: SpawnSpec[];
+  /** Where Starship stands on its tower, and the compass heading (degrees) it launches on; omitted = no Starship. */
+  launch?: { name: string; lat: number; lon: number; azimuth: number };
   /** The weather on offer (src/sim/weather.ts), the first the default; omitted = a clear sky. */
   weather?: WeatherSpec[];
 }
@@ -89,6 +91,8 @@ export interface Site {
   /** The buildings of the loaded tiles, for the car to crash into. */
   buildings: BuildingIndex;
   spawns: Spawn[];
+  /** The launch mount's centre and the heading (rad) the stack flies out on, if the zone has one. */
+  launch: { name: string; x: number; y: number; azimuth: number } | null;
   /** The places of interest to label, from places.json. */
   places: Place[];
   toLatLon(x: number, y: number): [number, number];
@@ -162,6 +166,11 @@ export async function loadSite(id: string): Promise<Site> {
     return hit ? { spec: s, x: hit.x, y: hit.y, heading: hit.heading } : { spec: s, x: e - x0, y: n - y0, heading: 0 };
   });
 
+  const launch = spec.launch ? (() => {
+    const [e, n] = proj.forward([spec.launch.lon, spec.launch.lat]);
+    return { name: spec.launch.name, x: e - x0, y: n - y0, azimuth: (spec.launch.azimuth * Math.PI) / 180 };
+  })() : null;
+
   const spots = (spec.places?.spots ?? []).map((s): Place => {
     const [e, n] = proj.forward([s.lon, s.lat]);
     return { n: s.name, x: e - x0, y: n - y0 };
@@ -176,6 +185,7 @@ export async function loadSite(id: string): Promise<Site> {
     roads,
     buildings,
     spawns,
+    launch,
     places: [...placesFile.places, ...spots],
     toLatLon(x, y) {
       const [lon, lat] = proj.inverse([x + x0, y + y0]);

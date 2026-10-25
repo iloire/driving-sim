@@ -11,9 +11,10 @@ describe('controls card', () => {
   });
 
   it("lists the picked vehicle's modes first in the menu, then the rest", () => {
-    expect(referenceOrder(modesOf(false, true))).toEqual(['jet', 'drive', 'hover', 'wings']);
-    expect(referenceOrder(modesOf(false, false))).toEqual(['drive', 'wings', 'hover', 'jet']);
-    expect(referenceOrder(modesOf(true, false))).toEqual(['drive', 'hover', 'wings', 'jet']);
+    expect(referenceOrder(modesOf(false, true))).toEqual(['jet', 'drive', 'hover', 'wings', 'rocket']);
+    expect(referenceOrder(modesOf(false, false))).toEqual(['drive', 'wings', 'hover', 'jet', 'rocket']);
+    expect(referenceOrder(modesOf(true, false))).toEqual(['drive', 'hover', 'wings', 'jet', 'rocket']);
+    expect(referenceOrder(['rocket'])).toEqual(['rocket', 'drive', 'hover', 'wings', 'jet']);
   });
 
   it('keeps each mode short enough to read at a glance, in every language', () => {

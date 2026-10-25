@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-25 21:55
+
+- Starship launches from El Jable. Super Heavy and Ship stand on a 146 m tower with chopsticks in the
+  sand plain between Teguise and Famara (`launch` in Lanzarote's `site.json`), and Starship is a
+  vehicle in the menu: Space counts down, 33 engines lift it off, it stages at T+2:07 55 km up,
+  the ship flies on towards orbit and the booster flips, burns back, falls engines first under its
+  grid fins and lights its landing burn to be caught by the arms. The autopilot flies all of it and
+  catches the booster; the stick takes over, F gives it back, T warps time up high. A webcast
+  telemetry strip, a tracking camera, a rumble and crackle, the sky going black up high. Flying
+  anything else, a launch goes up every few minutes in the background, with a chip keeping the clock.
+
 ## 2026-10-25 21:45
 
 - The Jet lands without spinning off the runway. Space on the ground locked the rear wheels, and a

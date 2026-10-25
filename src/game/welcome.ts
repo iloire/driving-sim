@@ -18,6 +18,8 @@ export interface WelcomeView {
   canResume: boolean;
   /** The Jet takes off from the sky rather than driving off. */
   flies: boolean;
+  /** Starship launches from its tower. */
+  launches?: boolean;
   lang: Lang;
   langs: Lang[];
 }
@@ -157,7 +159,7 @@ export class Welcome {
         </div>
         <div class="wl-go">
           ${v.canResume ? `<button type="button" class="wl-btn primary" data-resume>${esc(t('menu.resume'))}<small>${esc(t('menu.resume.note'))}</small></button>` : ''}
-          <button type="button" class="wl-btn ${v.canResume ? '' : 'primary'}" data-drive>${esc(t(v.flies ? 'menu.fly' : 'menu.drive'))} →<small>${esc(t(v.canResume ? 'menu.again' : v.flies ? 'menu.from.air' : 'menu.from.here'))}</small></button>
+          <button type="button" class="wl-btn ${v.canResume ? '' : 'primary'}" data-drive>${esc(t(v.launches ? 'menu.launch' : v.flies ? 'menu.fly' : 'menu.drive'))} →<small>${esc(t(v.canResume ? 'menu.again' : v.launches ? 'menu.from.pad' : v.flies ? 'menu.from.air' : 'menu.from.here'))}</small></button>
         </div>
       </div>
       <aside class="wl-side">

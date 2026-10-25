@@ -1,10 +1,10 @@
 // The controls, written once: the in-game card shows only the keys for what you're doing now
-// (driving, hovering, on wings, the Jet) and a line of the keys that work everywhere; the menu's
+// (driving, hovering, on wings, the Jet, Starship) and a line of the keys that work everywhere; the menu's
 // Controls tab shows them all, the picked vehicle's first, with the longer notes. The words are in i18n.ts.
 
 import { t, type Key } from './i18n';
 
-export type Mode = 'drive' | 'hover' | 'wings' | 'jet';
+export type Mode = 'drive' | 'hover' | 'wings' | 'jet' | 'rocket';
 
 export interface Row {
   keys: string[];
@@ -53,6 +53,14 @@ export const MODES: Record<Mode, Row[]> = {
     ...THROTTLE,
     { keys: ['Space'], label: 'ctl.airbrake' },
     { keys: ['U'], label: 'ctl.hud' },
+  ],
+  rocket: [
+    { keys: ['Space'], label: 'ctl.countdown', more: 'ctl.countdown.more' },
+    { keys: ['W', 'S'], label: 'ctl.rocket.pitch' },
+    { keys: ['A', 'D'], label: 'ctl.rocket.tilt' },
+    { keys: ['Shift', 'Ctrl'], label: 'ctl.rocket.throttle' },
+    { keys: ['F'], label: 'ctl.autopilot', more: 'ctl.autopilot.more' },
+    { keys: ['T'], label: 'ctl.warp', more: 'ctl.warp.more' },
   ],
 };
 

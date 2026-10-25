@@ -30,6 +30,10 @@ zone, place and vehicle; **M** / **Esc** brings it back.
   wings and a jet, and it flies like a light plane.
 - **The Jet** (`?car=jet`, what a first visit starts in): a fly-by-wire delta fighter, up to 9 g (12 g past the limiter on the arrows) and Mach 1.2 on afterburner
   (Mach 2 up high). Sonic boom, contrails, vapour, pull-up warnings, g blackout and a fighter HUD.
+- **Starship** (`?car=starship`, Lanzarote): Super Heavy and Ship on a launch tower in the sand of
+  El Jable. Launch it, watch it stage, then bring the booster home and into the tower's chopsticks.
+  The autopilot can fly the whole flight; touch the stick and it's yours. Whatever you're flying, a
+  launch goes up from El Jable every few minutes.
 - **Towns**: OSM buildings, solid, styled per zone (Lanzarote's white houses, Zaragoza's brick
   flats), lit at dusk, with street lamps and edge posts.
 - **Peak and sight labels** (**L**): Aneto, Teide, Mirador del Río …
@@ -45,6 +49,8 @@ zone, place and vehicle; **M** / **Esc** brings it back.
 ![Calle Trinidad, Arrecife: the OSM buildings drawn as the island's white houses](docs/screenshots/arrecife.png)
 
 ![Off runway 03 at Lanzarote Airport, wings out, climbing over Arrecife](docs/screenshots/flying.png)
+
+![Starship climbing off its tower in El Jable, Teguise and the Atlantic ahead, the webcast telemetry below](docs/screenshots/starship.png)
 
 ## Run it
 
@@ -72,6 +78,10 @@ npm run dev        # http://localhost:5173
 **With wings** (4×4, Jet): W/S pitch, A/D roll, Q/E rudder. WASD is the fine stick, arrows the hard
 one (in the Jet they go past the limiter: 12 g, −6 g pushing, and a 250°/s roll). Shift/Ctrl move the throttle, 1–4 jump to idle/cruise/80 %/full; hold Shift at full for
 afterburner. Space is the Jet's airbrake. The 4×4 takes off past ~160 km/h with S.
+
+**Starship**: Space starts the countdown (by hand, it lights or cuts the booster), W/S tip the
+nose over or back, A/D tilt it sideways, Shift/Ctrl throttle, F autopilot on/off, T time warp
+×1/×4/×10 up high. C cycles chase, a long-lens tracking camera and orbit.
 
 **Gamepad**: RT/LT throttle and brake, left stick steers, A/B handbrake, X transform, Y camera,
 stick click turbo, LB/RB rudder. **Phone**: left thumb steers, right thumb accelerates and brakes.

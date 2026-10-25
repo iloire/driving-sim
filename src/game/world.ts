@@ -15,7 +15,8 @@ export function toScene(extent: number, x: number, y: number, z: number, out = n
  * valley floor below the plain's height is never covered.
  */
 export function createSurround(extent: number, plainM?: number): THREE.Mesh {
-  const R = 200000;
+  // Out past the horizon even from Starship's 100 km (about 1,100 km away).
+  const R = 1.2e6;
   let geometry: THREE.BufferGeometry;
   if (plainM === undefined) {
     geometry = new THREE.PlaneGeometry(2 * R, 2 * R);
@@ -49,6 +50,8 @@ function smoothstep(a: number, b: number, x: number): number {
 
 /** Fog density at low level (FogExp2). */
 const HAZE = 0.000032;
+/** The least haze seen from the edge of space, so the sea fades out well before its edge. */
+const FAR_HAZE = 3e-6;
 /** Deep in a cloud: about 150 m to see by. */
 const CLOUD_FOG = 0.012;
 
@@ -95,10 +98,13 @@ export class Sunlight {
     const m = this.sky.material;
     m.uniforms.hazeAmount = { value: 0 };
     m.uniforms.hazeTint = { value: this.skyTint };
+    // High up the air above runs out and the sky goes black, from the zenith down towards the horizon's thin blue line.
+    m.uniforms.space = { value: 0 };
     m.fragmentShader = m.fragmentShader
-      .replace('void main() {', 'uniform float hazeAmount;\nuniform vec3 hazeTint;\nvoid main() {')
+      .replace('void main() {', 'uniform float hazeAmount;\nuniform vec3 hazeTint;\nuniform float space;\nvoid main() {')
       .replace('#include <colorspace_fragment>', `#include <colorspace_fragment>
-gl_FragColor.rgb = mix(gl_FragColor.rgb, hazeTint, hazeAmount * (1.0 - smoothstep(-0.1, 0.6, direction.y)));`);
+gl_FragColor.rgb = mix(gl_FragColor.rgb, hazeTint, hazeAmount * (1.0 - smoothstep(-0.1, 0.6, direction.y)));
+gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(0.004, 0.006, 0.016), space * smoothstep(-0.2, 0.3, direction.y));`);
     this.envSky.scale.setScalar(450000);
     // The environment shares the sky's uniforms, so reflections and ambient light match it.
     this.envSky.material = this.sky.material;
@@ -154,11 +160,13 @@ gl_FragColor.rgb = mix(gl_FragColor.rgb, hazeTint, hazeAmount * (1.0 - smoothste
 
   /**
    * Thins the haze for a camera `height` metres above the sea: the haze lies in the low air, so
-   * from high up the view down through it is clearer. Unchanged below 1,000 m. `inCloud` (0..1)
-   * is how deep the camera is in a cloud.
+   * from high up the view down through it is clearer. Unchanged below 1,000 m. Above 15 km the sky
+   * darkens to black by 70 km (Starship). `inCloud` (0..1) is how deep the camera is in a cloud.
    */
   setViewHeight(height: number, inCloud = 0): void {
-    const clear = HAZE * this.weather.haze * Math.min(1, 1500 / (Math.max(height, 0) + 500));
+    this.sky.material.uniforms.space.value = smoothstep(15e3, 70e3, height);
+    // From very high the far sea would end in an edge; a thin haze over hundreds of kilometres hides it in the horizon's glow.
+    const clear = Math.max(HAZE * this.weather.haze * Math.min(1, 1500 / (Math.max(height, 0) + 500)), FAR_HAZE * smoothstep(5e3, 40e3, height));
     // In a cloud the haze closes in to a grey-white wall, lit like the cloud around the camera.
     this.fog.density = clear + (CLOUD_FOG - clear) * inCloud * inCloud;
     const k = Math.min(inCloud * 1.5, 1);

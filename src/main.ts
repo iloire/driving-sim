@@ -17,13 +17,15 @@ import { buffet, JetEffects } from './game/jet-effects';
 import { Explosion } from './game/explosion';
 import { createJetModel } from './game/jet-model';
 import { createRoadsterModel } from './game/roadster-model';
+import { RocketHud } from './game/rocket-hud';
+import { createLaunchView } from './game/starship-model';
 import { applyPose, poseOf, ReplayBuffer } from './game/replay';
 import { RoadView } from './game/road-view';
 import { loadSite, ZONES, zoneOf, type Spawn } from './game/site';
 import { TerrainView } from './game/terrain-view';
 import { TouchPad } from './game/touch';
 import { Welcome } from './game/welcome';
-import { CLEAR_SKY, createSurround, Sunlight, type SkyWeather } from './game/world';
+import { CLEAR_SKY, createSurround, Sunlight, toScene, type SkyWeather } from './game/world';
 import { CloudsView } from './game/clouds-view';
 import { drawCloudShadows, setCloudShadows, shadeByClouds } from './game/cloud-shadow';
 import { buildingStyle } from './sim/objects';
@@ -34,6 +36,7 @@ import { dayOfYear, daylightHours, sunPosition } from './sim/sun';
 import { blendQuat, lerpV3, rotate, type Quat, type V3 } from './sim/vec';
 import { alphaLimit, stalled } from './sim/wings';
 import { CLEAR, CloudField, seedOf, type WeatherSpec } from './sim/weather';
+import { createLaunch, stepLaunch, SUPER_HEAVY, type Launch, type LaunchControls, type LaunchEvent } from './sim/starship';
 
 declare const __COMMIT_SHA__: string;
 
@@ -45,7 +48,7 @@ const KEY = () => TOUCH
   ? { reset: t('touch.reset'), pull: t('hint.pull.touch'), climb: t('hint.climb.touch') }
   : { reset: 'R', pull: t('hint.pull'), climb: t('hint.climb') };
 /** What to do first, in whatever it is. */
-const START_HINT = (spec: CarSpec) => isJet(spec)
+const START_HINT = (spec: CarSpec, rocket = false) => rocket ? t('start.rocket') : isJet(spec)
   ? t(TOUCH ? 'start.jet.touch' : 'start.jet')
   : t(TOUCH ? 'start.car.touch' : 'start.car');
 
@@ -70,6 +73,22 @@ const LANDING = { speed: 110, sink: 6 };
 const WRECK_S = 1.8;
 const G = 9.81;
 const isJet = (spec: CarSpec) => !!spec.wings?.fbw;
+/** Starship: not a car but its own sim, picked like one where the zone has a launch tower. */
+const ROCKET = 'starship';
+const ROCKET_NAME = 'Starship';
+/** How far back the chase camera sits behind the rocket (in the 4×4's wingspans: about 240 m). */
+const ROCKET_CAMERA = 22;
+/**
+ * The launch in the background, whatever you're flying: the first countdown this long into the
+ * drive (s), a fresh stack on the tower this long after the booster is home (or lost), and the next
+ * countdown this long after that.
+ */
+const BACKGROUND = { first: 40, restack: 60, between: 120 };
+/** Time warp steps on T, and the height (m) under which it's off: near the ground it all happens fast. */
+const WARPS = [1, 4, 10];
+const WARP_FLOOR = 20e3;
+/** What the background launch is told: nothing; its autopilot flies. */
+const HANDS_OFF: LaunchControls = { pitch: 0, yaw: 0, throttle: 1, fire: false, auto: false };
 
 const TARMAC: Surface = { grip: 1, rolling: 0.012 };
 const GRAVEL: Surface = { grip: 0.72, rolling: 0.03 };
@@ -130,7 +149,7 @@ async function boot(): Promise<void> {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200000);
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1.5e6);
   const sunlight = new Sunlight(scene, renderer);
   const ortho = await new THREE.TextureLoader().loadAsync(site.orthoUrl);
   const anisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -144,9 +163,13 @@ async function boot(): Promise<void> {
   scene.add(terrainView.group, createSurround(extent, site.spec.plainM));
   loading(t('load.road'));
 
-  const vehicleId = vehicleOf(query, Object.keys(VEHICLES));
-  const settings = { vehicle: VEHICLES[vehicleId].name, drivetrain: 'AWD' };
-  let spec: CarSpec = { ...VEHICLES[vehicleId].spec };
+  const vehicleId = vehicleOf(query, [...Object.keys(VEHICLES), ...(site.launch ? [ROCKET] : [])]);
+  /** Flying Starship: the car is parked out of sight and the frame flies the launch instead. */
+  let rocketMode = vehicleId === ROCKET;
+  // Under Starship there's still a car, parked: the Roadster, until another is picked.
+  const carId = rocketMode ? 'roadster' : vehicleId;
+  const settings = { vehicle: rocketMode ? ROCKET_NAME : VEHICLES[carId].name, drivetrain: 'AWD' };
+  let spec: CarSpec = { ...VEHICLES[carId].spec };
   const heightAt = (x: number, y: number) => terrain.heightAt(x, y);
   /** A vehicle's body, darkened like the land when a cloud passes over it. */
   const build = (id: string): CarModel => {
@@ -156,18 +179,43 @@ async function boot(): Promise<void> {
     });
     return m;
   };
-  let model = build(vehicleId);
+  let model = build(carId);
+  model.group.visible = !rocketMode;
   scene.add(model.group);
   if (model.world) scene.add(model.world);
   const jetFx = new JetEffects();
   const explosion = new Explosion();
   scene.add(jetFx.group, explosion.group);
+  // Starship on its tower, launching in the background whatever you're in, or flown by you.
+  const newLaunch = (): Launch | null => site.launch
+    ? createLaunch([site.launch.x, site.launch.y, terrain.heightAt(site.launch.x, site.launch.y)], site.launch.azimuth)
+    : null;
+  let launch = newLaunch();
+  const launchView = launch ? createLaunchView(extent, launch.pad, launch.azimuth) : null;
+  if (launchView && launch) {
+    launchView.update(launch, camera, 0);
+    scene.add(launchView.group);
+  }
+  const boosterBlast = new Explosion(8);
+  scene.add(boosterBlast.group);
+  const rocketHud = new RocketHud();
+  /** Seconds until the background autopilot's next step: a countdown, or a fresh stack. */
+  let launchIdle = BACKGROUND.first;
+  let launchAcc = 0;
+  let warp = 1;
+  /** Space (the countdown, or lighting the booster by hand) and F, waiting for the next launch step. */
+  let fireAsked = false;
+  let autoAsked = false;
+  /** What the camera follows: the car, or the launch. */
+  const focus = () => (rocketMode && launchView ? launchView.focus : model.group);
   const placesView = new PlacesView(site.places, extent, heightAt);
   scene.add(placesView.group);
   const rig = new CameraRig(camera, canvas);
   const audio = new CarAudio();
   audio.electric = !!spec.engine.electric;
   audio.jet = isJet(spec);
+  audio.quiet = rocketMode;
+  document.body.classList.toggle('rocket', rocketMode);
   const hud = new Hud(__COMMIT_SHA__, site.roads.roads, ortho.image as HTMLImageElement, extent);
 
   const env: CarEnv = {
@@ -231,7 +279,7 @@ async function boot(): Promise<void> {
     // The camera cuts to the start of the replay, and back to the car after it.
     const s = on ? applyPose(car, replay.at(replay.start)!) : car;
     model.update(s, false, extent, 0, false, camera, 0);
-    rig.snap(model.group, s.heading);
+    rig.snap(focus(), s.heading);
     jetFx.reset();
   }
 
@@ -255,7 +303,8 @@ async function boot(): Promise<void> {
     model.group.visible = true;
     input.lever = CRUISE_THRUST;
     model.update(car, false, extent, 0, false, camera, 0);
-    rig.snap(model.group, heading);
+    model.group.visible = !rocketMode;
+    if (!rocketMode) rig.snap(model.group, heading);
   }
 
   async function goTo(s: Spawn): Promise<void> {
@@ -294,6 +343,18 @@ async function boot(): Promise<void> {
     hud.say(t('say.road'));
   }
 
+  /** A fresh stack on the tower: under your hands it waits for Space, in the background for the next countdown. */
+  function restack(): void {
+    launch = newLaunch();
+    launchIdle = BACKGROUND.between;
+    launchAcc = 0;
+    warp = 1;
+  }
+
+  /** Time warp only up high, never on the pad or in the landing burn. */
+  const warpable = (l: Launch) => l.phase !== 'pad' && l.phase !== 'landing' && l.phase !== 'caught' && l.phase !== 'lost'
+    && l.booster.pos[2] - l.pad[2] > WARP_FLOOR;
+
   // The welcome screen: the car holds still under it while the camera circles it.
   let canResume = false;
   const welcome = new Welcome({
@@ -314,7 +375,7 @@ async function boot(): Promise<void> {
       void goTo(s);
     },
     vehicle: (id) => {
-      settings.vehicle = VEHICLES[id].name;
+      settings.vehicle = id === ROCKET ? ROCKET_NAME : VEHICLES[id].name;
       gui.controllersRecursive().forEach((c) => c.updateDisplay());
       switchVehicle();
     },
@@ -324,7 +385,7 @@ async function boot(): Promise<void> {
     },
     resume: leaveMenu,
     lang: (l) => relabel(l),
-  }, () => referenceHtml(modesOf(!!spec.thrusters, isJet(spec))));
+  }, () => referenceHtml(rocketMode ? ['rocket'] : modesOf(!!spec.thrusters, isJet(spec))));
 
   /** From a drive the menu offers to carry on; at boot there is nothing to carry on. */
   function openMenu(fromDrive = true): void {
@@ -340,21 +401,32 @@ async function boot(): Promise<void> {
     welcome.close();
     rig.drive();
     track('start', { shared: false, site: zone, spawn: spawn.spec.id, car: vehicleKey(), touch: TOUCH, resume: canResume });
-    if (!canResume) hud.say(t('say.start', { place: spawn.spec.name, hint: START_HINT(spec) }), 5);
+    if (!canResume) hud.say(t('say.start', { place: rocketMode && site.launch ? site.launch.name : spawn.spec.name, hint: START_HINT(spec, rocketMode) }), 5);
   }
 
   function refreshMenu(): void {
     welcome.render({
       title: site.spec.name, kicker: site.spec.kicker[currentLang()], zones: ZONES, zone,
       places: site.spawns.map((s) => ({ id: s.spec.id, name: s.spec.name })), place: spawn.spec.id,
-      vehicles: Object.entries(VEHICLES).map(([id, v]) => ({ id, name: v.name, line: t(v.line) })), vehicle: vehicleKey(),
-      canResume, flies: isJet(spec), lang: currentLang(), langs: LANGS,
+      vehicles: [
+        ...Object.entries(VEHICLES).map(([id, v]) => ({ id, name: v.name, line: t(v.line) })),
+        ...(site.launch ? [{ id: ROCKET, name: ROCKET_NAME, line: t('car.starship', { launch: site.launch.name }) }] : []),
+      ],
+      vehicle: vehicleKey(),
+      canResume, flies: !rocketMode && isJet(spec), launches: rocketMode, lang: currentLang(), langs: LANGS,
     });
   }
 
   const actions: Record<Action, () => void> = {
-    reset: () => { track('reset'); void recover(); },
-    camera: () => hud.say(t('say.camera', { name: t(`cam.${rig.next()}`) }), 1.5),
+    reset: () => {
+      track('reset');
+      if (rocketMode) restack();
+      else void recover();
+    },
+    camera: () => {
+      const mode = rig.next();
+      hud.say(t('say.camera', { name: t(rocketMode && mode === 'bonnet' ? 'cam.tracking' : `cam.${mode}`) }), 1.5);
+    },
     mute: () => { audio.setMuted(!audio.muted); hud.say(t(audio.muted ? 'say.sound.off' : 'say.sound.on'), 1.5); },
     pause: () => { setPaused(!paused); if (!paused) hud.say(t('say.go'), 1.5); },
     help: () => helpFold.toggle(),
@@ -363,9 +435,17 @@ async function boot(): Promise<void> {
     map: () => minimap.classList.toggle('hidden'),
     hud: () => { hudShown = !hudShown; },
     labels: () => { placesView.visible = !placesView.visible; hud.say(t(placesView.visible ? 'say.labels.on' : 'say.labels.off'), 1.5); },
-    replay: () => setReplay(replayAt === null),
+    replay: () => { if (!rocketMode) setReplay(replayAt === null); },
+    warp: () => {
+      if (!rocketMode || !launch) return;
+      const next = WARPS[(WARPS.indexOf(warp) + 1) % WARPS.length];
+      if (next > 1 && !warpable(launch)) { hud.say(t('say.rocket.nowarp'), 2); return; }
+      warp = next;
+      hud.say(t('say.rocket.warp', { k: warp }), 1.5);
+    },
     transform: () => {
       if (replayAt !== null) return;
+      if (rocketMode) { autoAsked = true; return; }
       if (isJet(spec)) { hud.say(t('say.jet.only'), 2); return; }
       car.flying = !car.flying;
       track('fly', { on: car.flying, car: vehicleKey() });
@@ -426,15 +506,44 @@ async function boot(): Promise<void> {
     setWeather(weathers.find((w) => w.id === id)!);
     track('weather', { id });
   }), 'gui.weather');
+  /** The car in use, or parked under Starship. */
+  let carKey = carId;
   const applyDrivetrain = () => {
     const split = DRIVETRAINS[settings.drivetrain];
-    spec.driveFront = split ?? VEHICLES[vehicleKey()].spec.driveFront;
+    spec.driveFront = split ?? VEHICLES[carKey].spec.driveFront;
   };
-  const vehicleKey = () => Object.keys(VEHICLES).find((k) => VEHICLES[k].name === settings.vehicle) ?? 'roadster';
-  /** Swaps the car where it stands: new body, new physics, the same place and heading. */
+  const vehicleKey = () => settings.vehicle === ROCKET_NAME ? ROCKET : Object.keys(VEHICLES).find((k) => VEHICLES[k].name === settings.vehicle) ?? 'roadster';
+  /**
+   * Swaps the car where it stands: new body, new physics, the same place and heading. Starship
+   * parks the car out of sight and takes over the launch: a flight under way carries on in your
+   * hands, otherwise a fresh stack waits on the tower for Space.
+   */
   const switchVehicle = () => {
     const id = vehicleKey();
     track('car', { car: id });
+    const q = new URLSearchParams(location.search);
+    q.set('car', id);
+    history.replaceState(null, '', `?${q}`);
+    const wasRocket = rocketMode;
+    rocketMode = id === ROCKET;
+    audio.quiet = rocketMode;
+    document.body.classList.toggle('rocket', rocketMode);
+    warp = 1;
+    if (rocketMode && launch) {
+      setReplay(false);
+      model.group.visible = false;
+      if (['pad', 'caught', 'lost'].includes(launch.phase)) restack();
+      rig.snap(focus(), launch.azimuth);
+      if (!welcome.isOpen) hud.say(ROCKET_NAME, 2);
+      refreshMenu();
+      return;
+    }
+    // Back to a car: the autopilot takes the launch on in the background.
+    if (wasRocket && launch) {
+      launch.auto = true;
+      if (launch.phase === 'pad' && !launch.counting) launchIdle = BACKGROUND.between;
+    }
+    carKey = id;
     scene.remove(model.group);
     if (model.world) scene.remove(model.world);
     spec = { ...VEHICLES[id].spec };
@@ -447,15 +556,12 @@ async function boot(): Promise<void> {
     if (model.world) scene.add(model.world);
     audio.electric = !!spec.engine.electric;
     audio.jet = isJet(spec);
-    const q = new URLSearchParams(location.search);
-    q.set('car', id);
-    history.replaceState(null, '', `?${q}`);
     void place(car.pos[0], car.pos[1], car.heading).then(() => {
       if (!welcome.isOpen) hud.say(VEHICLES[id].name, 2);
       refreshMenu();
     });
   };
-  guiLabels.set(gui.add(settings, 'vehicle', Object.values(VEHICLES).map((v) => v.name)).onChange(switchVehicle), 'gui.vehicle');
+  guiLabels.set(gui.add(settings, 'vehicle', [...Object.values(VEHICLES).map((v) => v.name), ...(site.launch ? [ROCKET_NAME] : [])]).onChange(switchVehicle), 'gui.vehicle');
   guiLabels.set(gui.add(settings, 'drivetrain', Object.keys(DRIVETRAINS)).onChange(applyDrivetrain), 'gui.drivetrain');
   const langSetting = { lang: currentLang() };
   guiLabels.set(gui.add(langSetting, 'lang', { English: 'en', Español: 'es' }).onChange((l: Lang) => relabel(l)), 'gui.lang');
@@ -507,15 +613,24 @@ async function boot(): Promise<void> {
     hud.say(t('say.shared', { hint: START_HINT(spec) }), 5);
   } else {
     await place(spawn.x, spawn.y, spawn.heading);
+    if (rocketMode && launch) rig.snap(focus(), launch.azimuth);
     openMenu(false);
   }
 
   // Dev builds expose the live state for poking at from the console.
   const perf = { physics: 0, terrain: 0, render: 0, frames: 0, worst: 0 };
-  if (import.meta.env.DEV) Object.assign(window, { drive: { car: () => car, pilot: () => pilot, controls: input.controls, terrain, site, perf, renderer, clouds: () => clouds } });
+  if (import.meta.env.DEV) Object.assign(window, { drive: { car: () => car, pilot: () => pilot, controls: input.controls, terrain, site, perf, renderer, clouds: () => clouds, launch: () => launch,
+    // Fast-forwards the launch on its autopilot, for looking at a phase without waiting for it.
+    skip: (seconds: number) => {
+      for (let t = 0; launch && t < seconds; t += STEP) {
+        stepLaunch(launch, { ...HANDS_OFF, fire: launch.phase === 'pad' }, (x, y) => terrain.heightAt(x, y), STEP);
+        launch.events.forEach(onLaunchEvent);
+      }
+    } } });
 
   const carPos = new THREE.Vector3();
   const carVel = new THREE.Vector3();
+  const boosterAt = new THREE.Vector3();
   const ground = (p: THREE.Vector3) => terrain.heightAt(p.x + extent / 2, extent / 2 - p.z);
   // The pose one physics step back. A frame runs 1, 2 or 3 steps as its length wobbles around two
   // of them, so drawing only the latest step jerks the car along (2 to 6 m a frame in the Jet);
@@ -526,17 +641,78 @@ async function boot(): Promise<void> {
   let last = performance.now();
   let acc = 0;
   const flightHud = new FlightHud(document.getElementById('flight-hud') as HTMLCanvasElement);
+
+  /** What a launch event says, and does: flying it you hear all of it; in the background, only the lift-off and how it ended. */
+  function onLaunchEvent(e: LaunchEvent): void {
+    if (!launch) return;
+    const b = launch.booster;
+    if (e === 'lost') {
+      boosterBlast.burst(toScene(extent, b.pos[0], b.pos[1], b.pos[2]), carVel.set(b.vel[0], b.vel[2], -b.vel[1]));
+      audio.explode();
+    }
+    if (e === 'caught' || e === 'lost') launchIdle = BACKGROUND.restack;
+    if (rocketMode && ['liftoff', 'caught', 'lost'].includes(e)) track('launch', { event: e, auto: launch.auto });
+    if (rocketMode || e === 'liftoff' || e === 'caught' || e === 'lost') {
+      hud.say(t(`say.rocket.${e}`, { launch: site.launch?.name ?? '' }), e === 'manual' ? 3 : 2.5);
+    }
+  }
+
+  /**
+   * Steps the launch: flown by you as Starship, by its autopilot in the background, which also
+   * starts the countdowns and puts a fresh stack on the tower after each flight.
+   */
+  function flyLaunch(dt: number): void {
+    if (!launch) return;
+    const c = input.controls;
+    if (input.took('Space') && rocketMode) fireAsked = true;
+    const over = launch.phase === 'caught' || launch.phase === 'lost';
+    if (over || (!rocketMode && launch.phase === 'pad' && !launch.counting)) {
+      if ((launchIdle -= dt) <= 0) {
+        if (over) restack();
+        else fireAsked = true;
+      }
+    }
+    if (warp > 1 && !warpable(launch)) warp = 1;
+    launchAcc += dt * warp;
+    while (launchAcc >= STEP) {
+      const ctl: LaunchControls = rocketMode
+        ? { pitch: c.flight.pitch, yaw: c.flight.roll, throttle: c.flight.thrust, fire: fireAsked, auto: autoAsked }
+        : { ...HANDS_OFF, fire: fireAsked };
+      fireAsked = autoAsked = false;
+      stepLaunch(launch, ctl, (x, y) => terrain.heightAt(x, y), STEP);
+      launchAcc -= STEP;
+      launch.events.forEach(onLaunchEvent);
+    }
+  }
+
+  /** The tracking camera: on the ground well off the tower, zooming to keep the rocket in frame. */
+  function trackingCamera(l: Launch, target: THREE.Vector3): void {
+    const back = 1100, side = 450;
+    const x = l.pad[0] - Math.sin(l.azimuth) * back - Math.cos(l.azimuth) * side;
+    const y = l.pad[1] - Math.cos(l.azimuth) * back + Math.sin(l.azimuth) * side;
+    toScene(extent, x, y, Math.max(terrain.heightAt(x, y), 0) + 25, camera.position);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(target);
+    const fov = THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(2 * Math.atan(170 / camera.position.distanceTo(target))), 0.6, 45);
+    if (Math.abs(camera.fov - fov) > 0.01) {
+      camera.fov = fov;
+      camera.updateProjectionMatrix();
+    }
+  }
+
   function frame(now: number): void {
     const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
-    input.plane = car.flying && !!spec.wings;
+    input.plane = rocketMode || (car.flying && !!spec.wings);
     input.update(dt);
     // Blacked out, the pilot's hands fall off the stick and the flight computer flies 1 g.
     if (pilot.out) Object.assign(input.controls.flight, { pitch: 0, roll: 0, yaw: 0 });
     // A crash plays out, the jet gone and the physics held, before it's back in the air.
     const live = replayAt === null;
     if (wreck > 0 && !paused && live && (wreck -= dt) <= 0) void place(car.pos[0], car.pos[1], car.heading).finally(() => { crashing = false; });
-    if (!paused && !welcome.isOpen && wreck <= 0 && live) {
+    if (!paused && !welcome.isOpen && live) flyLaunch(dt);
+    else input.took('Space'); // a press on the menu or paused isn't a countdown
+    if (!paused && !welcome.isOpen && wreck <= 0 && live && !rocketMode) {
       acc += dt;
       const t0 = performance.now();
       const v0 = [...car.vel];
@@ -603,7 +779,7 @@ async function boot(): Promise<void> {
     }
 
     // The controls card shows the keys for what the car is doing now (see HelpFold for when it folds).
-    const mode = modeOf(car.flying, !!spec.thrusters, isJet(spec));
+    const mode: Mode = rocketMode ? 'rocket' : modeOf(car.flying, !!spec.thrusters, isJet(spec));
     const pad = !!navigator.getGamepads?.().some((p) => p?.connected);
     if (mode !== shownMode || pad !== shownPad) {
       shownMode = mode;
@@ -611,13 +787,13 @@ async function boot(): Promise<void> {
       helpMode.textContent = ` · ${modeName(mode)}`;
       helpBody.innerHTML = cardHtml(mode, pad);
     }
-    if (!paused && !welcome.isOpen && live) helpFold.update(dt, mode, Math.abs(car.speed) > 8);
+    if (!paused && !welcome.isOpen && live) helpFold.update(dt, mode, rocketMode ? launch?.phase !== 'pad' : Math.abs(car.speed) > 8);
     if (helpFold.folded !== help.classList.contains('collapsed')) {
       help.classList.toggle('collapsed', helpFold.folded);
       if (helpFold.folded) storageFlag(HELP_SEEN_KEY, true);
     }
     const c = input.controls;
-    if (live && !paused && !welcome.isOpen) {
+    if (live && !paused && !welcome.isOpen && !rocketMode) {
       liveClock += dt;
       replay.push(() => poseOf(liveClock, car, {
         braking: car.gear > 0 ? c.brake > 0.1 : c.throttle > 0.1, boost: c.boost, thrust: c.flight.thrust,
@@ -655,17 +831,30 @@ async function boot(): Promise<void> {
     const cloudBumps = view.flying && clouds ? 0.12 * clouds.density(view.pos[0], view.pos[1], view.pos[2]) * Math.min(view.airspeed / 60, 1) : 0;
     // Crashed, the camera backs well off from the fireball.
     const reach = gone ? 3 : view.wings * (isJet(spec) ? JET_CAMERA : spec.wings ? 1 : 0.3);
-    rig.eye = isJet(spec) ? JET_EYE : BONNET_EYE;
-    rig.update(dt, model.group, carVel, followHeading, ground, reach, boosting,
-      Math.min(view.airbrake * Math.min(view.airspeed / 250, 1) + jetBuffet + cloudBumps + (gone ? (live ? wreck / WRECK_S : 0.5) : 0), 1));
+    if (launch && launchView) launchView.update(launch, camera, paused ? 0 : dt);
+    if (rocketMode && launch && launchView) {
+      // Behind the booster the way it's going (east, while it climbs straight up), shaking near the pad.
+      const b = launch.booster;
+      carVel.set(b.vel[0], b.vel[2], -b.vel[1]);
+      const heading = Math.hypot(b.vel[0], b.vel[1]) > 30 ? Math.atan2(b.vel[0], b.vel[1]) : launch.azimuth;
+      const lit = b.prop > 0 ? (b.lit * b.throttle) / SUPER_HEAVY.engines : 0;
+      const rumble = Math.min(lit * Math.max(0, 1 - (b.pos[2] - launch.pad[2]) / 2000) * 2, 1);
+      if (rig.mode === 'bonnet' && !welcome.isOpen) trackingCamera(launch, launchView.focus.position);
+      else rig.update(dt, launchView.focus, carVel, heading, ground, ROCKET_CAMERA, false, rumble);
+    } else {
+      rig.eye = isJet(spec) ? JET_EYE : BONNET_EYE;
+      rig.update(dt, model.group, carVel, followHeading, ground, reach, boosting,
+        Math.min(view.airbrake * Math.min(view.airspeed / 250, 1) + jetBuffet + cloudBumps + (gone ? (live ? wreck / WRECK_S : 0.5) : 0), 1));
+    }
     jetFx.update(paused ? 0 : dt, {
-      body: model.group, on: isJet(spec) && view.flying && !welcome.isOpen && !gone, altitude: view.pos[2], agl, airspeed: view.airspeed,
+      body: model.group, on: isJet(spec) && view.flying && !welcome.isOpen && !gone && !rocketMode, altitude: view.pos[2], agl, airspeed: view.airspeed,
       g, alpha: view.alpha, groundY: Math.max(groundZ, 0), sea: groundZ < 0, vel: carVel,
     }, camera);
     explosion.update(paused ? 0 : dt, camera, ground);
+    boosterBlast.update(paused ? 0 : dt, camera, ground);
     // Fighting HUD on wings. PULL UP when the line it's flying meets the ground within 5 s at a
     // speed or sink rate that would crash rather than land.
-    const plane = view.flying && !!spec.wings && !welcome.isOpen && !gone;
+    const plane = view.flying && !!spec.wings && !welcome.isOpen && !gone && !rocketMode;
     const pullUp = plane && (view.airspeed > LANDING.speed || -view.vel[2] > LANDING.sink)
       && secondsToGround([view.pos[0], view.pos[1], view.pos[2] - spec.cgHeight], view.vel, (x, y) => terrain.heightAt(x, y)) < 5;
     // The pilot's eyes are the live drive's: a replay is watched with clear ones.
@@ -673,7 +862,7 @@ async function boot(): Promise<void> {
     hud.setVeil(eyes.grey, eyes.red);
     audio.setMuffle(eyes.grey);
     flightHud.update(camera, plane && hudShown ? { vel: carVel, heading: followHeading, g, alpha: view.alpha, pullUp, airbrake: view.airbrake } : null, now / 1000);
-    sunlight.follow(carPos);
+    sunlight.follow(rocketMode && launchView ? launchView.focus.position : carPos);
     clouds?.step(paused ? 0 : dt, weather.wind ?? [0, 0]);
     setCloudShadows(clouds ? 0.8 * sunlight.daylight : 0, clouds?.drift ?? [0, 0]);
     cloudsView.update(dt, camera);
@@ -685,7 +874,12 @@ async function boot(): Promise<void> {
 
     const road = onRoad(site.roads, view.pos[0], view.pos[1], 2);
     placesView.update(camera);
-    hud.update(dt, {
+    const rb = rocketMode && launch ? launch.booster : null;
+    hud.update(dt, rb && launch ? {
+      speedKmh: Math.hypot(...rb.vel) * 3.6, rpmShare: 0, gear: '', road: null, x: rb.pos[0], y: rb.pos[1],
+      heading: Math.hypot(rb.vel[0], rb.vel[1]) > 30 ? Math.atan2(rb.vel[0], rb.vel[1]) : launch.azimuth,
+      flying: true, boost: false, agl: rb.pos[2] - launch.pad[2],
+    } : {
       speedKmh: (view.flying ? view.airspeed : view.speed) * 3.6, rpmShare: view.rpm / spec.engine.redline,
       gear: view.flying ? '✈' : view.gear < 0 ? 'R' : spec.engine.electric ? 'D' : String(view.gear),
       road, x: view.pos[0], y: view.pos[1], heading: view.heading,
@@ -702,6 +896,14 @@ async function boot(): Promise<void> {
     // A wreck makes no engine noise.
     audio.update(view.rpm, gone ? 0 : pedal, slip, gone ? 0 : Math.abs(view.speed), boosting && !gone, view.lift);
     audio.airbrake(welcome.isOpen ? 0 : view.airbrake, view.airspeed);
+    if (launch && launchView) {
+      // Starship heard from wherever the camera is: the booster's engines, or the ship's while they're stacked and near.
+      const b = launch.booster;
+      const level = b.prop > 0 ? (b.lit * (0.4 + 0.6 * b.throttle)) / SUPER_HEAVY.engines : 0;
+      audio.rocket(Math.min(level * 1.6, 1), camera.position.distanceTo(toScene(extent, b.pos[0], b.pos[1], b.pos[2], boosterAt)));
+    }
+    const ended = !launch || launch.phase === 'caught' || launch.phase === 'lost';
+    rocketHud.update(launch, welcome.isOpen ? 'off' : rocketMode ? 'full' : launch?.counting && !ended ? 'chip' : 'off', warp);
     // The horn sounds at the wing's angle-of-attack limit: the flight computer's for this stick, or the stall.
     const aLimit = !spec.wings ? Infinity : spec.wings.fbw ? alphaLimit(spec.wings.fbw, c.flight.pitch) : spec.wings.stall;
     audio.warnings({

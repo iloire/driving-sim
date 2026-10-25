@@ -7,6 +7,7 @@ src/sim/    pure TypeScript, no three.js, no DOM — unit-tested
   car.ts      the car: rigid body, struts, tyres, engine, gearbox
   wings.ts    the 4×4's plane half and the Jet: lift, drag, stability, control surfaces, jet, fly-by-wire
   thrusters.ts  the Roadster's hover: lift on its exhaust, height hold, attitude assists
+  starship.ts   Starship: the stack, staging, the booster flown home and caught, and its autopilot
   roads.ts    road model: profiles, carving, nearest-road index
   buildings.ts  building footprints as obstacles: point-in-polygon, way out, per-tile index
   objects.ts  per-tile objects file, building heights, lamp and edge-post placement
@@ -362,6 +363,61 @@ exactly and not snapped to a road).
 
 **Surfaces** come from the road index: on a paved carriageway grip ×1.0 and rolling 0.012, on a
 track ×0.72 and 0.03, anywhere else (picón, lava, sand) ×0.62 and 0.06.
+
+## Starship (`src/sim/starship.ts`, `src/game/starship-model.ts`, `src/game/rocket-hud.ts`)
+
+A zone with a `launch` in its `site.json` (`{ name, lat, lon, azimuth }`) has Starship on a tower.
+Lanzarote's stands in the sand plain of El Jable (29.042 N, 13.594 W, 193 m up, under 8 m of relief
+over 800 m), launching east over Teguise and out to sea. It is not a `CarSpec`: picking Starship
+parks the car out of sight and the frame flies the launch instead. Whatever you are in, the launch
+runs on its autopilot in the background (`BACKGROUND` in `main.ts`): a countdown 40 s into the drive,
+the booster home (or lost), a fresh stack on the tower a minute later and the next countdown two
+minutes after that, with a chip at the bottom of the screen keeping the mission clock.
+
+- **The model.** Each stage is a point mass at the middle of its engine plane, with an axis (nose and
+  thrust) that turns at a commanded rate: the stack at 3°/s, the booster at 10°/s, the ship at 3°/s.
+  No gimbal dynamics; the flight computer is taken to hold whatever attitude it asks for.
+  `SUPER_HEAVY`: 275 t dry, 3,400 t of propellant, 33 Raptors of 2.26 MN at sea level and 2.45 MN in
+  vacuum (Isp 347 s), throttling to 30 %. `SHIP`: 130 t + 1,500 t, six engines lumped. Thrust lies
+  between the two by the air's pressure; propellant burns at a fixed rate per engine and throttle.
+- **The air** is wings.ts' standard atmosphere: drag along the wind (0.35, with a hump to 0.8 through
+  Mach 1.1) and, when the body meets the wind at an angle, a normal force (slender-body lift plus
+  the crossflow on the cylinder's side). Falling engines first with the grid fins out the drag is
+  2.5 times the nose-first value, which is what slows the booster from Mach 4 to about 300 m/s.
+- **The earth** is flat with a constant g, less the pull that going round its curve takes away
+  (v²/R on the horizontal speed), which is what holds the ship up as it nears orbital speed.
+- **The autopilot.** Countdown from Space: T−10, the engines light at T−3 and come up over 2.5 s,
+  release at zero once they lift more than the stack weighs. A gravity turn scheduled on height
+  (straight up to 400 m, then tipping to 72° from vertical by 60 km), throttled back to hold the
+  dynamic pressure near 32 kPa. MECO at 12 % propellant left (T+2:07, 55 km up, 1.7 km/s), hot
+  staging two seconds later. The booster flips and burns back on 13 engines along the predicted miss
+  (`predictImpact`, a coarse fall with drag), easing off as it closes, until the fall would bring it
+  home. Coming down, the grid fins tilt it (aimed 400 m long, for the way the landing burn falls
+  short). The landing burn lights when 13 engines at 85 % and the drag would just stop it at the arms
+  (`stoppingDistance`), steers across by zero-effort miss and velocity, hovers 12 m over the arms to
+  slide in over the mount, then settles through them: **caught** within 3.5 m of the mount's axis,
+  under 4 m/s and 5° of upright. Anything else through the arms, or into the ground, is lost: an
+  `Explosion` eight times the Jet's.
+- **By hand.** Any stick past 15 % (or F) hands it over: W/S tip the nose towards or away from where
+  it leans (the azimuth when upright), A/D tilt it across, the lever is the throttle (on the booster,
+  13 engines' worth, dropping to the centre three below their lowest setting), Space lights or cuts the
+  booster. F gives it back. T warps time ×4 or ×10 above 20 km, never in the landing burn.
+
+`src/sim/starship.test.ts` pins the countdown and lift-off, MECO's height, speed and climb, max-q, the
+booster caught on the autopilot launching east and north-east, lost with the flight computer off
+after staging, and the engine rings. Taking away the engines-first drag or the long aim fails both
+catches.
+
+On screen: a lattice tower 146 m tall with its chopsticks (open for the launch and the way home,
+closing round a caught booster), the launch mount over a steel deflector, a concrete pad and a tank
+farm; Super Heavy in bare steel with its grid fins, hot-staging ring and 33 bells; Ship with its black
+heat shield and four flaps. The plumes are additive cones that brighten with the engines lit and
+balloon into the thin air up high. Steam boils off the pad at lift-off and the low air keeps a trail.
+The sky darkens towards black from 15 to 70 km, and above 5 km a thin far haze hides the sea's edge.
+C cycles chase (about 240 m behind), a long-lens tracking camera on the ground 1.2 km off the tower
+that zooms to keep the rocket in frame, and orbit. The telemetry strip is a launch webcast's: the
+mission clock and phase, and each stage's speed, height, propellant and engine ring. The sound is a
+low rumble and a crackle that fade and dull with distance.
 
 ## Roads (`src/sim/roads.ts`, `scripts/fetch-terrain.ts`)
 

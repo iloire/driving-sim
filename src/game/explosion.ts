@@ -60,14 +60,16 @@ export class Explosion {
   readonly group = new THREE.Group();
   private readonly fire = new Smoke(new THREE.Color(0xff7a2a), 0.6);
   private readonly core: THREE.Sprite;
-  private readonly light = new THREE.PointLight(0xff9a50, 0, 600, 2);
+  private readonly light: THREE.PointLight;
   private readonly bits: Bit[] = [];
   private readonly plumes: Plume[] = [];
   private age = Infinity;
   private readonly at = new THREE.Vector3();
   private readonly v = new THREE.Vector3();
 
-  constructor() {
+  /** `size`: how many times the Jet's crash it is (the booster's is about eight). */
+  constructor(private readonly size = 1) {
+    this.light = new THREE.PointLight(0xff9a50, 0, 600 * size, 2);
     const map = puffTexture();
     // The flash: a soft white-hot glow, not a ball with an edge.
     this.core = new THREE.Sprite(new THREE.SpriteMaterial({ map, color: 0xfff1c8, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
@@ -76,7 +78,7 @@ export class Explosion {
     this.group.add(this.fire.mesh, this.core, this.light);
     const metal = new THREE.MeshStandardMaterial({ color: 0x3a3d42, roughness: 0.7, metalness: 0.4 });
     for (let i = 0; i < DEBRIS; i++) {
-      const s = 0.3 + Math.random() * 1.1;
+      const s = (0.3 + Math.random() * 1.1) * size;
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(s * 1.6, s * 0.25, s), metal);
       mesh.visible = false;
       this.group.add(mesh);
@@ -95,33 +97,34 @@ export class Explosion {
     this.age = 0;
     this.at.copy(at);
     // What carries on is a fraction of the speed, mostly along the ground.
+    const k = this.size;
     const carry = this.v.copy(vel).multiplyScalar(0.15);
     carry.y = Math.max(carry.y, 0);
     for (let i = 0; i < 45; i++) {
       const dir = new THREE.Vector3().randomDirection();
       dir.y = Math.abs(dir.y) * 0.8 + 0.1;
-      const speed = 10 + Math.random() * 30;
-      this.fire.emit(at.clone().addScaledVector(dir, 2), dir.multiplyScalar(speed).add(carry), 4 + Math.random() * 3, 10 + Math.random() * 10, 0.7 + Math.random() * 0.8);
+      const speed = (10 + Math.random() * 30) * Math.sqrt(k);
+      this.fire.emit(at.clone().addScaledVector(dir, 2 * k), dir.multiplyScalar(speed).add(carry), (4 + Math.random() * 3) * k, (10 + Math.random() * 10) * k, (0.7 + Math.random() * 0.8) * Math.sqrt(k));
     }
     for (const b of this.bits) {
       const dir = new THREE.Vector3().randomDirection();
       dir.y = Math.abs(dir.y) + 0.3;
-      b.vel.copy(dir.normalize().multiplyScalar(20 + Math.random() * 50)).add(carry);
+      b.vel.copy(dir.normalize().multiplyScalar((20 + Math.random() * 50) * Math.sqrt(k))).add(carry);
       b.spin.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(14);
       b.mesh.position.copy(at);
       b.mesh.visible = true;
     }
     this.plumes.forEach((p, i) => {
       p.age = -0.3 - i * 0.05; // after the fireball, a column that keeps rising for a couple of seconds
-      p.life = 4 + Math.random() * 3;
-      p.grow = 6 + Math.random() * 6;
-      p.vel.set((Math.random() - 0.5) * 8, 10 + Math.random() * 10, (Math.random() - 0.5) * 8).add(this.v.copy(carry).multiplyScalar(0.5));
+      p.life = (4 + Math.random() * 3) * Math.sqrt(k);
+      p.grow = (6 + Math.random() * 6) * k;
+      p.vel.set((Math.random() - 0.5) * 8 * k, (10 + Math.random() * 10) * Math.sqrt(k), (Math.random() - 0.5) * 8 * k).add(this.v.copy(carry).multiplyScalar(0.5));
       p.sprite.position.copy(at);
-      p.sprite.scale.setScalar(8);
+      p.sprite.scale.setScalar(8 * k);
       p.sprite.visible = false;
     });
     this.core.position.copy(at);
-    this.light.position.copy(at).y += 8;
+    this.light.position.copy(at).y += 8 * k;
   }
 
   /** Plays it on; `floor` gives the ground's scene height under a point, for the debris to land on. */
@@ -133,9 +136,9 @@ export class Explosion {
 
     const f = flash(a);
     this.core.visible = f > 0.01;
-    this.core.scale.setScalar(10 + 40 * Math.min(a / 0.25, 1));
+    this.core.scale.setScalar((10 + 40 * Math.min(a / 0.25, 1)) * this.size);
     this.core.material.opacity = f;
-    this.light.intensity = a < LIGHT.fade ? LIGHT.peak * (1 - a / LIGHT.fade) ** 2 : 0;
+    this.light.intensity = a < LIGHT.fade ? LIGHT.peak * this.size ** 2 * (1 - a / LIGHT.fade) ** 2 : 0;
 
     for (const b of this.bits) {
       if (!b.mesh.visible) continue;
@@ -145,7 +148,7 @@ export class Explosion {
       b.mesh.rotation.z += b.spin.z * dt;
       b.spin.multiplyScalar(Math.exp(-dt * 0.8));
       // Burning bits trail fire for the first second and a half.
-      if (a < 1.5 && Math.random() < 0.5) this.fire.emit(b.mesh.position.clone(), this.v.set(0, 3, 0), 1.2, 3, 0.4);
+      if (a < 1.5 && Math.random() < 0.5) this.fire.emit(b.mesh.position.clone(), this.v.set(0, 3, 0), 1.2 * this.size, 3 * this.size, 0.4);
       if (a > 6) b.mesh.visible = false;
     }
 
@@ -157,12 +160,13 @@ export class Explosion {
         continue;
       }
       // Set off in turn from round the crash.
-      if (!p.sprite.visible) p.sprite.position.set(this.at.x + (Math.random() - 0.5) * 14, this.at.y + Math.random() * 6, this.at.z + (Math.random() - 0.5) * 14);
+      const k = this.size;
+      if (!p.sprite.visible) p.sprite.position.set(this.at.x + (Math.random() - 0.5) * 14 * k, this.at.y + Math.random() * 6 * k, this.at.z + (Math.random() - 0.5) * 14 * k);
       p.sprite.visible = true;
       p.vel.multiplyScalar(Math.exp(-dt * 0.6));
       p.vel.y += 2 * dt; // hot smoke keeps rising
       p.sprite.position.addScaledVector(p.vel, dt);
-      p.sprite.scale.setScalar(8 + p.grow * p.age);
+      p.sprite.scale.setScalar(8 * k + p.grow * p.age);
       const t = p.age / p.life;
       p.sprite.material.opacity = Math.min(p.age / 0.5, 1) * (1 - t) ** 1.3 * 0.5;
     }

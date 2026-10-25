@@ -130,6 +130,12 @@
       "lon": -13.4513
     }
   ],
+  "launch": {
+    "name": "El Jable",
+    "lat": 29.042,
+    "lon": -13.594,
+    "azimuth": 90
+  },
   "weather": [
     {
       "id": "trades",

@@ -212,7 +212,9 @@ body.touch #cluster { min-width: 0; }
 }
 #welcome[hidden] { display: none; }
 #welcome > * { pointer-events: auto; }
-body.in-menu :is(#flight-hud, #g-desat, #g-veil, #plate, #cluster, #minimap, #message, #help, #touch-buttons, #boost-btn, #paused, .lil-gui.autoPlace) { display: none; }
+body.in-menu :is(#flight-hud, #g-desat, #g-veil, #plate, #cluster, #minimap, #message, #help, #touch-buttons, #boost-btn, #paused, #rocket-hud, #rocket-chip, .lil-gui.autoPlace) { display: none; }
+/* Flying Starship, the webcast strip stands in for the speedometer. */
+body.rocket :is(#cluster, #plate) { display: none; }
 #welcome button { cursor: pointer; }
 
 .wl-main { display: grid; justify-items: start; max-height: 100%; overflow-y: auto; overflow-x: hidden; padding: 4px 6px 4px 0; }
@@ -349,3 +351,40 @@ body.touch .wl-side nav [data-tab="help"] { display: none; }
   font: inherit; padding: 1px 8px; cursor: pointer;
 }
 #stats-chip button[data-on] { background: var(--shutter); border-color: var(--shutter); }
+
+/* Starship telemetry: a webcast strip along the bottom, the clock in the middle. */
+#rocket-hud {
+  position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 18px;
+  padding: 10px 18px; background: var(--picon-glass); border-radius: 10px; backdrop-filter: blur(6px); pointer-events: none;
+  max-width: calc(100vw - 2 * var(--edge) - 220px);
+}
+#rocket-hud[hidden], #rocket-chip[hidden] { display: none; }
+.rk-stage { display: flex; align-items: center; gap: 10px; }
+.rk-stage:last-child { flex-direction: row-reverse; text-align: right; }
+.rk-ring svg { width: 58px; height: 58px; display: block; }
+.rk-ring circle { fill: rgba(244, 243, 238, 0.16); }
+.rk-ring circle.rim { fill: none; stroke: rgba(244, 243, 238, 0.35); stroke-width: 0.25; }
+.rk-ring circle.lit { fill: var(--cal); filter: drop-shadow(0 0 0.6px #ffd28a); }
+.rk-nums { display: grid; gap: 1px; font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; min-width: 118px; }
+.rk-nums b { font-family: var(--display); font-weight: 800; font-size: 15px; letter-spacing: 0.06em; text-transform: uppercase; }
+.rk-nums span { font-size: 17px; font-weight: 600; }
+.rk-nums small { margin-left: 4px; color: var(--malpais); }
+.rk-tank { height: 4px; background: rgba(244, 243, 238, 0.18); border-radius: 2px; overflow: hidden; margin-top: 3px; }
+.rk-tank i { display: block; height: 100%; background: var(--cal); }
+.rk-stage:last-child .rk-tank i { margin-left: auto; }
+.rk-mid { display: grid; justify-items: center; gap: 2px; min-width: 170px; }
+.rk-clock { font-family: var(--display); font-weight: 800; font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.rk-phase { font-family: var(--body); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; }
+.rk-mode { font-family: var(--mono); font-size: 11px; color: var(--malpais); }
+.rk-mode.manual { color: var(--marker); }
+#rocket-chip {
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); white-space: nowrap; padding: 6px 12px; border-radius: 6px; background: var(--picon-glass);
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; pointer-events: none; backdrop-filter: blur(6px);
+}
+@media (max-width: 760px) {
+  #rocket-hud { gap: 8px; padding: 8px 10px; max-width: calc(100vw - 2 * var(--edge)); bottom: 8px; }
+  .rk-ring { display: none; }
+  .rk-nums { min-width: 0; font-size: 11px; }
+  .rk-clock { font-size: 24px; }
+  .rk-mid { min-width: 0; }
+}
