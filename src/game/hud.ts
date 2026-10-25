@@ -198,5 +198,14 @@ export class Hud {
     g.closePath();
     g.stroke();
     g.fill();
+    // North: an "N" riding the rim, at the top when you face north.
+    const nx = r - (r - 13) * Math.sin(f.heading), ny = r - (r - 13) * Math.cos(f.heading);
+    g.font = "800 17px 'Big Shoulders Display', 'Barlow', sans-serif";
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.lineWidth = 3.5;
+    g.strokeText('N', nx, ny);
+    g.fillStyle = '#f4ead8';
+    g.fillText('N', nx, ny);
   }
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-10-25 19:58
+
+- The minimap shows north. The map turns with you, so an "N" now rides its rim: at the top when
+  you face north, on the right when you face west.
+
 ## 2026-10-25 19:42
 
 - Weather. Clouds you can fly through, with shadows that drift over the land, and a preset list
