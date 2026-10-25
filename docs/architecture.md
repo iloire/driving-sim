@@ -40,6 +40,7 @@ Each zone is a folder with a `site.json`, which `scripts/fetch-terrain.ts` fills
 | `places` | the places of interest labelled over the land (`src/sim/places.ts`), omitted = none: `osm` the Overpass selectors to ask for (one element type and its tags each, e.g. `node[natural=peak][name][ele]`), `max` how many labels, highest first, `spacingM` a place closer than this to a higher one already kept is dropped, so each mountain gets one label rather than one per needle. The build writes them to `places.json`, named in Spanish where OSM has it. And/or `spots`, a hand-picked list of `{ name, lat, lon }` (like `spawns`), always labelled and read as the page loads, so adding one needs no rebuild |
 | `heightmap.unitM` | metres per stored step. 0.1 (default) holds 3,276 m. Tenerife and Benasque use 0.2 for Teide and Aneto |
 | `spawns` | the places, as lat/lon, snapped to the nearest paved road; `toward` starts on a runway facing that way |
+| `weather` | the weather on offer, the first the default; omitted = a clear sky. See *Weather* below |
 
 | zone | square | projection | notes |
 |---|---|---|---|
@@ -59,6 +60,43 @@ El Golfo, Los Hervideros, Janubio and Papagayo are outside its square); Zaragoza
 sprite on a pin 25 m over the ground (the OSM summit height when it has one), the same size on screen
 at any range, hidden by the hills in front, fading out past 30 km and when you are on top of it.
 Where two overlap on screen the nearer shows. **L** shows or hides them.
+
+## Weather (`src/sim/weather.ts`, `src/game/clouds-view.ts`, `src/game/cloud-shadow.ts`)
+
+Each zone lists its weather in `site.json`; Settings picks one, `?wx=<id>` asks for one, and a
+shared moment carries it unless it is the zone's first.
+
+| field | meaning |
+|---|---|
+| `id`, `name` | the link's name, and Settings' (`en`, `es`) |
+| `layers` | the cloud layers, none = clear: `base` and `top` (m above the sea), `cover` 0..1, `size` a typical cloud's radius (m), optional `box` `[west, south, east, north]` as fractions of the site (beyond 0..1 is over the sea) |
+| `wind` | `[east, north]` m/s the clouds drift on; omitted = still |
+| `light` | the sun's strength, times the usual (overcast, fog) |
+| `haze`, `hazeColor` | thicker haze in that colour (calima: about 2, a pale dust) |
+
+| zone | presets |
+|---|---|
+| Lanzarote | trade-wind cumulus (900–1,500 m, drifting SW), calima, clear |
+| Tenerife | sea of clouds (a deck at 950–1,550 m over the north slopes, the peaks out of it), trade-wind cumulus, calima, clear |
+| Zaragoza | fair-weather cumulus, high cloud at 6.5 km, clear |
+| Benasque | cumulus on the peaks, cloud in the valley (1,050–1,500 m: drive in fog), clear |
+
+- **The field.** `CloudField` scatters clouds over a square 1.6 times the site's side, seeded by the
+  zone and preset, so a preset always looks the same. A cloud is 7–14 puffs, wide at the base and
+  narrowing into a dome. The square repeats: the wind slides it, and the clouds are always drawn in
+  the copy nearest the camera, so there are clouds all round wherever you fly.
+- **Drawing.** One instanced draw of soft camera-facing discs, about 10,000 of them (60 % on a
+  phone). Each is lit as a ball, bright towards the sun and grey underneath, has a silver edge with
+  the sun behind it, and is cut flat at its layer's base. They fade out where the square repeats and
+  as the camera reaches them, and are sorted far to near four times a second.
+- **Inside.** `density()` says how deep a point is in a cloud. At the camera it closes the fog in to
+  a grey-white wall (about 150 m to see by). At the car in the air, it adds a little buffeting.
+- **Shadows.** The puffs are stamped as soft discs into one 1,024 px texture of the square, moved
+  along the sun's rays down to the ground, redrawn when the sun or the weather changes. The land,
+  roads, buildings, sea and the car read it and dim the sun's light, not the sky's, by up to 80 %.
+  The wind slides the texture with the clouds.
+- **Calima.** Thicker haze in a dust colour; the sky fades to the same colour towards the horizon,
+  mixed in the same colour space as three's fog so the two meet without a line.
 
 ## Frames
 

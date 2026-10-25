@@ -11,6 +11,7 @@ import { parseObjects, type TileObjects, type TileObjectsFile } from '../sim/obj
 import type { Place, PlacesFile, PlacesSpec } from '../sim/places';
 import { isPaved, parseRoads, RoadIndex, type RoadsFile } from '../sim/roads';
 import { Heightmap } from '../sim/terrain';
+import type { WeatherSpec } from '../sim/weather';
 import type { Lang } from './i18n';
 
 /** The zones on offer, each a folder in public/sites/; the first is where a link without ?site= goes. */
@@ -56,6 +57,8 @@ export interface SiteSpec {
   /** Native-resolution tiles with the roads carved in, written by scripts/fetch-terrain.ts. */
   detail: { dir: string; tileM: number; orthoSize: number };
   spawns: SpawnSpec[];
+  /** The weather on offer (src/sim/weather.ts), the first the default; omitted = a clear sky. */
+  weather?: WeatherSpec[];
 }
 
 /** A place to start, already on the road: the nearest paved road to the spec's point. */

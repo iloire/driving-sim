@@ -34,6 +34,8 @@ zone, place and vehicle; **M** / **Esc** brings it back.
   flats), lit at dusk, with street lamps and edge posts.
 - **Peak and sight labels** (**L**): Aneto, Teide, Mirador del Río …
 - **Instant replay** (**I**): the last 30 seconds, crashes included.
+- **Weather**: clouds you can fly through, with shadows that drift over the land. Each zone has its own:
+  trade-wind cumulus, Tenerife's sea of clouds, calima, fog in the Benasque valley (`?wx=`, or Settings).
 - **Surfaces, sound, map, road signs**, and the real sun position for any time of day.
 
 ![The Roadster hovering on its floor thrusters above the LZ-203 at dusk](docs/screenshots/roadster-hover.png)

@@ -102,5 +102,53 @@
       "lat": 41.693,
       "lon": -0.924
     }
+  ],
+  "weather": [
+    {
+      "id": "fair",
+      "name": {
+        "en": "Fair-weather cumulus",
+        "es": "Cúmulos de buen tiempo"
+      },
+      "wind": [
+        6,
+        -4
+      ],
+      "layers": [
+        {
+          "base": 1700,
+          "top": 2600,
+          "cover": 0.25,
+          "size": 800
+        }
+      ]
+    },
+    {
+      "id": "high",
+      "name": {
+        "en": "High cloud",
+        "es": "Nubes altas"
+      },
+      "wind": [
+        12,
+        -3
+      ],
+      "light": 0.85,
+      "layers": [
+        {
+          "base": 6500,
+          "top": 7000,
+          "cover": 0.5,
+          "size": 1500
+        }
+      ]
+    },
+    {
+      "id": "clear",
+      "name": {
+        "en": "Clear",
+        "es": "Despejado"
+      }
+    }
   ]
 }

@@ -45,6 +45,7 @@ const en = {
   // Settings panel
   'gui.title': 'Settings',
   'gui.hour': 'Solar time',
+  'gui.weather': 'Weather',
   'gui.vehicle': 'Vehicle',
   'gui.drivetrain': 'Drivetrain',
   'gui.lang': 'Language',
@@ -185,6 +186,7 @@ const es: Record<Key, string> = {
 
   'gui.title': 'Ajustes',
   'gui.hour': 'Hora solar',
+  'gui.weather': 'Tiempo',
   'gui.vehicle': 'Vehículo',
   'gui.drivetrain': 'Tracción',
   'gui.lang': 'Idioma',

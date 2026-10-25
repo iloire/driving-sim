@@ -23,7 +23,9 @@ import { loadSite, ZONES, zoneOf, type Spawn } from './game/site';
 import { TerrainView } from './game/terrain-view';
 import { TouchPad } from './game/touch';
 import { Welcome } from './game/welcome';
-import { createSurround, Sunlight } from './game/world';
+import { CLEAR_SKY, createSurround, Sunlight, type SkyWeather } from './game/world';
+import { CloudsView } from './game/clouds-view';
+import { drawCloudShadows, setCloudShadows, shadeByClouds } from './game/cloud-shadow';
 import { buildingStyle } from './sim/objects';
 import { createPilot, PILOT, stepPilot } from './sim/pilot';
 import { createCar, JET, ROADSTER, TRUCK, stepCar, type CarEnv, type CarSpec, type CarState, type Surface } from './sim/car';
@@ -31,6 +33,7 @@ import { isPaved, MAX_HALF_WIDTH, ROAD_WIDTH, type Road } from './sim/roads';
 import { dayOfYear, daylightHours, sunPosition } from './sim/sun';
 import { blendQuat, lerpV3, rotate, type Quat, type V3 } from './sim/vec';
 import { stalled } from './sim/wings';
+import { CLEAR, CloudField, seedOf, type WeatherSpec } from './sim/weather';
 
 declare const __COMMIT_SHA__: string;
 
@@ -145,7 +148,15 @@ async function boot(): Promise<void> {
   const settings = { vehicle: VEHICLES[vehicleId].name, drivetrain: 'AWD' };
   let spec: CarSpec = { ...VEHICLES[vehicleId].spec };
   const heightAt = (x: number, y: number) => terrain.heightAt(x, y);
-  let model = VEHICLES[vehicleId].model(spec, heightAt);
+  /** A vehicle's body, darkened like the land when a cloud passes over it. */
+  const build = (id: string): CarModel => {
+    const m = VEHICLES[id].model(spec, heightAt);
+    m.group.traverse((o) => {
+      if (o instanceof THREE.Mesh && o.material instanceof THREE.MeshStandardMaterial) shadeByClouds(o.material);
+    });
+    return m;
+  };
+  let model = build(vehicleId);
   scene.add(model.group);
   if (model.world) scene.add(model.world);
   const jetFx = new JetEffects();
@@ -289,7 +300,8 @@ async function boot(): Promise<void> {
     // Another zone is another page load: the car, the sun and the language come along.
     zone: (id) => {
       const q = new URLSearchParams(location.search);
-      for (const k of ['spawn', 'at', 'fly']) q.delete(k);
+      // Each zone has its own weather.
+      for (const k of ['spawn', 'at', 'fly', 'wx']) q.delete(k);
       q.set('site', id);
       q.set('time', formatHour(sky.hour));
       track('zone', { site: id });
@@ -380,16 +392,40 @@ async function boot(): Promise<void> {
   const day = dayOfYear(new Date());
   const hours = daylightHours(lat, day);
   const sky = { hour: Math.min(Math.max(parseHour(query) ?? DEFAULT_HOUR, hours.first), hours.last) };
+  // The weather: the zone's presets (site.json), ?wx= picks one, the first by default.
+  const weathers: WeatherSpec[] = site.spec.weather?.length ? site.spec.weather : [CLEAR];
+  let weather = weathers.find((w) => w.id === query.get('wx')) ?? weathers[0];
+  let clouds: CloudField | null = null;
+  const cloudsView = new CloudsView(extent);
+  scene.add(cloudsView.mesh);
+  const skyWeather = (w: WeatherSpec): SkyWeather => w.light || w.haze || w.hazeColor
+    ? { light: w.light ?? 1, haze: w.haze ?? 1, hazeColor: w.hazeColor ? new THREE.Color(w.hazeColor) : null }
+    : CLEAR_SKY;
   const applySun = () => {
     const sun = sunPosition(lat, day, sky.hour);
-    sunlight.set(sun.dir, sun.elevationDeg);
+    sunlight.set(sun.dir, sun.elevationDeg, skyWeather(weather));
     dresser.setSun(sun.elevationDeg);
+    cloudsView.setLight(sunlight.toLight, sunlight.cloudLit, sunlight.cloudShade);
+    drawCloudShadows(clouds, extent, sun.dir, site.spec.plainM ?? 150);
   };
-  applySun();
+  /** A fresh sky for this weather; the same preset always brings the same clouds. */
+  const setWeather = (w: WeatherSpec) => {
+    weather = w;
+    clouds = w.layers?.length ? new CloudField(w.layers, extent, seedOf(`${zone}/${w.id}`), TOUCH ? 0.6 : 1) : null;
+    cloudsView.setField(clouds);
+    applySun();
+  };
+  setWeather(weather);
   const gui = new GUI({ title: t('gui.title') });
   /** Each control's label key, so a language switch can rename them. */
   const guiLabels = new Map<ReturnType<GUI['add']>, Parameters<typeof t>[0]>();
   guiLabels.set(gui.add(sky, 'hour', hours.first, hours.last, 0.05).onChange(applySun), 'gui.hour');
+  const wxSetting = { weather: weather.id };
+  const wxNames = Object.fromEntries(weathers.map((w) => [w.name[currentLang()] ?? w.name.en, w.id]));
+  guiLabels.set(gui.add(wxSetting, 'weather', wxNames).onChange((id: string) => {
+    setWeather(weathers.find((w) => w.id === id)!);
+    track('weather', { id });
+  }), 'gui.weather');
   const applyDrivetrain = () => {
     const split = DRIVETRAINS[settings.drivetrain];
     spec.driveFront = split ?? VEHICLES[vehicleKey()].spec.driveFront;
@@ -406,7 +442,7 @@ async function boot(): Promise<void> {
     applyDrivetrain();
     setReplay(false);
     replay.clear(); // it would be drawn in the new body
-    model = VEHICLES[id].model(spec, heightAt);
+    model = build(id);
     scene.add(model.group);
     if (model.world) scene.add(model.world);
     audio.electric = !!spec.engine.electric;
@@ -443,6 +479,8 @@ async function boot(): Promise<void> {
     writeMoment({ x: car.pos[0], y: car.pos[1], z: car.pos[2], heading: car.heading, speed: car.speed, flying: car.flying }, zone, q);
     writeView({ cam: rig.mode, hud: hudShown, map: !minimap.classList.contains('hidden'), drive: settings.drivetrain }, q, !isJet(spec));
     q.set('time', formatHour(sky.hour));
+    if (weather === weathers[0]) q.delete('wx');
+    else q.set('wx', weather.id);
     const url = `${location.origin}${location.pathname}?${q.toString().replace(/%2C/g, ',').replace(/%3A/g, ':')}`;
     track('share', { flying: car.flying });
     shareLink.value = url;
@@ -474,7 +512,7 @@ async function boot(): Promise<void> {
 
   // Dev builds expose the live state for poking at from the console.
   const perf = { physics: 0, terrain: 0, render: 0, frames: 0, worst: 0 };
-  if (import.meta.env.DEV) Object.assign(window, { drive: { car: () => car, pilot: () => pilot, controls: input.controls, terrain, site, perf, renderer } });
+  if (import.meta.env.DEV) Object.assign(window, { drive: { car: () => car, pilot: () => pilot, controls: input.controls, terrain, site, perf, renderer, clouds: () => clouds } });
 
   const carPos = new THREE.Vector3();
   const carVel = new THREE.Vector3();
@@ -613,11 +651,13 @@ async function boot(): Promise<void> {
     const groundZ = terrain.heightAt(view.pos[0], view.pos[1]);
     const agl = view.pos[2] - spec.cgHeight - Math.max(groundZ, 0);
     const jetBuffet = isJet(spec) && view.flying ? buffet(view.mach, agl, view.airspeed) : 0;
+    // Through a cloud the air is rougher.
+    const cloudBumps = view.flying && clouds ? 0.12 * clouds.density(view.pos[0], view.pos[1], view.pos[2]) * Math.min(view.airspeed / 60, 1) : 0;
     // Crashed, the camera backs well off from the fireball.
     const reach = gone ? 3 : view.wings * (isJet(spec) ? JET_CAMERA : spec.wings ? 1 : 0.3);
     rig.eye = isJet(spec) ? JET_EYE : BONNET_EYE;
     rig.update(dt, model.group, carVel, followHeading, ground, reach, boosting,
-      Math.min(view.airbrake * Math.min(view.airspeed / 250, 1) + jetBuffet + (gone ? (live ? wreck / WRECK_S : 0.5) : 0), 1));
+      Math.min(view.airbrake * Math.min(view.airspeed / 250, 1) + jetBuffet + cloudBumps + (gone ? (live ? wreck / WRECK_S : 0.5) : 0), 1));
     jetFx.update(paused ? 0 : dt, {
       body: model.group, on: isJet(spec) && view.flying && !welcome.isOpen && !gone, altitude: view.pos[2], agl, airspeed: view.airspeed,
       g, alpha: view.alpha, groundY: Math.max(groundZ, 0), sea: groundZ < 0, vel: carVel,
@@ -634,7 +674,11 @@ async function boot(): Promise<void> {
     audio.setMuffle(eyes.grey);
     flightHud.update(camera, plane && hudShown ? { vel: carVel, heading: followHeading, g, alpha: view.alpha, pullUp, airbrake: view.airbrake } : null, now / 1000);
     sunlight.follow(carPos);
-    sunlight.setViewHeight(camera.position.y);
+    clouds?.step(paused ? 0 : dt, weather.wind ?? [0, 0]);
+    setCloudShadows(clouds ? 0.8 * sunlight.daylight : 0, clouds?.drift ?? [0, 0]);
+    cloudsView.update(dt, camera);
+    const inCloud = clouds ? clouds.density(camera.position.x + extent / 2, extent / 2 - camera.position.z, camera.position.y) : 0;
+    sunlight.setViewHeight(camera.position.y, inCloud);
     const t1 = performance.now();
     terrainView.update(camera.position, camera.position.y - ground(camera.position), Math.hypot(...view.vel));
     perf.terrain += performance.now() - t1;

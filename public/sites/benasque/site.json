@@ -95,5 +95,53 @@
       "lat": 42.489,
       "lon": 0.502
     }
+  ],
+  "weather": [
+    {
+      "id": "peaks",
+      "name": {
+        "en": "Clouds on the peaks",
+        "es": "Nubes en las cumbres"
+      },
+      "wind": [
+        2,
+        1
+      ],
+      "layers": [
+        {
+          "base": 2700,
+          "top": 3800,
+          "cover": 0.3,
+          "size": 700
+        }
+      ]
+    },
+    {
+      "id": "valley-fog",
+      "name": {
+        "en": "Cloud in the valley",
+        "es": "Niebla en el valle"
+      },
+      "wind": [
+        0.5,
+        0.5
+      ],
+      "light": 0.75,
+      "layers": [
+        {
+          "base": 1050,
+          "top": 1500,
+          "cover": 0.8,
+          "size": 900
+        }
+      ]
+    },
+    {
+      "id": "clear",
+      "name": {
+        "en": "Clear",
+        "es": "Despejado"
+      }
+    }
   ]
 }

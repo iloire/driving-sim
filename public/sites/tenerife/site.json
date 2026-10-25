@@ -111,5 +111,74 @@
       "lat": 28.0513,
       "lon": -16.7166
     }
+  ],
+  "weather": [
+    {
+      "id": "sea-of-clouds",
+      "name": {
+        "en": "Sea of clouds",
+        "es": "Mar de nubes"
+      },
+      "wind": [
+        -1,
+        -1.5
+      ],
+      "layers": [
+        {
+          "base": 950,
+          "top": 1550,
+          "cover": 0.92,
+          "size": 1100,
+          "box": [
+            -0.3,
+            0.68,
+            1.3,
+            1.3
+          ]
+        },
+        {
+          "base": 2600,
+          "top": 3300,
+          "cover": 0.06,
+          "size": 600
+        }
+      ]
+    },
+    {
+      "id": "trades",
+      "name": {
+        "en": "Trade-wind clouds",
+        "es": "Nubes del alisio"
+      },
+      "wind": [
+        -4,
+        -6
+      ],
+      "layers": [
+        {
+          "base": 1100,
+          "top": 1900,
+          "cover": 0.25,
+          "size": 700
+        }
+      ]
+    },
+    {
+      "id": "calima",
+      "name": {
+        "en": "Calima (Saharan dust)",
+        "es": "Calima"
+      },
+      "haze": 2.2,
+      "hazeColor": "#d9c6a5",
+      "light": 0.9
+    },
+    {
+      "id": "clear",
+      "name": {
+        "en": "Clear",
+        "es": "Despejado"
+      }
+    }
   ]
 }

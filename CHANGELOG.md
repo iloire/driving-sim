@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-25 19:42
+
+- Weather. Clouds you can fly through, with shadows that drift over the land, and a preset list
+  per zone in its `site.json`: trade-wind cumulus over Lanzarote, Tenerife's sea of clouds on the
+  north slopes with Teide above it, calima (a soft dust haze), fair-weather and high cloud over
+  Zaragoza, cumulus on the Benasque peaks and fog down its valley. Inside a cloud the view goes
+  grey-white and the Jet bumps about. Settings → Weather picks one, `?wx=` asks for one, and a shared
+  moment keeps it.
+
 ## 2026-10-25 19:11
 
 - The balloon game is gone: no B key, no BALLOONS button on phones, no score panel, no balloon

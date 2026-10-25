@@ -9,6 +9,7 @@
 
 import * as THREE from 'three';
 import type { Heightmap } from '../sim/terrain';
+import { shadeByClouds } from './cloud-shadow';
 import type { DetailTile } from './site';
 
 /** Coarse-mesh segments per chunk side. */
@@ -58,7 +59,7 @@ diffuseColor.rgb *= mix(1.0, 0.75 + 0.5 * grain, grainFade);`)
   normal = normalize(normal + (viewMatrix * vec4(bump, 0.0)).xyz);
 }`);
   };
-  return material;
+  return shadeByClouds(material);
 }
 
 /**

@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { isPaved, resample, ROAD_WIDTH, type Road, type RoadKind } from '../sim/roads';
 import type { Heightmap } from '../sim/terrain';
+import { shadeByClouds } from './cloud-shadow';
 
 /** Metres of road one repeat of the texture covers (one dash and its gap). */
 const REPEAT_M = 12;
@@ -71,10 +72,10 @@ export class RoadView {
       }
       return { kind: r.kind, pts, along, bbox: [x0, y0, x1, y1] };
     });
-    const material = (marked: boolean) => new THREE.MeshStandardMaterial({
+    const material = (marked: boolean) => shadeByClouds(new THREE.MeshStandardMaterial({
       map: asphalt(marked, anisotropy), roughness: 0.86, metalness: 0, transparent: true, depthWrite: false,
       polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
-    });
+    }));
     this.materials = { marked: material(true), plain: material(false) };
   }
 

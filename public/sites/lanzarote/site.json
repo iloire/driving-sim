@@ -129,5 +129,43 @@
       "lat": 29.2209,
       "lon": -13.4513
     }
+  ],
+  "weather": [
+    {
+      "id": "trades",
+      "name": {
+        "en": "Trade-wind clouds",
+        "es": "Nubes del alisio"
+      },
+      "wind": [
+        -4,
+        -6
+      ],
+      "layers": [
+        {
+          "base": 900,
+          "top": 1500,
+          "cover": 0.28,
+          "size": 650
+        }
+      ]
+    },
+    {
+      "id": "calima",
+      "name": {
+        "en": "Calima (Saharan dust)",
+        "es": "Calima"
+      },
+      "haze": 2.2,
+      "hazeColor": "#d9c6a5",
+      "light": 0.9
+    },
+    {
+      "id": "clear",
+      "name": {
+        "en": "Clear",
+        "es": "Despejado"
+      }
+    }
   ]
 }

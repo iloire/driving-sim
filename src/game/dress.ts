@@ -11,6 +11,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { area, inside, roofline, type Building } from '../sim/buildings';
 import type { BuildingStyle, TileObjects } from '../sim/objects';
 import type { Heightmap } from '../sim/terrain';
+import { shadeByClouds } from './cloud-shadow';
 import type { RoadView } from './road-view';
 import type { DetailTile } from './site';
 
@@ -351,9 +352,9 @@ export class TileDresser {
   private readonly walls: THREE.MeshStandardMaterial[];
   /** How lit the windows are: 0 by day, 1 once the sun is down. */
   private readonly glow = { value: 0 };
-  private readonly roofMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
-  private readonly lampMat = new THREE.MeshStandardMaterial({ color: 0x8f949a, roughness: 0.5, metalness: 0.6 });
-  private readonly postMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 });
+  private readonly roofMat = shadeByClouds(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }));
+  private readonly lampMat = shadeByClouds(new THREE.MeshStandardMaterial({ color: 0x8f949a, roughness: 0.5, metalness: 0.6 }));
+  private readonly postMat = shadeByClouds(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 }));
   private readonly lampGeo = lampGeometry();
   private readonly postGeo = postGeometry();
   /** Per tile: its buildings and furniture (built once), and with the road surfaces (finest level). */
@@ -365,7 +366,7 @@ export class TileDresser {
         const { map, mask } = wallTextures(wood, style, anisotropy);
         const m = new THREE.MeshStandardMaterial({ map, vertexColors: true, roughness: 0.92 });
         wallShader(m, mask, this.glow);
-        return m;
+        return shadeByClouds(m);
       }),
     );
   }
