@@ -18,6 +18,8 @@ const STICK_RATE = 3;
 export const PLANE_STICK_RATE = 1.5;
 /** Roll asks the fly-by-wire for a roll rate, which can't overshoot, so it goes out faster on a softer curve (squared: full in 0.5 s). */
 export const PLANE_ROLL_RATE = 2;
+/** A/D only ever give this much roll stick, gentle however long they're held; the arrows give it all. */
+export const KEY_ROLL_MAX = 0.4;
 /** On wings the arrows are the hard stick: linear, full in an eighth of a second, for snapping into a turn. */
 export const PLANE_ARROW_RATE = 8;
 export const CRUISE_THRUST = 0.6;
@@ -37,7 +39,7 @@ export function stepKey(v: number, target: number, rate: number, back: number, d
 
 /** The plane's stick curve: fine near the middle, full at the end. */
 export const shapeStick = (v: number) => v * v * v;
-export const shapeRoll = (v: number) => v * Math.abs(v);
+export const shapeRoll = (v: number) => KEY_ROLL_MAX * v * Math.abs(v);
 
 export type Action = 'reset' | 'camera' | 'mute' | 'pause' | 'help' | 'menu' | 'next' | 'map' | 'transform' | 'balloons' | 'hud' | 'replay';
 

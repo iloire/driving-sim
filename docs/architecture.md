@@ -187,8 +187,9 @@ as the struts and tyres, scaled by how far out they are, and the wheel drive swi
   about a fifth, and full takes 0.67 s: a tap is a fine correction, a held key pulls hard soon
   enough to get out of a dive. Roll is the exception: it asks the fly-by-wire for a roll
   rate, which stops when you let go, so A/D go out at 2 a second on a square (`shapeRoll`) and
-  start the roll straight away: on the Jet a quarter stick (25°/s) at 0.25 s, full (100°/s) at
-  0.5 s, so a one-second hold banks about 60°.
+  start the roll straight away, but they only ever give 40 % of the stick (`KEY_ROLL_MAX`), gentle
+  however long they're held: on the Jet 40°/s by 0.5 s, so a one-second hold banks about 25° and
+  two seconds about 65°. The full 100°/s is on the arrows.
   On wings the arrows are a second, hard stick: linear, out and back at 8 a second
   (`PLANE_ARROW_RATE`, full in 0.125 s), for snapping into a turn or a pull, while W A S D keep
   the fine curves. Off wings the arrows are just W A S D. `src/game/input.test.ts` pins the curves.

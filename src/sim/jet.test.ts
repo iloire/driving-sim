@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCar, JET, stepCar, type CarEnv, type CarState, type Controls } from './car';
 import { atmosphere, stalled } from './wings';
-import { PLANE_ROLL_RATE, PLANE_STICK_RATE, shapeRoll, shapeStick } from '../game/input';
+import { PLANE_ARROW_RATE, PLANE_ROLL_RATE, PLANE_STICK_RATE, shapeRoll, shapeStick } from '../game/input';
 import { rotate, unrotate } from './vec';
 
 const STEP = 1 / 120;
@@ -131,17 +131,21 @@ describe('the jet', () => {
     expect(most).toBeLessThan(8);
   });
 
-  it('banks about 60° on a one-second hold of D at cruise, and a tap only a few degrees', () => {
-    const bank = (seconds: number) => {
+  it('banks gently on D however long it is held, and briskly on the arrow', () => {
+    const bank = (stick: (t: number) => number, seconds: number) => {
       const s = airborne(230, 3000);
       const c = controls();
-      for (let t = 0; t < seconds; t += STEP) { c.flight.roll = shapeRoll(Math.min(PLANE_ROLL_RATE * t, 1)); fly(s, c, STEP); }
+      for (let t = 0; t < seconds; t += STEP) { c.flight.roll = stick(t); fly(s, c, STEP); }
       const right = rotate(s.q, [0, -1, 0]), up = rotate(s.q, [0, 0, 1]);
       return (Math.atan2(-right[2], up[2]) * 180) / Math.PI;
     };
-    expect(bank(0.2)).toBeLessThan(5);
-    expect(bank(1)).toBeGreaterThan(45);
-    expect(bank(1)).toBeLessThan(80);
+    const d = (t: number) => shapeRoll(Math.min(PLANE_ROLL_RATE * t, 1));
+    const arrow = (t: number) => Math.min(PLANE_ARROW_RATE * t, 1);
+    expect(bank(d, 0.2)).toBeLessThan(2);
+    expect(bank(d, 1)).toBeGreaterThan(15);
+    expect(bank(d, 1)).toBeLessThan(35);
+    expect(bank(d, 2)).toBeLessThan(80);
+    expect(bank(arrow, 0.5)).toBeGreaterThan(35);
   });
 
   it('rolls at the same rate at 250 and 300 m/s, and slower when slow', () => {

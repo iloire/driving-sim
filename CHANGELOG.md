@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-25 07:46
+
+- A/D roll gently the whole time and the arrows roll hard. A/D now only ever give 40 % of the
+  stick, 40°/s on the Jet, so a one-second hold banks about 25° and two seconds about 65°. ← / →
+  still go to the full 100°/s in an eighth of a second, about 40° of bank in half a second.
+
 ## 2026-10-25 07:40
 
 - The Jet rolls at 100°/s at full stick, down from 258°/s. With the quicker key, A/D whipped it
