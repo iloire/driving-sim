@@ -11,8 +11,8 @@ A browser driving simulator over real places in Spain: IGN 5 m terrain and aeria
 Four zones: **Lanzarote**, **Tenerife**, **Zaragoza** and **Benasque** (`?site=tenerife`). Drive the
 LZ-67 through Timanfaya, go off-road across the lava, or press **F** to take off.
 
-Runs in a desktop browser or on a phone held sideways. A welcome screen picks place, vehicle and
-time of day; **M** / **Esc** brings it back.
+Runs in a desktop browser or on a phone held sideways. A welcome screen, set out as a rally roadbook, picks
+zone, place and vehicle; **M** / **Esc** brings it back.
 
 ![The welcome screen: Lanzarote Drive over the Roadster on the LZ-67 in Timanfaya](docs/screenshots/welcome.png)
 

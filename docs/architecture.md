@@ -32,7 +32,7 @@ Each zone is a folder with a `site.json`, which `scripts/fetch-terrain.ts` fills
 
 | field | meaning |
 |---|---|
-| `name`, `kicker` | the welcome screen's title and the line over it (`en`, `es`) |
+| `name`, `kicker` | the welcome screen's title and the line under it (`en`, `es`) |
 | `proj4`, `crs` | the map projection, and the code IGN's services know it by |
 | `bbox` | the square, in that projection's metres: a multiple of `detail.tileM` a side |
 | `plainM` | inland only: the farmland's height around the square. Omitted means an island with sea all round |
@@ -411,8 +411,10 @@ Here all 105 land tiles have detail (about 74 MB of heights), so they load lazil
 
 ## Welcome screen (`src/game/welcome.ts`, `camera.ts`)
 
-The page opens on a menu laid over the live scene. You pick a place (← → or the Places tab), a vehicle and
-a named time of day (`timesOfDay` clamps Dawn…Sunset to the day's daylight), then Drive. Under it the
+The page opens on a menu laid over the live scene, set out as a rally roadbook: a tilted paper sheet
+whose numbered boxes are the zone, the place (with a tulip that turns as you step through places, ← → or
+the Places tab) and the vehicle, the picked one under a stroke of yellow highlighter. Then Drive. The sun
+starts at `DEFAULT_HOUR` (afternoon) unless a shared link says otherwise. Under it the
 physics stops and the audio is paused. The HUD, the settings panel and the touch buttons are hidden by
 `body.in-menu`. `CameraRig.showcase()` circles the car slowly, wider and higher with the wings out. A
 place far across the island is a cut, not a sweep over the mountains. `drive()` blends into the camera

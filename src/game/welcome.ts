@@ -1,8 +1,8 @@
 // The welcome screen, laid over the live map: the camera circles the car while you pick a
-// zone, a place, a vehicle and the time of day, then drive. M or Esc on the road brings it back with
-// Resume. ← → change place, Enter drives. A shared link skips it and starts where it was shared.
+// zone, a place and a vehicle, then drive, always in the afternoon light. M or Esc on the road
+// brings it back with Resume. ← → change place, Enter drives. A shared link skips it and starts where it was shared.
 
-import { t, type Key, type Lang } from './i18n';
+import { t, type Lang } from './i18n';
 
 export interface WelcomeView {
   /** The zone's name (the title) and the line over it. */
@@ -14,9 +14,6 @@ export interface WelcomeView {
   place: string;
   vehicles: { id: string; name: string; line: string }[];
   vehicle: string;
-  /** Named times of day, and which one (if any) the sun is at. */
-  times: string[];
-  time: string;
   /** A drive is paused under the menu and can carry on. */
   canResume: boolean;
   /** The Jet takes off from the sky rather than driving off. */
@@ -29,19 +26,12 @@ export interface WelcomeHandlers {
   zone(id: string): void;
   place(id: string): void;
   vehicle(id: string): void;
-  time(name: string): void;
   drive(): void;
   resume(): void;
   lang(l: Lang): void;
 }
 
 type Tab = 'help' | 'places';
-
-/** Named solar hours inside the day's daylight, in order; the ends hug sunrise and sunset. */
-export function timesOfDay(first: number, last: number): Record<string, number> {
-  const named: [string, number][] = [['Dawn', first], ['Morning', 9.5], ['Midday', 12.5], ['Afternoon', 16.5], ['Sunset', last]];
-  return Object.fromEntries(named.map(([k, h]) => [k, Math.min(Math.max(h, first), last)]));
-}
 
 /** The neighbour of `current` in `list`, wrapping round. */
 export function step<T>(list: T[], current: T, by: number): T {
@@ -101,7 +91,6 @@ export class Welcome {
     else if (d.placeStep) this.on.place(step(v.places.map((p) => p.id), v.place, Number(d.placeStep)));
     else if (d.place) this.on.place(d.place);
     else if (d.vehicle) this.on.vehicle(d.vehicle);
-    else if (d.time) this.on.time(d.time);
     else if (d.drive !== undefined) this.on.drive();
     else if (d.resume !== undefined) this.on.resume();
     else if (d.lang) this.on.lang(d.lang as Lang);
@@ -133,30 +122,38 @@ export class Welcome {
       ? keyOf(document.activeElement) : null;
     const at = v.places.findIndex((p) => p.id === v.place);
     const vehicle = v.vehicles.find((x) => x.id === v.vehicle);
-    const chip = (attr: string, value: string, label: string, on: boolean) =>
-      `<button type="button" class="wl-chip" ${attr}="${esc(value)}" aria-pressed="${on}">${esc(label)}</button>`;
+    const pick = (attr: string, value: string, label: string, on: boolean) =>
+      `<button type="button" class="wl-pick" ${attr}="${esc(value)}" aria-pressed="${on}">${esc(label)}</button>`;
     this.root.innerHTML = `
       <div class="wl-main">
-        <p class="wl-kicker">${esc(v.kicker)}</p>
         <h1 class="wl-title">${esc(v.title)} <span>Drive</span></h1>
-        <div class="wl-row" role="group" aria-label="Zone">
-          <span class="wl-label">${esc(t('menu.zone'))}</span>
-          ${v.zones.map((x) => chip('data-zone', x.id, x.name, x.id === v.zone)).join('')}
-        </div>
-        <div class="wl-place">
-          <button type="button" class="wl-arrow" data-place-step="-1" aria-label="${esc(t('menu.prev'))}">‹</button>
-          <h2>${esc(v.places[at]?.name ?? '')}</h2>
-          <button type="button" class="wl-arrow" data-place-step="1" aria-label="${esc(t('menu.next'))}">›</button>
-          <span class="wl-count">${at + 1} / ${v.places.length}</span>
-        </div>
-        <div class="wl-row" role="group" aria-label="Vehicle">
-          <span class="wl-label">${esc(t('menu.ride'))}</span>
-          ${v.vehicles.map((x) => chip('data-vehicle', x.id, x.name, x.id === v.vehicle)).join('')}
-          <span class="wl-line">${esc(vehicle?.line ?? '')}</span>
-        </div>
-        <div class="wl-row" role="group" aria-label="Time of day">
-          <span class="wl-label">${esc(t('menu.sun'))}</span>
-          ${v.times.map((x) => chip('data-time', x, t(`time.${x}` as Key), x === v.time)).join('')}
+        <p class="wl-kicker">${esc(v.kicker)}</p>
+        <div class="wl-book">
+          <div class="wl-leg">
+            <span class="wl-n">1</span>
+            <span class="wl-label">${esc(t('menu.zone'))}</span>
+            <div class="wl-picks" role="group" aria-label="${esc(t('menu.zone'))}">
+              ${v.zones.map((x) => pick('data-zone', x.id, x.name, x.id === v.zone)).join('')}
+            </div>
+          </div>
+          <div class="wl-leg wl-start">
+            <span class="wl-n">2</span>
+            ${tulip(at)}
+            <div class="wl-place">
+              <button type="button" class="wl-arrow" data-place-step="-1" aria-label="${esc(t('menu.prev'))}">‹</button>
+              <h2>${esc(v.places[at]?.name ?? '')}</h2>
+              <button type="button" class="wl-arrow" data-place-step="1" aria-label="${esc(t('menu.next'))}">›</button>
+              <span class="wl-count">${at + 1}/${v.places.length}</span>
+            </div>
+          </div>
+          <div class="wl-leg">
+            <span class="wl-n">3</span>
+            <span class="wl-label">${esc(t('menu.ride'))}</span>
+            <div class="wl-picks" role="group" aria-label="${esc(t('menu.ride'))}">
+              ${v.vehicles.map((x) => pick('data-vehicle', x.id, x.name, x.id === v.vehicle)).join('')}
+              <span class="wl-line">${esc(vehicle?.line ?? '')}</span>
+            </div>
+          </div>
         </div>
         <div class="wl-go">
           ${v.canResume ? `<button type="button" class="wl-btn primary" data-resume>${esc(t('menu.resume'))}<small>${esc(t('menu.resume.note'))}</small></button>` : ''}
@@ -180,6 +177,21 @@ export class Welcome {
       <li><button type="button" data-place="${esc(p.id)}" aria-current="${p.id === v.place}">${esc(p.name)}</button></li>`).join('')}
     </ul>`;
   }
+}
+
+/** A roadbook tulip for the start box: a dot where you are, the line you take, a road you pass.
+ * Places take turns at going right, straight on and left, so stepping through them redraws it. */
+function tulip(at: number): string {
+  const [route, side] = [
+    ['M20 40V25L33 12', 'M20 25 7 14'],
+    ['M20 40V8', 'M20 22H33'],
+    ['M20 40V25L7 12', 'M20 25 33 14'],
+  ][((at % 3) + 3) % 3];
+  return `<svg class="wl-tulip" viewBox="0 0 40 48" aria-hidden="true">
+    <path d="${side}" stroke-width="2"/><path d="${route}" stroke-width="3.5" marker-end="url(#wl-head)"/>
+    <circle cx="20" cy="42" r="4"/>
+    <defs><marker id="wl-head" viewBox="0 0 6 6" refX="3" refY="3" markerWidth="2.6" markerHeight="2.6" orient="auto"><path d="M0 0 6 3 0 6z"/></marker></defs>
+  </svg>`;
 }
 
 /** A selector that finds the same button again after a repaint: each carries one data attribute. */

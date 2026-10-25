@@ -23,7 +23,7 @@ import { RoadView } from './game/road-view';
 import { loadSite, ZONES, zoneOf, type Spawn } from './game/site';
 import { TerrainView } from './game/terrain-view';
 import { TouchPad } from './game/touch';
-import { timesOfDay, Welcome } from './game/welcome';
+import { Welcome } from './game/welcome';
 import { createSurround, Sunlight } from './game/world';
 import { BalloonField } from './sim/balloons';
 import { buildingStyle } from './sim/objects';
@@ -350,12 +350,6 @@ async function boot(): Promise<void> {
       gui.controllersRecursive().forEach((c) => c.updateDisplay());
       switchVehicle();
     },
-    time: (name) => {
-      sky.hour = times()[name];
-      gui.controllersRecursive().forEach((c) => c.updateDisplay());
-      applySun();
-      refreshMenu();
-    },
     drive: () => {
       if (canResume) { canResume = false; void goTo(spawn).then(leaveMenu); } // start over at the place
       else leaveMenu();
@@ -382,12 +376,10 @@ async function boot(): Promise<void> {
   }
 
   function refreshMenu(): void {
-    const named = times();
     welcome.render({
       title: site.spec.name, kicker: site.spec.kicker[currentLang()], zones: ZONES, zone,
       places: site.spawns.map((s) => ({ id: s.spec.id, name: s.spec.name })), place: spawn.spec.id,
       vehicles: Object.entries(VEHICLES).map(([id, v]) => ({ id, name: v.name, line: t(v.line) })), vehicle: vehicleKey(),
-      times: Object.keys(named), time: Object.keys(named).find((k) => Math.abs(named[k] - sky.hour) < 0.01) ?? '',
       canResume, flies: isJet(spec), lang: currentLang(), langs: LANGS,
     });
   }
@@ -433,7 +425,6 @@ async function boot(): Promise<void> {
   const day = dayOfYear(new Date());
   const hours = daylightHours(lat, day);
   const sky = { hour: Math.min(Math.max(parseHour(query) ?? DEFAULT_HOUR, hours.first), hours.last) };
-  const times = () => timesOfDay(hours.first, hours.last);
   const applySun = () => {
     const sun = sunPosition(lat, day, sky.hour);
     sunlight.set(sun.dir, sun.elevationDeg);

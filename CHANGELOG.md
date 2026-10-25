@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-25 10:05
+
+- Welcome screen as a rally roadbook: the choices sit on a tilted paper sheet in numbered, ruled boxes
+  (zone, place, vehicle), the place box carries a roadbook tulip that turns as you step through places,
+  and the picked option gets a stroke of yellow highlighter. DRIVE in the title, the Drive button and the
+  side panel's accents go from Timanfaya orange to the same highlighter yellow; the tagline is a plain
+  line under the title, and the loading screen's DRIVE turns yellow too.
+- The Sun choice is gone from the welcome screen: every drive starts in the afternoon light (a shared
+  link still carries its own hour). README screenshot retaken.
+
 ## 2026-10-25 08:30
 
 - Lit windows at dusk: as the sun drops below 10°, about half the windows glow warm, picked per bay and
