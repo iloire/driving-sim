@@ -302,3 +302,22 @@ describe('the atmosphere', () => {
     expect(atmosphere(20000).sound).toBeCloseTo(295.1, 0);
   });
 });
+
+describe('the jet on the runway', () => {
+  it('brakes straight down the runway on Space: wheel brakes short of locking, no ground loop', () => {
+    const s = createCar(JET, 0, 0, 0, 0);
+    s.flying = true;
+    s.wings = 1;
+    s.vel = [0, 75, 0];
+    s.w = [0, 0, 0.05]; // a touchdown is never quite straight
+    const c = controls(0, 0, 0.1);
+    c.handbrake = true;
+    c.flight.airbrake = true;
+    let stopped = Infinity;
+    fly(s, c, 20, () => { if (Math.hypot(...s.vel) < 1) stopped = Math.min(stopped, s.pos[1]); });
+    const nose = rotate(s.q, [1, 0, 0]);
+    expect(Math.abs(Math.atan2(nose[0], nose[1]))).toBeLessThan(0.1);
+    expect(Math.abs(s.pos[0])).toBeLessThan(15);
+    expect(stopped).toBeLessThan(1000);
+  });
+});

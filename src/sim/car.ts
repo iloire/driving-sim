@@ -22,6 +22,8 @@ const SLIP_FLOOR = 2.5;
 const BRAKE_STIFFNESS = 20000;
 /** Airbrake panel travel per second (1 = fully up). */
 const AIRBRAKE_RATE = 2;
+/** Share of the brakes Space gives on wings, like anti-skid: any more and the rear tyres slide and ground-loop the jet. */
+const ANTI_SKID = 0.7;
 /** A locked, sliding tyre keeps this share of its grip. */
 const KINETIC = 0.8;
 /** Body corners touching the ground (a roll, a bottoming): stiffness N/m, damping N per m/s. */
@@ -369,8 +371,10 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
   s.wings += clamp((s.flying && deploy ? 1 : 0) - s.wings, -deploy * dt, deploy * dt);
   const panel = s.flying && w?.airbrake && c.flight.airbrake ? 1 : 0;
   s.airbrake += clamp(panel - s.airbrake, -AIRBRAKE_RATE * dt, AIRBRAKE_RATE * dt);
-  // In plane mode the jet drives it, so the wheels just roll (Space still brakes the rear ones).
-  const { drive, brake } = s.flying ? { drive: 0, brake: 0 } : powertrain(s, spec, c, dt);
+  // In plane mode the jet drives it, so the wheels just roll, and Space brakes them all short of
+  // locking: a locked rear wheel has no side grip left and ground-loops the jet.
+  const { drive, brake } = s.flying ? { drive: 0, brake: c.handbrake ? ANTI_SKID : 0 } : powertrain(s, spec, c, dt);
+  const lockRear = c.handbrake && !s.flying;
   if (s.flying) s.rpm += (spec.engine.idle + c.flight.thrust * (spec.engine.redline - spec.engine.idle) - s.rpm) * (1 - Math.exp(-dt * 3));
   const sus = spec.suspension;
 
@@ -392,7 +396,7 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
       wheel.compression = 0;
       wheel.strut = sus.rest;
       wheel.slip = 0;
-      if (!(c.handbrake && !wheel.front)) wheel.spin += (s.speed / spec.wheelRadius) * dt;
+      if (!(lockRear && !wheel.front)) wheel.spin += (s.speed / spec.wheelRadius) * dt;
       continue;
     }
     wheel.contact = true;
@@ -417,7 +421,7 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
     const grip = spec.mu * (surface.grip + (1 - surface.grip) * spec.allTerrain) * load;
     const axleDrive = wheel.front ? spec.driveFront : 1 - spec.driveFront;
     const axleBrake = wheel.front ? spec.brakeFront : 1 - spec.brakeFront;
-    const locked = c.handbrake && !wheel.front;
+    const locked = lockRear && !wheel.front;
     const brakeCap = brake * spec.brakeForce * axleBrake / 2 + (locked ? spec.brakeForce : 0);
     let fx = (drive * axleDrive) / 2
       - clamp(vx * BRAKE_STIFFNESS, -brakeCap, brakeCap)

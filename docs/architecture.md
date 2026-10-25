@@ -197,7 +197,9 @@ slight shake, the speed readout glows, and a low rocket roar plays.
 The car stays the same rigid body when it transforms. `flying` sends `wings` (0..1) towards fully
 out at 1.1 per second. While they're out, `aero()` adds its force and torque in the same sub-step
 as the struts and tyres, scaled by how far out they are, and the wheel drive switches off
-(Space still locks the rear wheels). The extra inertia of the wings is added in proportion.
+(Space brakes all four at 70 %, `ANTI_SKID`, never locking them: a locked rear wheel has no side
+grip left, so the jet would ground-loop off the runway; from 270 km/h at idle it stops straight in
+about 700 m). The extra inertia of the wings is added in proportion.
 
 - **Lift.** On 12 m²: CL = 0.25 + 5α up to the stall at 15° (CL ≈ 1.55). Over the next 9° it
   collapses onto a flat plate's 0.9 sin 2α. Drag is 0.035 + 0.06 CL². The lift acts perpendicular to

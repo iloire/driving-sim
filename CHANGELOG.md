@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-25 21:45
+
+- The Jet lands without spinning off the runway. Space on the ground locked the rear wheels, and a
+  locked tyre has no side grip, so the slightest yaw at touchdown swung the jet round and onto the
+  lava, where it bounced and blew up. On wings Space now brakes all four wheels short of locking,
+  like anti-skid: from 270 km/h at idle it stops straight in about 700 m, with a test.
+
 ## 2026-10-25 21:05
 
 - The Jet's up arrow pushes harder. Pushing was still held at −3 g, so a full push turned the
