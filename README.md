@@ -6,20 +6,13 @@ https://github.com/user-attachments/assets/6201258c-3a50-472c-bdfe-7c36c5b83674
 
 ### ▶ Play it now: **[https://iloire.github.io/driving-sim/](https://iloire.github.io/driving-sim/)**
 
-A browser driving simulator over real places in Spain: the IGN 5 m terrain and aerial photo
-used by [Famara Glide](https://github.com/iloire/paragliding-sim), with every OpenStreetMap road
-carved into it. Four zones: **Lanzarote**, **Tenerife** (Teide, Masca, the south airport),
-**Zaragoza** (the city, the Ebro and the air base) and **Benasque** (the Pyrenees under Aneto and
-Posets). Pick one on the welcome screen, or link straight to it with `?site=tenerife`. You can drive the LZ-67 through Timanfaya, wind along La Geria, or leave
-the road and bounce across the lava. Or press **F**: the Roadster lights the gas thrusters in its
-floor and lifts off like a rocket, and the armoured 4×4 unfolds wings and takes off from Lanzarote
-Airport's runway.
+A browser driving simulator over real places in Spain: IGN 5 m terrain and aerial photo (as in
+[Famara Glide](https://github.com/iloire/paragliding-sim)) with every OpenStreetMap road carved in.
+Four zones: **Lanzarote**, **Tenerife**, **Zaragoza** and **Benasque** (`?site=tenerife`). Drive the
+LZ-67 through Timanfaya, go off-road across the lava, or press **F** to take off.
 
-It runs in a desktop browser, or on a phone held sideways. Nothing to install.
-
-It opens on a welcome screen over the live island, with the camera circling your car. Pick a place,
-a ride and the time of day, then **Drive**. **M** or **Esc** brings the menu back, with **Resume**.
-A shared link skips the menu and puts you straight into the moment someone shared.
+Runs in a desktop browser or on a phone held sideways. A welcome screen picks place, vehicle and
+time of day; **M** / **Esc** brings it back.
 
 ![The welcome screen: Lanzarote Drive over the Roadster on the LZ-67 in Timanfaya](docs/screenshots/welcome.png)
 
@@ -27,59 +20,22 @@ A shared link skips the menu and puts you straight into the moment someone share
 
 ## What's in it
 
-- **The whole island at 5 m**: 105 detail tiles (3 km each) with a 1.5 m/px orthophoto, loaded as
-  you drive and freed behind you.
-- **Real roads**: about 13,000 OSM ways. Paved roads are graded and carved flat into the terrain,
-  and drawn with Spanish markings. Dirt tracks are left to the photo, and so is everything off-road.
-- **The Roadster** (the default car): an original white wedge hypercar with a long glass canopy, a
-  light bar across the nose and a red one across the tail, and four round nozzles in a black
-  diffuser. It's electric: three motors give 1,400 N·m from a standstill through one gear, so
-  0–100 km/h is down to the tyres (about 2 s) and it tops out near 390 km/h.
-- **It hovers on thrusters**: press **F** and four nozzles drop out of the floor and blast gas
-  straight down. Flight assists hold your height, so it flies like a drone. Space climbs, Ctrl
-  sinks, W/S tilt it to fly forwards or back, A/D turn, and Shift fires the tail nozzles.
-- **An armoured 4×4** (choose it under Settings → Vehicle, or `?car=4x4`): a matte-black, gunmetal-plated pickup on 1 m tall lug tyres, with a lift
-  kit, solid axles, a ram bar, slatted guards over the glass, a roof light bar and a spare in the
-  bed. It has a 520 N·m V8 and 50/50 four-wheel drive, and its all-terrain tyres keep their grip
-  on picón and gravel.
-- **A Jet** (Settings → Vehicle, or `?car=jet`): an original grey delta fighter that starts 600 m up and
-  only flies. Fly-by-wire turns the stick into g (S pulls up to 9 g) and a roll rate (A/D), so it
-  handles the same at any speed. W A S D work the stick finely, the arrows hard. Shift and Ctrl work a throttle lever. Dry, it tops out just under the sound barrier. Hold Shift at full and the
-  afterburner pushes it through, with a vapour cone and a boom, on to about 1,470 km/h (Mach 1.2), which puts the
-  island's whole length (about 60 km) under three minutes away. The air thins with height, so up
-  high it's faster still (Mach 2 from 8 km up on the afterburner) and runs out of air near 18 km. Above 8 km it draws a
-  contrail, hard turns pull vapour off the wingtips, and low and fast it kicks up dust or sea spray.
-  The cockpit warns you: "whoop whoop, pull up" near the ground, a stall horn at the angle-of-attack
-  limit, and the pilot's strained breathing as the g builds. Fly into the ground and it goes up in
-  a fireball, with debris and smoke, before putting you back in the air. Space puts out the airbrake. A fighter HUD (flight path marker, pitch ladder,
-  heading tape, g, PULL UP) draws over the view on wings. Hold too much g for too long and the view
-  greys from the edges, the sound goes dull, and you black out for a few seconds; push hard and it reddens.
-- **A car that is a rigid body**: four raycast struts, tyres with a slip-angle curve and a friction
-  circle, a torque curve and an automatic six-speed. Weight transfer, power oversteer, handbrake
-  turns and rollovers all come out of the physics.
-- **Towns**: OSM buildings with flat roofs and green, blue or brown woodwork. On Lanzarote (about
-  27,500) they are one or two storeys and lime white, as the island's building rules have it; the
-  other zones have their own heights and colours, Zaragoza's blocks of flats up to 14 storeys in
-  brick, sand and grey. Window styles, parapets,
-  stepped upper floors, chimneys and roof rooms vary from house to house. They are solid, so you can crash into
-  them. Street lamps line the roads through town, and white-and-black edge posts line the main
-  roads in the open.
-- **The 4×4 flies too**: press **F** and wings rise from the roof edges and swing out to an 8.4 m span, a
-  fin and tailplane grow from the bed, and a jet lights under the rear bumper. It's a light plane
-  from then on: lift and drag from the angle of attack, a stall past about 15°, a tail that keeps
-  it pointing into the airflow, and controls that go soft as it slows. Fold the wings in the air
-  and it falls like a car.
-- **Balloon game**: about 40 big party balloons float 40–400 m over the island around you. Fly
-  through one to pop it into confetti: 100 points plus a speed bonus, multiplied by a combo of up to
-  ×5 when pops come within 4 s of each other. They show as dots on the map, and your best score is
-  remembered in your browser. It's off until you press **B**. The settings panel can also turn it
-on or start a new round.
-- **Instant replay**: press **I** to watch the last 30 seconds again from the start, crashes
-  included. C changes the camera and P pauses it; I again, or the end of the replay, puts you back
-  where you were.
-- **Surfaces**: tarmac grips, gravel tracks slide, and picón and lava slide more.
-- **The road you're on** as a sign plate, a heading-up map, and sound for the engine and tyres.
-- **Time of day**: from sunrise to sunset, with the sun where it really is over Lanzarote today.
+- **Real terrain**: 5 m tiles with a 1.5 m/px orthophoto, streamed as you drive.
+- **Real roads**: ~13,000 OSM ways; paved ones graded, carved flat and marked Spanish-style.
+- **Rigid-body car physics**: raycast struts, slip-angle tyres, torque curve, six-speed auto.
+  Oversteer, handbrake turns and rollovers come out of the physics.
+- **The Roadster**: an electric wedge hypercar, 0–100 in ~2 s, ~390 km/h. **F** turns it into a
+  hovering drone on floor thrusters.
+- **The armoured 4×4** (`?car=4x4`): lifted V8 pickup on lug tyres, grips on gravel. **F** unfolds
+  wings and a jet, and it flies like a light plane.
+- **The Jet** (`?car=jet`): a fly-by-wire delta fighter, up to 9 g and Mach 1.2 on afterburner
+  (Mach 2 up high). Sonic boom, contrails, vapour, pull-up warnings, g blackout and a fighter HUD.
+- **Towns**: OSM buildings, solid, styled per zone (Lanzarote's white houses, Zaragoza's brick
+  flats), lit at dusk, with street lamps and edge posts.
+- **Peak and sight labels** (**L**): Aneto, Teide, Mirador del Río …
+- **Balloon game** (**B**): fly through balloons for points and combos; best score is saved.
+- **Instant replay** (**I**): the last 30 seconds, crashes included.
+- **Surfaces, sound, map, road signs**, and the real sun position for any time of day.
 
 ![The Roadster hovering on its floor thrusters above the LZ-203 at dusk](docs/screenshots/roadster-hover.png)
 
@@ -102,89 +58,53 @@ npm run dev        # http://localhost:5173
 | **S / ↓** | Brake, and reverse once stopped |
 | **A / D** or **← / →** | Steer |
 | **Space** | Handbrake |
-| **Shift** | Turbo: a nitro rocket on the road (500+ km/h), tail thrusters hovering; on wings it opens the throttle, and the afterburner lights at full |
-| **F** | Fly: the Roadster lights its thrusters, the 4×4 unfolds its wings (again to land as a car) |
-| **B** | Balloon game on/off |
-| **L** | Labels on/off: the names of the peaks (Aneto, Posets, Teide …) |
-| **R** | Back on the nearest paved road, facing the way you were going |
-| **M** / **Esc** · **N** | Menu (place, vehicle, time of day) · next place |
-| **C** | Camera: chase, bonnet, orbit (drag the mouse) |
-| **G** · **V** · **P** · **H** | Map · mute · pause · help |
+| **Shift** | Turbo; in the air, throttle up (afterburner at full) |
+| **F** | Fly: Roadster thrusters, 4×4 wings (again to land) |
+| **B** · **L** · **I** | Balloon game · labels · replay |
+| **R** | Back on the nearest paved road |
+| **M** / **Esc** · **N** | Menu · next place |
+| **C** | Camera: chase, bonnet, orbit |
+| **G** · **V** · **P** · **H** · **U** | Map · mute · pause · help · flight HUD |
 
-**Hovering** (the Roadster): **Space** climbs and **Ctrl** sinks, and letting go holds your height.
-**W / S** tilt the nose down or up to fly forwards or back, **A / D** turn, and **Shift** fires the tail
-nozzles. On a phone the left thumb climbs and sinks.
+**Hovering** (Roadster): Space climbs, Ctrl sinks, W/S tilt, A/D turn, Shift fires the tail nozzles.
 
-**In the air with wings** (the 4×4 and the Jet) the same keys fly it. **W / S** push and pull the stick (S pulls the nose up),
-**A / D** roll, and **Q / E** work the rudder. **W A S D** are the fine stick: they stay gentle however long you hold them, for small corrections and subtle turns.
-The **arrows** are the hard stick, full almost at once, for snapping into a turn or pulling out of a dive. The stick snaps back when you let go. On the Jet the stick asks for how fast the nose comes round (20°/s at full), up to 9 g. The jet has a throttle lever, starting at cruise (60 %):
-**Shift** opens it, **Ctrl** closes it, and **1–4** jump to idle, cruise, 80 % and full. Keep holding **Shift** at
-full to light the afterburner. On the Jet, **Space** is the airbrake. The HUD shows the throttle next to the height.
-**U** shows or hides the green flight HUD; the Jet starts with it off, the 4×4 on wings with it on.
-To take off in the 4×4, transform, let it run past about 160 km/h, and pull **S**.
+**With wings** (4×4, Jet): W/S pitch, A/D roll, Q/E rudder. WASD is the fine stick, arrows the hard
+one. Shift/Ctrl move the throttle, 1–4 jump to idle/cruise/80 %/full; hold Shift at full for
+afterburner. Space is the Jet's airbrake. The 4×4 takes off past ~160 km/h with S.
 
-**Gamepad** (standard mapping): RT throttle, LT brake, left stick steers, A/B handbrake, X transform,
-Y camera, either stick click turbo, Back reset, Start pause. In the air the left stick is the
-stick, RT and LT open and close the throttle, a stick click lights the afterburner, and LB/RB are the rudder. On a phone, hold BOOST.
+**Gamepad**: RT/LT throttle and brake, left stick steers, A/B handbrake, X transform, Y camera,
+stick click turbo, LB/RB rudder. **Phone**: left thumb steers, right thumb accelerates and brakes.
 
-**Phone**, held sideways: slide the left thumb sideways to steer. Push the right thumb up to
-accelerate, and pull it down to brake or back up.
-
-The welcome screen and the settings panel both swap the vehicle (Roadster, armoured 4×4 or Jet) and
-set the time of day. The settings panel also has the exact solar time and the drivetrain (AWD, RWD, FWD).
-
-**Balloons:** press **B** (BALLOONS on a phone) to fill the sky with them, take off (from the
-airport, say), find the coloured dots on the map, and fly through them. Chain them for the combo.
-Press **B** again to put them away.
-
-A link starts someone at the same place and time: `?spawn=timanfaya&time=17:30` (add `&car=4x4`
-for the truck, `&car=jet` for the Jet). The places are
-`timanfaya`, `airport`, `mirador`, `famara`, `haria`, `la-geria`, `arrecife`, `teguise`
-and `orzola`.
-
-**Share a moment:** pause (**P**) and press **Share this moment**. That copies a link that starts the
-car exactly there, with the same heading and speed, at the same time of day and in the same car,
-in the air if you were flying, and seen the way you had it: the same camera, flight HUD and map on or
-off, balloons and drivetrain. It opens already playing, so whoever opens it lands straight in the
-drive. The link looks like `?at=25256.0,11616.1,2.7,308,31` (x, y and z in site metres, heading in
-degrees, km/h) plus `&fly=1` in the air, and only the view settings you changed from the defaults:
-`&cam=bonnet|orbit`, `&hud=0` (`&hud=1` in the Jet), `&map=0`, `&balloons=1`, `&drive=RWD|FWD`.
+**Links**: `?spawn=timanfaya&time=17:30&car=jet`. Spawns: `timanfaya`, `airport`, `mirador`,
+`famara`, `haria`, `la-geria`, `arrecife`, `teguise`, `orzola`. Pause and press **Share this
+moment** to copy a link that drops someone into exactly where you are, e.g.
+`?at=25256.0,11616.1,2.7,308,31&fly=1` (x, y, z, heading, km/h).
 
 ## Check it
 
 ```bash
-npm test           # car physics, electric drive, hovering, wing flight, balloon game, road carving, buildings, street furniture, terrain, sun, touch (Vitest)
+npm test           # Vitest
 npm run lint
 npm run build      # typecheck + production bundle
 ```
 
-CI runs all three on every push to `main` and on every pull request.
+CI runs all three on every push to `main` and every pull request.
 
 ## Terrain and roads
 
-`public/sites/<zone>/` holds what the game loads, one folder a zone, each described by its
-`site.json` (the square, the projection, the places; the fields are in
-[docs/architecture.md](docs/architecture.md#zones-srcgamesitets-publicsiteszonesitejson)).
-`npm run fetch-terrain -- <zone>` builds it: the IGN heightmap and photo, the 5 m tiles, and the OSM roads from Overpass, which it then
-carves into the tiles. It also writes each tile's OSM buildings, street lamps and edge posts to
-`objects/<col>_<row>.json`. Downloads are cached in `cache/` (git-ignored), so re-carving after a change
-to the road model happens offline. `--refresh` downloads everything again. See
-[docs/architecture.md](docs/architecture.md), and [docs/performance.md](docs/performance.md) for how
-it stays fast.
+Each zone lives in `public/sites/<zone>/`, described by its `site.json`.
+`npm run fetch-terrain -- <zone>` downloads the IGN data and OSM roads, builds the tiles and carves
+the roads in; downloads are cached in `cache/` (`--refresh` to redo). See
+[docs/architecture.md](docs/architecture.md) and [docs/performance.md](docs/performance.md).
 
 ## Deploy
 
-GitHub Pages, from CI. Every push to `main` that passes the tests is built with the
-`/driving-sim/` base path and deployed. The deploy job then fetches the live page, the site file and
-a detail photo, so a green badge means that commit is live.
-
-Analytics: Google Analytics 4, only when the build gets a measurement ID. CI passes the repo
-variable `GA_MEASUREMENT_ID` as `VITE_GA_ID` (`gh variable set GA_MEASUREMENT_ID --body G-XXXX`);
-without it nothing loads. Storage stays denied until the player taps OK on the one-line chip.
-Gameplay events live in `src/game/analytics.ts` and the `track(...)` calls in `src/main.ts`.
+GitHub Pages from CI: every green push to `main` deploys, then smoke-tests the live page, so a
+green badge means that commit is live. Google Analytics 4 loads only if the repo variable
+`GA_MEASUREMENT_ID` is set, and only after the player consents.
 
 ## Licence
 
-The code is free for non-commercial use under a [custom licence](LICENSE); commercial use (selling it,
-paid installations or services, ads) needs a separate licence from the author. The terrain data (MDT05 and PNOA) is © [Instituto Geográfico Nacional](https://www.ign.es),
-CC BY 4.0. Road data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), ODbL.
+Code: free for non-commercial use under a [custom licence](LICENSE); commercial use needs a
+separate licence. Terrain (MDT05, PNOA) © [Instituto Geográfico Nacional](https://www.ign.es),
+CC BY 4.0. Roads © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), ODbL.
