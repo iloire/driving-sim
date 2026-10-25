@@ -28,6 +28,7 @@ import { Welcome } from './game/welcome';
 import { CLEAR_SKY, createSurround, Sunlight, toScene, type SkyWeather } from './game/world';
 import { CloudsView } from './game/clouds-view';
 import { drawCloudShadows, setCloudShadows, shadeByClouds } from './game/cloud-shadow';
+import { setSeaWind, stepSea } from './game/sea';
 import { buildingStyle } from './sim/objects';
 import { createPilot, PILOT, stepPilot } from './sim/pilot';
 import { createCar, JET, ROADSTER, TRUCK, stepCar, type CarEnv, type CarSpec, type CarState, type Surface } from './sim/car';
@@ -493,6 +494,7 @@ async function boot(): Promise<void> {
     weather = w;
     clouds = w.layers?.length ? new CloudField(w.layers, extent, seedOf(`${zone}/${w.id}`), TOUCH ? 0.6 : 1) : null;
     cloudsView.setField(clouds);
+    setSeaWind(w.wind ?? [0, 0]);
     applySun();
   };
   setWeather(weather);
@@ -880,6 +882,7 @@ async function boot(): Promise<void> {
     flightHud.update(camera, plane && hudShown ? { vel: carVel, heading: followHeading, g, alpha: view.alpha, pullUp, airbrake: view.airbrake } : null, now / 1000);
     sunlight.follow(rocketMode && launchView ? launchView.focus.position : carPos);
     clouds?.step(paused ? 0 : dt, weather.wind ?? [0, 0]);
+    stepSea(paused ? 0 : dt);
     setCloudShadows(clouds ? 0.8 * sunlight.daylight : 0, clouds?.drift ?? [0, 0]);
     cloudsView.update(dt, camera);
     const inCloud = clouds ? clouds.density(camera.position.x + extent / 2, extent / 2 - camera.position.z, camera.position.y) : 0;

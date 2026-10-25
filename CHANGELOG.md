@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-25 22:13
+
+- Waves on the sea. The flat sea's material now tilts its surface with ten travelling waves, from a
+  60 m swell to sub-metre ripples, so the sky's reflection and the sun's glitter move like water and
+  a low sun lays a path across it. The weather's `wind` sets which way they run and how rough they
+  are (Lanzarote's trades give a fair chop; still air leaves a light swell). Waves smaller than a
+  pixel fade into extra roughness, so the horizon stays calm instead of shimmering. Shading only,
+  so the frame cost is a few lines of shader and the car still meets a flat sea (`src/game/sea.ts`, with tests).
+
 ## 2026-10-25 22:12
 
 - The 4×4 is now the Buggy: an open roll cage over two bucket seats, a short nose, a V8 out in the

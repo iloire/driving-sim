@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { Sky } from 'three/examples/jsm/objects/Sky.js';
 import { shadeByClouds } from './cloud-shadow';
+import { waveSea } from './sea';
 
 export function toScene(extent: number, x: number, y: number, z: number, out = new THREE.Vector3()): THREE.Vector3 {
   return out.set(x - extent / 2, z, extent / 2 - y);
@@ -11,8 +12,8 @@ export function toScene(extent: number, x: number, y: number, z: number, out = n
 
 /**
  * What surrounds the site out to the horizon: sea at 0 m under everything (an island has
- * water inside its bbox too), or dry farmland at `plainM` with a hole for the site, so a
- * valley floor below the plain's height is never covered.
+ * water inside its bbox too) with waves on it (sea.ts), or dry farmland at `plainM` with a
+ * hole for the site, so a valley floor below the plain's height is never covered.
  */
 export function createSurround(extent: number, plainM?: number): THREE.Mesh {
   // Out past the horizon even from Starship's 100 km (about 1,100 km away).
@@ -28,7 +29,7 @@ export function createSurround(extent: number, plainM?: number): THREE.Mesh {
   }
   geometry.rotateX(-Math.PI / 2);
   const material = plainM === undefined
-    ? new THREE.MeshStandardMaterial({ color: 0x0a2a3d, roughness: 0.32, metalness: 0 })
+    ? waveSea(new THREE.MeshStandardMaterial({ color: 0x0a2a3d, roughness: 0.12, metalness: 0 }))
     : new THREE.MeshStandardMaterial({ color: 0x8c7a5c, roughness: 1, metalness: 0 });
   const surround = new THREE.Mesh(geometry, shadeByClouds(material));
   // A plain sits a metre low so the terrain's faded edge meets it without z-fighting.

@@ -62,7 +62,7 @@ sprite on a pin 25 m over the ground (the OSM summit height when it has one), th
 at any range, hidden by the hills in front, fading out past 30 km and when you are on top of it.
 Where two overlap on screen the nearer shows. **L** shows or hides them.
 
-## Weather (`src/sim/weather.ts`, `src/game/clouds-view.ts`, `src/game/cloud-shadow.ts`)
+## Weather (`src/sim/weather.ts`, `src/game/clouds-view.ts`, `src/game/cloud-shadow.ts`, `src/game/sea.ts`)
 
 Each zone lists its weather in `site.json`; Settings picks one, `?wx=<id>` asks for one, and a
 shared moment carries it unless it is the zone's first.
@@ -71,7 +71,7 @@ shared moment carries it unless it is the zone's first.
 |---|---|
 | `id`, `name` | the link's name, and Settings' (`en`, `es`) |
 | `layers` | the cloud layers, none = clear: `base` and `top` (m above the sea), `cover` 0..1, `size` a typical cloud's radius (m), optional `box` `[west, south, east, north]` as fractions of the site (beyond 0..1 is over the sea) |
-| `wind` | `[east, north]` m/s the clouds drift on; omitted = still |
+| `wind` | `[east, north]` m/s the clouds drift on and the waves run with; omitted = still |
 | `light` | the sun's strength, times the usual (overcast, fog) |
 | `haze`, `hazeColor` | thicker haze in that colour (calima: about 2, a pale dust) |
 
@@ -96,6 +96,14 @@ shared moment carries it unless it is the zone's first.
   along the sun's rays down to the ground, redrawn when the sun or the weather changes. The land,
   roads, buildings, sea and the car read it and dim the sun's light, not the sky's, by up to 80 %.
   The wind slides the texture with the clouds.
+- **Waves.** The sea stays one flat plane; its material tilts the normal with ten travelling
+  waves (60 m swell down to 0.8 m ripples) at deep-water speed, so the sky's reflection and the
+  sun's glitter move like water. They run downwind, within about 75° of it, and roughen with the
+  wind up to 10 m/s; still air keeps a third of that as swell from the north-west. Each wave comes
+  in groups and its crests bend a little, so they don't read as ruled lines. A wave fades out
+  where it shrinks below a couple of pixels and the roughness rises in its place, so the far sea
+  stays calm without shimmering and the sun's path on it widens with the chop. It is shading only:
+  the car still meets a flat sea at 0 m.
 - **Calima.** Thicker haze in a dust colour; the sky fades to the same colour towards the horizon,
   mixed in the same colour space as three's fog so the two meet without a line.
 
