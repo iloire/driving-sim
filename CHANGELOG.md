@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-25 21:05
+
+- The Jet's up arrow pushes harder. Pushing was still held at −3 g, so a full push turned the
+  nose down only about as fast as W. Past the limiter it now goes to −6 g: about 17°/s at 230 m/s,
+  up from 10°/s. Held, it reddens the view in a few seconds.
+
 ## 2026-10-25 20:50
 
 - The Jet's arrows go past the limiter. W A S D stay the fine stick, but stick beyond what they

@@ -246,7 +246,7 @@ the afterburner. Two additions make it a fighter rather than a fast light plane:
   Deflections clamp at full travel, so below about 150 m/s it runs out of authority as the bare wing would.
   The rudder's travel shrinks with (120 / V)².
   **Past the limiter** (`fbw.override`): stick beyond 40 %, which W A S D never reach, opens the
-  limits towards 12 g, 27° angle of attack and 4.4 rad/s (250°/s) of roll at full stick, and
+  limits towards 12 g (−6 g pushing), 27° angle of attack and 4.4 rad/s (250°/s) of roll at full stick, and
   asks for up to 3× the pitch rate, so the arrows (or a pad's full stick) snap the jet round:
   about 29°/s of turn at 230 m/s where the limiter held 20°/s. The pilot pays for it (12 g greys
   the view in about 2 s and blacks out after about 4.5 s). `alphaLimit()` gives the limit in

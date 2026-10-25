@@ -214,7 +214,7 @@ export const JET: CarSpec = {
     inertia: [0, 0, 0],
     unfoldRate: 10,
     fbw: { pitchRate: 0.35, gMax: 9, gMin: -3, alphaMax: 0.38, rollRate: 1.75, kAlpha: 3, kPitch: 0.5, kRoll: 0.4, rudderFade: 120,
-      override: { from: 0.4, gMax: 12, alphaMax: 0.47, rollRate: 4.4 } },
+      override: { from: 0.4, gMax: 12, gMin: -6, alphaMax: 0.47, rollRate: 4.4 } },
     mach: { crit: 0.85, peak: 0.015, plateau: 0.005 },
     airbrake: 0.08,
   },

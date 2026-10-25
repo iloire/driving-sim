@@ -86,6 +86,19 @@ describe('the jet', () => {
     });
   }
 
+  it('pushes past the limiter on the arrow: about −6 g at 230 m/s, where W stops at −3 g', () => {
+    const push = (stick: number) => {
+      const s = airborne(230, 3000);
+      const g = gauge(s);
+      let least = 1;
+      fly(s, controls(stick), 2, () => { least = Math.min(least, g()); });
+      return least;
+    };
+    expect(push(-1)).toBeLessThan(-5.5);
+    expect(push(-1)).toBeGreaterThan(-6.3);
+    expect(push(-keyed(1))).toBeGreaterThan(-3.1);
+  });
+
   it('W A S D at full stay inside the limiter: under 9 g and the 22° angle-of-attack limit at any speed', () => {
     for (const speed of [80, 150, 250, 300]) {
       const s = airborne(speed);

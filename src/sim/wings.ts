@@ -71,10 +71,10 @@ export interface FlyByWire {
   /** Airspeed (m/s) above which the rudder's travel shrinks, so a full boot doesn't skid it sideways. */
   rudderFade: number;
   /**
-   * Past the limiter: stick beyond `from` (where W A S D stop) opens the g, angle-of-attack and
-   * roll-rate limits towards these, all the way at full stick, for the arrows' hard pulls and rolls.
+   * Past the limiter: stick beyond `from` (where W A S D stop) opens the g (pull and push),
+   * angle-of-attack and roll-rate limits towards these, all the way at full stick, for the arrows' hard pulls and rolls.
    */
-  override: { from: number; gMax: number; alphaMax: number; rollRate: number };
+  override: { from: number; gMax: number; gMin: number; alphaMax: number; rollRate: number };
 }
 
 /** How far past the limiter stick `v` is: 0 up to `override.from`, 1 at full stick. */
@@ -262,9 +262,10 @@ export function flyByWire(w: WingSpec, f: FlyByWire, mass: number, q: Quat, vel:
 
   const over = past(f, c.pitch);
   const gMax = f.gMax + (f.override.gMax - f.gMax) * over;
+  const gMin = f.gMin + (f.override.gMin - f.gMin) * over;
   const alphaMax = alphaLimit(f, c.pitch);
   // Past the limiter the stick asks for a faster swing too, or slow it would never reach the new limits.
-  const nz = Math.min(Math.max(1 + (V * c.pitch * f.pitchRate * (1 + 2 * over)) / G, f.gMin), gMax);
+  const nz = Math.min(Math.max(1 + (V * c.pitch * f.pitchRate * (1 + 2 * over)) / G, gMin), gMax);
   const cl = (nz * mass * G) / (qbar * w.area);
   const want = Math.min(Math.max((cl - w.cl0) / w.clAlpha, -alphaMax), alphaMax);
   // The elevator that holds `want` against the tail's stability, plus the error terms. A steady

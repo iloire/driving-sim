@@ -70,7 +70,7 @@ npm run dev        # http://localhost:5173
 **Hovering** (Roadster): Space climbs, Ctrl sinks, W/S tilt, A/D turn, Shift fires the tail nozzles.
 
 **With wings** (4×4, Jet): W/S pitch, A/D roll, Q/E rudder. WASD is the fine stick, arrows the hard
-one (in the Jet they go past the limiter: 12 g and a 250°/s roll). Shift/Ctrl move the throttle, 1–4 jump to idle/cruise/80 %/full; hold Shift at full for
+one (in the Jet they go past the limiter: 12 g, −6 g pushing, and a 250°/s roll). Shift/Ctrl move the throttle, 1–4 jump to idle/cruise/80 %/full; hold Shift at full for
 afterburner. Space is the Jet's airbrake. The 4×4 takes off past ~160 km/h with S.
 
 **Gamepad**: RT/LT throttle and brake, left stick steers, A/B handbrake, X transform, Y camera,
