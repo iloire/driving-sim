@@ -1,8 +1,6 @@
 # Driving Sim
 
-
-https://github.com/user-attachments/assets/2760293f-edd4-4c84-ab65-bea412dab348
-
+https://github.com/user-attachments/assets/6201258c-3a50-472c-bdfe-7c36c5b83674
 
 [![CI](https://github.com/iloire/driving-sim/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/iloire/driving-sim/actions/workflows/ci.yml)
 
