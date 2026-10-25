@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-25 07:40
+
+- The Jet rolls at 100°/s at full stick, down from 258°/s. With the quicker key, A/D whipped it
+  past 90° in under a second. Now a tap moves the wings a degree, half a second's hold banks about
+  13° and a one-second hold about 60°, and the roll still starts the moment the key goes down.
+
 ## 2026-10-25 07:38
 
 - Instant replay. Press I to watch the last 30 seconds again, crashes and all. C changes the camera

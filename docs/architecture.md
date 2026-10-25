@@ -187,7 +187,8 @@ as the struts and tyres, scaled by how far out they are, and the wheel drive swi
   about a fifth, and full takes 0.67 s: a tap is a fine correction, a held key pulls hard soon
   enough to get out of a dive. Roll is the exception: it asks the fly-by-wire for a roll
   rate, which stops when you let go, so A/D go out at 2 a second on a square (`shapeRoll`) and
-  start the roll straight away: a quarter stick (about 65°/s) at 0.25 s, full at 0.5 s.
+  start the roll straight away: on the Jet a quarter stick (25°/s) at 0.25 s, full (100°/s) at
+  0.5 s, so a one-second hold banks about 60°.
   On wings the arrows are a second, hard stick: linear, out and back at 8 a second
   (`PLANE_ARROW_RATE`, full in 0.125 s), for snapping into a turn or a pull, while W A S D keep
   the fine curves. Off wings the arrows are just W A S D. `src/game/input.test.ts` pins the curves.
@@ -211,7 +212,7 @@ the afterburner. Two additions make it a fighter rather than a fast light plane:
   flight path turns, 0.35 rad/s (20°/s) at full stick. That is the load factor 1 + V·rate/g
   (1 g hands-off), kept between −3 g and 9 g, so above about 230 m/s a full pull is simply the 9 g
   limit, the hardest dive recovery the jet has, and slower the same stick swings the path no
-  faster than 20°/s. Roll asks for a roll rate (4.5 rad/s at full stick). The computer flies the
+  faster than 20°/s. Roll asks for a roll rate (1.75 rad/s, 100°/s, at full stick). The computer flies the
   load factor as the angle of attack that gives it, capped at 22° (under the
   stall), and sets each surface to what holds the target steady plus a correction for the error. The
   pitch-rate target is capped at the g the wing can reach, so a slow pull doesn't overshoot the cap.

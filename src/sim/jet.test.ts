@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCar, JET, stepCar, type CarEnv, type CarState, type Controls } from './car';
 import { atmosphere, stalled } from './wings';
-import { PLANE_STICK_RATE, shapeStick } from '../game/input';
+import { PLANE_ROLL_RATE, PLANE_STICK_RATE, shapeRoll, shapeStick } from '../game/input';
 import { rotate, unrotate } from './vec';
 
 const STEP = 1 / 120;
@@ -131,6 +131,19 @@ describe('the jet', () => {
     expect(most).toBeLessThan(8);
   });
 
+  it('banks about 60° on a one-second hold of D at cruise, and a tap only a few degrees', () => {
+    const bank = (seconds: number) => {
+      const s = airborne(230, 3000);
+      const c = controls();
+      for (let t = 0; t < seconds; t += STEP) { c.flight.roll = shapeRoll(Math.min(PLANE_ROLL_RATE * t, 1)); fly(s, c, STEP); }
+      const right = rotate(s.q, [0, -1, 0]), up = rotate(s.q, [0, 0, 1]);
+      return (Math.atan2(-right[2], up[2]) * 180) / Math.PI;
+    };
+    expect(bank(0.2)).toBeLessThan(5);
+    expect(bank(1)).toBeGreaterThan(45);
+    expect(bank(1)).toBeLessThan(80);
+  });
+
   it('rolls at the same rate at 250 and 300 m/s, and slower when slow', () => {
     const rate = (speed: number) => {
       const s = airborne(speed);
@@ -142,7 +155,7 @@ describe('the jet', () => {
     expect(rate(250)).toBeCloseTo(fbw, 1);
     expect(rate(300)).toBeCloseTo(fbw, 1);
     expect(rate(100)).toBeLessThan(fbw);
-    expect(rate(100)).toBeGreaterThan(1.5);
+    expect(rate(100)).toBeGreaterThan(fbw * 0.6);
   });
 
   it('sheds speed on the airbrake: from 830 km/h at idle, under 600 within 10 s, where the clean jet keeps over 700', () => {
@@ -232,7 +245,7 @@ describe('the atmosphere', () => {
     c.flight.yaw = 1;
     fly(s, c, 0.2);
     fly(still, controls(), 0.2);
-    expect(s.surfaces.roll).toBeGreaterThan(0.3);
+    expect(s.surfaces.roll).toBeGreaterThan(0.15);
     // Full right boot, cut to (120 / 240)² = a quarter at 240 m/s.
     expect(s.surfaces.yaw).toBeCloseTo(0.25, 2);
     expect(Math.abs(still.surfaces.roll)).toBeLessThan(0.05);
