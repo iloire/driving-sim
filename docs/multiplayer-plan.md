@@ -78,7 +78,7 @@ Worth measuring once step 2 runs, not assuming.
 ## Not now
 
 - Collisions between players: needs prediction and correction, a big job.
-- Shared balloons, races, leaderboards: needs the relay to act as referee. The Durable Object is
+- Races, leaderboards: needs the relay to act as referee. The Durable Object is
   where that would go.
 - Voice and chat: moderation burden.
 - Remote engine sounds: easy later, by feeding a remote's speed into a quieter `CarAudio`.

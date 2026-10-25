@@ -39,20 +39,20 @@ describe('shared moments', () => {
 
   it('round-trips the view, leaving defaults out of the link', () => {
     const drives = ['AWD', 'RWD', 'FWD'];
-    const q = new URLSearchParams('cam=orbit&balloons=1');
-    writeView({ cam: 'chase', hud: true, map: true, balloons: false, drive: 'AWD' }, q);
+    const q = new URLSearchParams('cam=orbit&map=0');
+    writeView({ cam: 'chase', hud: true, map: true, drive: 'AWD' }, q);
     expect(q.toString()).toBe('');
-    writeView({ cam: 'bonnet', hud: false, map: false, balloons: true, drive: 'RWD' }, q);
-    expect(readView(q, drives)).toEqual({ cam: 'bonnet', hud: false, map: false, balloons: true, drive: 'RWD' });
+    writeView({ cam: 'bonnet', hud: false, map: false, drive: 'RWD' }, q);
+    expect(readView(q, drives)).toEqual({ cam: 'bonnet', hud: false, map: false, drive: 'RWD' });
   });
 
   it('leaves the HUD out of the link when it is at the vehicle\'s default, off in the Jet', () => {
     const drives = ['AWD'];
     const q = new URLSearchParams();
-    writeView({ cam: 'chase', hud: false, map: true, balloons: false, drive: 'AWD' }, q, false);
+    writeView({ cam: 'chase', hud: false, map: true, drive: 'AWD' }, q, false);
     expect(q.toString()).toBe('');
     expect(readView(q, drives, false).hud).toBe(false);
-    writeView({ cam: 'chase', hud: true, map: true, balloons: false, drive: 'AWD' }, q, false);
+    writeView({ cam: 'chase', hud: true, map: true, drive: 'AWD' }, q, false);
     expect(q.get('hud')).toBe('1');
     expect(readView(q, drives, false).hud).toBe(true);
     expect(readView(new URLSearchParams('hud=0'), drives).hud).toBe(false);

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-25 19:11
+
+- The balloon game is gone: no B key, no BALLOONS button on phones, no score panel, no balloon
+  dots on the map and no settings toggle. A shared link with `balloons=1` still opens; the flag
+  is ignored. The old best score is left in the browser's storage, unused.
+
 ## 2026-10-25 10:47
 
 - The welcome screen's Controls tab starts with the picked vehicle's keys: Jet first in the Jet,

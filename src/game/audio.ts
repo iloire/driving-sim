@@ -167,38 +167,6 @@ export class CarAudio {
     return { roar, roarFilter, whine, whineGain, burner, wind, windFilter, buffet };
   }
 
-  /** A balloon going: a bright snap, then a falling squeak; higher on a bigger combo. */
-  pop(combo: number): void {
-    const ctx = this.ctx;
-    if (!ctx || !this.master) return;
-    const t = ctx.currentTime;
-    const n = Math.floor(ctx.sampleRate * 0.08);
-    const buf = ctx.createBuffer(1, n, ctx.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (n * 0.12));
-    const snap = ctx.createBufferSource();
-    snap.buffer = buf;
-    const hp = ctx.createBiquadFilter();
-    hp.type = 'highpass';
-    hp.frequency.value = 900;
-    const sg = ctx.createGain();
-    sg.gain.value = 0.9;
-    snap.connect(hp).connect(sg).connect(this.master);
-    snap.start(t);
-
-    const squeak = ctx.createOscillator();
-    squeak.type = 'triangle';
-    const top = 700 * Math.pow(1.12, combo - 1);
-    squeak.frequency.setValueAtTime(top, t);
-    squeak.frequency.exponentialRampToValueAtTime(top / 3.5, t + 0.16);
-    const qg = ctx.createGain();
-    qg.gain.setValueAtTime(0.25, t);
-    qg.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
-    squeak.connect(qg).connect(this.master);
-    squeak.start(t);
-    squeak.stop(t + 0.2);
-  }
-
   /**
    * The Jet going up: a deep blast of noise opening out from a thud, a sub-bass drop under it, and
    * a long crackling roar of the fire after.

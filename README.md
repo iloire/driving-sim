@@ -33,7 +33,6 @@ zone, place and vehicle; **M** / **Esc** brings it back.
 - **Towns**: OSM buildings, solid, styled per zone (Lanzarote's white houses, Zaragoza's brick
   flats), lit at dusk, with street lamps and edge posts.
 - **Peak and sight labels** (**L**): Aneto, Teide, Mirador del Río …
-- **Balloon game** (**B**): fly through balloons for points and combos; best score is saved.
 - **Instant replay** (**I**): the last 30 seconds, crashes included.
 - **Surfaces, sound, map, road signs**, and the real sun position for any time of day.
 
@@ -60,7 +59,7 @@ npm run dev        # http://localhost:5173
 | **Space** | Handbrake |
 | **Shift** | Turbo; in the air, throttle up (afterburner at full) |
 | **F** | Fly: Roadster thrusters, 4×4 wings (again to land) |
-| **B** · **L** · **I** | Balloon game · labels · replay |
+| **L** · **I** | Labels · replay |
 | **R** | Back on the nearest paved road |
 | **M** / **Esc** · **N** | Menu · next place |
 | **C** | Camera: chase, bonnet, orbit |

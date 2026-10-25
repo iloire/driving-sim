@@ -2,7 +2,7 @@
 // It rides in the query as ?site=<zone>&at=x,y,z,heading,speed (the zone's metres to the decimetre,
 // compass degrees, km/h along the nose) plus ?fly=1 while the car is in the air, next to the ?time and ?car the page
 // already reads. The view rides along too, so the link looks as it did: ?cam=bonnet|orbit, ?hud=0|1
-// (flight HUD hidden or, in the Jet where it starts off, shown), ?map=0 (minimap hidden), ?balloons=1 and ?drive=RWD|FWD; defaults are left out.
+// (flight HUD hidden or, in the Jet where it starts off, shown), ?map=0 (minimap hidden) and ?drive=RWD|FWD; defaults are left out.
 
 import { CAMERA_MODES, type CameraMode } from './camera';
 
@@ -40,12 +40,11 @@ export interface View {
   cam: CameraMode;
   hud: boolean;
   map: boolean;
-  balloons: boolean;
   /** AWD, RWD or FWD. */
   drive: string;
 }
 
-const DEFAULT_VIEW: View = { cam: 'chase', hud: true, map: true, balloons: false, drive: 'AWD' };
+const DEFAULT_VIEW: View = { cam: 'chase', hud: true, map: true, drive: 'AWD' };
 
 /** Writes the view into `q`, leaving out whatever is at its default. `hudOn` is the HUD's default (off in the Jet). */
 export function writeView(v: View, q: URLSearchParams, hudOn = DEFAULT_VIEW.hud): void {
@@ -53,7 +52,6 @@ export function writeView(v: View, q: URLSearchParams, hudOn = DEFAULT_VIEW.hud)
   put('cam', v.cam === DEFAULT_VIEW.cam ? null : v.cam);
   put('hud', v.hud === hudOn ? null : v.hud ? '1' : '0');
   put('map', v.map ? null : '0');
-  put('balloons', v.balloons ? '1' : null);
   put('drive', v.drive === DEFAULT_VIEW.drive ? null : v.drive);
 }
 
@@ -65,7 +63,6 @@ export function readView(q: URLSearchParams, drives: string[], hudOn = DEFAULT_V
     cam: CAMERA_MODES.includes(cam) ? cam : DEFAULT_VIEW.cam,
     hud: q.has('hud') ? q.get('hud') !== '0' : hudOn,
     map: q.get('map') !== '0',
-    balloons: q.get('balloons') === '1',
     drive: drives.includes(drive) ? drive : DEFAULT_VIEW.drive,
   };
 }

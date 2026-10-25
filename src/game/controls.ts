@@ -59,7 +59,6 @@ export const MODES: Record<Mode, Row[]> = {
 /** Keys that work whatever you're in. */
 export const GENERAL: Row[] = [
   { keys: ['R'], label: 'ctl.road', more: 'ctl.road.more' },
-  { keys: ['B'], label: 'ctl.balloons', more: 'ctl.balloons.more' },
   { keys: ['C'], label: 'ctl.camera' },
   { keys: ['I'], label: 'ctl.replay', more: 'ctl.replay.more' },
   { keys: ['G'], label: 'ctl.map' },

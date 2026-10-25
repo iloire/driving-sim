@@ -2,7 +2,6 @@ import './style.css';
 import GUI from 'lil-gui';
 import * as THREE from 'three';
 import { CarAudio } from './game/audio';
-import { BalloonsView } from './game/balloons-view';
 import { PlacesView } from './game/places-view';
 import { BONNET_EYE, CameraRig } from './game/camera';
 import { cardHtml, HelpFold, modeName, modeOf, modesOf, referenceHtml, type Mode } from './game/controls';
@@ -25,7 +24,6 @@ import { TerrainView } from './game/terrain-view';
 import { TouchPad } from './game/touch';
 import { Welcome } from './game/welcome';
 import { createSurround, Sunlight } from './game/world';
-import { BalloonField } from './sim/balloons';
 import { buildingStyle } from './sim/objects';
 import { createPilot, PILOT, stepPilot } from './sim/pilot';
 import { createCar, JET, ROADSTER, TRUCK, stepCar, type CarEnv, type CarSpec, type CarState, type Surface } from './sim/car';
@@ -76,8 +74,6 @@ const GRAVEL: Surface = { grip: 0.72, rolling: 0.03 };
 const OFFROAD: Surface = { grip: 0.62, rolling: 0.06 };
 
 // The storage keys keep the name the game had when it was Lanzarote alone, so nobody loses them.
-/** Where the best balloon score is kept, in this browser only. */
-const BEST_KEY = 'lanzarote-drive.best';
 /** Set once the controls card has folded away, so a returning player starts with it folded. */
 const HELP_SEEN_KEY = 'lanzarote-drive.help-seen';
 
@@ -87,22 +83,6 @@ function storageFlag(key: string, set = false): boolean {
     return localStorage.getItem(key) === '1';
   } catch {
     return false;
-  }
-}
-
-function readBest(): number {
-  try {
-    return Number(localStorage.getItem(BEST_KEY)) || 0;
-  } catch {
-    return 0;
-  }
-}
-
-function saveBest(score: number): void {
-  try {
-    localStorage.setItem(BEST_KEY, String(score));
-  } catch {
-    // Private mode or blocked storage: the best score just doesn't survive the visit.
   }
 }
 
@@ -161,39 +141,18 @@ async function boot(): Promise<void> {
   scene.add(terrainView.group, createSurround(extent, site.spec.plainM));
   loading(t('load.road'));
 
-  // The balloon game is off until B (or the settings panel, or the phone's button) turns it on.
   const vehicleId = vehicleOf(query, Object.keys(VEHICLES));
-  const settings = { vehicle: VEHICLES[vehicleId].name, drivetrain: 'AWD', balloons: false };
+  const settings = { vehicle: VEHICLES[vehicleId].name, drivetrain: 'AWD' };
   let spec: CarSpec = { ...VEHICLES[vehicleId].spec };
   const heightAt = (x: number, y: number) => terrain.heightAt(x, y);
   let model = VEHICLES[vehicleId].model(spec, heightAt);
   scene.add(model.group);
   if (model.world) scene.add(model.world);
-  // The balloon game: a field kept full around the car, scored as you pop them.
-  const field = new BalloonField((x, y) => terrain.heightAt(x, y), (x, y) => x > 0 && y > 0 && x < extent && y < extent,
-    undefined, Date.now() % 1e9);
-  const balloonsView = new BalloonsView(extent);
-  balloonsView.visible = false;
-  scene.add(balloonsView.group);
   const jetFx = new JetEffects();
   const explosion = new Explosion();
   scene.add(jetFx.group, explosion.group);
   const placesView = new PlacesView(site.places, extent, heightAt);
   scene.add(placesView.group);
-  let best = readBest();
-  const lastPos: [number, number, number] = [0, 0, 0];
-
-  /** Turns the balloon game on (a fresh sky around the car, the score kept) or off. */
-  function setBalloons(on: boolean): void {
-    settings.balloons = on;
-    balloonsView.visible = on;
-    track('balloons', { on, score: field.score });
-    if (on) {
-      field.fill(car.pos[0], car.pos[1]);
-      lastPos.splice(0, 3, ...car.pos);
-    }
-    hud.say(t(on ? 'say.balloons.on' : 'say.balloons.off'), 3);
-  }
   const rig = new CameraRig(camera, canvas);
   const audio = new CarAudio();
   audio.electric = !!spec.engine.electric;
@@ -286,9 +245,6 @@ async function boot(): Promise<void> {
     input.lever = CRUISE_THRUST;
     model.update(car, false, extent, 0, false, camera, 0);
     rig.snap(model.group, heading);
-    lastPos.splice(0, 3, ...car.pos);
-    // A new place gets a fresh sky of balloons (the score carries on).
-    field.fill(x, y);
   }
 
   async function goTo(s: Spawn): Promise<void> {
@@ -393,7 +349,6 @@ async function boot(): Promise<void> {
     menu: () => { if (!welcome.isOpen) openMenu(); else if (canResume) leaveMenu(); },
     next: () => void goTo(site.spawns[(site.spawns.indexOf(spawn) + 1) % site.spawns.length]),
     map: () => minimap.classList.toggle('hidden'),
-    balloons: () => setBalloons(!settings.balloons),
     hud: () => { hudShown = !hudShown; },
     labels: () => { placesView.visible = !placesView.visible; hud.say(t(placesView.visible ? 'say.labels.on' : 'say.labels.off'), 1.5); },
     replay: () => setReplay(replayAt === null),
@@ -435,8 +390,6 @@ async function boot(): Promise<void> {
   /** Each control's label key, so a language switch can rename them. */
   const guiLabels = new Map<ReturnType<GUI['add']>, Parameters<typeof t>[0]>();
   guiLabels.set(gui.add(sky, 'hour', hours.first, hours.last, 0.05).onChange(applySun), 'gui.hour');
-  guiLabels.set(gui.add(settings, 'balloons').listen().onChange((on: boolean) => setBalloons(on)), 'gui.balloons');
-  guiLabels.set(gui.add({ restart: () => { field.reset(car.pos[0], car.pos[1]); hud.say(t('say.round'), 2); } }, 'restart'), 'gui.round');
   const applyDrivetrain = () => {
     const split = DRIVETRAINS[settings.drivetrain];
     spec.driveFront = split ?? VEHICLES[vehicleKey()].spec.driveFront;
@@ -488,7 +441,7 @@ async function boot(): Promise<void> {
   document.getElementById('share-btn')!.addEventListener('click', () => {
     const q = new URLSearchParams(location.search);
     writeMoment({ x: car.pos[0], y: car.pos[1], z: car.pos[2], heading: car.heading, speed: car.speed, flying: car.flying }, zone, q);
-    writeView({ cam: rig.mode, hud: hudShown, map: !minimap.classList.contains('hidden'), balloons: settings.balloons, drive: settings.drivetrain }, q, !isJet(spec));
+    writeView({ cam: rig.mode, hud: hudShown, map: !minimap.classList.contains('hidden'), drive: settings.drivetrain }, q, !isJet(spec));
     q.set('time', formatHour(sky.hour));
     const url = `${location.origin}${location.pathname}?${q.toString().replace(/%2C/g, ',').replace(/%3A/g, ':')}`;
     track('share', { flying: car.flying });
@@ -508,7 +461,6 @@ async function boot(): Promise<void> {
     while (rig.mode !== view.cam) rig.next();
     hudShown = view.hud;
     minimap.classList.toggle('hidden', !view.map);
-    settings.balloons = balloonsView.visible = view.balloons;
     settings.drivetrain = view.drive;
     applyDrivetrain();
     gui.controllersRecursive().forEach((c) => c.updateDisplay());
@@ -522,7 +474,7 @@ async function boot(): Promise<void> {
 
   // Dev builds expose the live state for poking at from the console.
   const perf = { physics: 0, terrain: 0, render: 0, frames: 0, worst: 0 };
-  if (import.meta.env.DEV) Object.assign(window, { drive: { car: () => car, pilot: () => pilot, controls: input.controls, terrain, site, perf, renderer, field } });
+  if (import.meta.env.DEV) Object.assign(window, { drive: { car: () => car, pilot: () => pilot, controls: input.controls, terrain, site, perf, renderer } });
 
   const carPos = new THREE.Vector3();
   const carVel = new THREE.Vector3();
@@ -571,19 +523,6 @@ async function boot(): Promise<void> {
         track('blackout');
       }
       perf.physics += performance.now() - t0;
-      if (settings.balloons) {
-        const speed = Math.hypot(...car.vel);
-        for (const pop of field.update(dt, lastPos, car.pos, speed)) {
-          balloonsView.burst(pop.balloon);
-          audio.pop(pop.combo);
-          hud.pop(pop.points, pop.combo);
-        }
-        if (field.score > best) {
-          best = field.score;
-          saveBest(best);
-        }
-      }
-      lastPos.splice(0, 3, ...car.pos);
       const upright = rotate(car.q, [0, 0, 1])[2] > 0.3;
       if (car.inWater || (!upright && Math.hypot(...car.vel) < 1)) {
         if (stuck === 0) hud.say(t(car.inWater ? 'say.water' : 'say.roof', { reset: KEY().reset }));
@@ -701,15 +640,13 @@ async function boot(): Promise<void> {
     perf.terrain += performance.now() - t1;
 
     const road = onRoad(site.roads, view.pos[0], view.pos[1], 2);
-    balloonsView.update(dt, field.balloons);
     placesView.update(camera);
-    hud.setScore(settings.balloons, field.score, field.popped, best);
     hud.update(dt, {
       speedKmh: (view.flying ? view.airspeed : view.speed) * 3.6, rpmShare: view.rpm / spec.engine.redline,
       gear: view.flying ? '✈' : view.gear < 0 ? 'R' : spec.engine.electric ? 'D' : String(view.gear),
       road, x: view.pos[0], y: view.pos[1], heading: view.heading,
       flying: view.flying, boost: boosting, mach: isJet(spec) ? view.mach : undefined,
-      throttle: view.flying && spec.wings ? thrust : undefined, airbrake: view.airbrake > 0.5 && !!spec.wings?.airbrake, balloons: settings.balloons ? field.balloons : [], agl: view.pos[2] - spec.cgHeight - terrain.heightAt(view.pos[0], view.pos[1]),
+      throttle: view.flying && spec.wings ? thrust : undefined, airbrake: view.airbrake > 0.5 && !!spec.wings?.airbrake, agl: view.pos[2] - spec.cgHeight - terrain.heightAt(view.pos[0], view.pos[1]),
     });
     if (replayAt !== null) {
       replayBar.style.width = `${(100 * (replayAt - replay.start)) / Math.max(replay.end - replay.start, 1e-6)}%`;
