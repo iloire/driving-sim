@@ -107,6 +107,7 @@ npm run dev        # http://localhost:5173
 | **Shift** | Turbo: a nitro rocket on the road (500+ km/h), tail thrusters hovering; on wings it opens the throttle, and the afterburner lights at full |
 | **F** | Fly: the Roadster lights its thrusters, the 4×4 unfolds its wings (again to land as a car) |
 | **B** | Balloon game on/off |
+| **L** | Labels on/off: the names of the peaks (Aneto, Posets, Teide …) |
 | **R** | Back on the nearest paved road, facing the way you were going |
 | **M** / **Esc** · **N** | Menu (place, vehicle, time of day) · next place |
 | **C** | Camera: chase, bonnet, orbit (drag the mouse) |

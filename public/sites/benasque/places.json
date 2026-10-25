@@ -1,0 +1,64 @@
+{
+ "places": [
+  {
+   "n": "Pico Aneto",
+   "x": 23841,
+   "y": 18340,
+   "ele": 3404
+  },
+  {
+   "n": "Pico de Posets",
+   "x": 5577,
+   "y": 20186,
+   "ele": 3369
+  },
+  {
+   "n": "Pico de la Maladeta",
+   "x": 22425,
+   "y": 19980,
+   "ele": 3312
+  },
+  {
+   "n": "Pico Perdiguero",
+   "x": 12260,
+   "y": 24613,
+   "ele": 3222
+  },
+  {
+   "n": "Bachimala",
+   "x": 2027,
+   "y": 24931,
+   "ele": 3177
+  },
+  {
+   "n": "Aguja Sur Rusell",
+   "x": 25208,
+   "y": 16718,
+   "ele": 3146
+  },
+  {
+   "n": "Guargas Blancas",
+   "x": 8853,
+   "y": 25370,
+   "ele": 3129
+  },
+  {
+   "n": "Pico de Maupás",
+   "x": 14403,
+   "y": 25749,
+   "ele": 3109
+  },
+  {
+   "n": "Grand Quayrat",
+   "x": 11852,
+   "y": 26981,
+   "ele": 3060
+  },
+  {
+   "n": "Tuca de Vallibierna",
+   "x": 23727,
+   "y": 14207,
+   "ele": 3059
+  }
+ ]
+}

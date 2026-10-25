@@ -6,6 +6,7 @@
 //   objects/   — per detail tile: OSM buildings, street lamps and edge posts (src/sim/objects.ts)
 //   detail/    — the same pair at the DEM's native 5 m (and a sharper photo) for every square
 //                tile with land, the roads carved into their heights, plus tiles.json listing them
+//   places.json — the places of interest site.json's `places` asks for, to label (src/sim/places.ts)
 // Downloads are cached in cache/<site>/ (git-ignored) and reused, so re-carving after a change
 // to the road model is offline. --refresh downloads everything again.
 // Usage: npm run fetch-terrain -- lanzarote   (or zaragoza, benasque, tenerife)
@@ -16,6 +17,7 @@ import { fromArrayBuffer } from 'geotiff';
 import proj4 from 'proj4';
 import { area, BuildingIndex, type Building } from '../src/sim/buildings';
 import { buildingHeight, buildingStyle, placeFurniture, type BuildingStyle, type TileObjectsFile } from '../src/sim/objects';
+import { pickPlaces, placeName, type Place, type PlacesFile, type PlacesSpec } from '../src/sim/places';
 import { carveRoads, parseRoads, type RoadKind, type RoadsFile } from '../src/sim/roads';
 import { Heightmap } from '../src/sim/terrain';
 
@@ -37,6 +39,8 @@ interface SiteFile {
   detail: { dir: string; tileM: number; orthoSize: number };
   /** How tall the buildings get (src/sim/objects.ts); omitted = Lanzarote's. */
   buildings?: Partial<BuildingStyle>;
+  /** The places of interest to label (src/sim/places.ts); omitted = none. */
+  places?: PlacesSpec;
 }
 
 /** OSM highway=* values worth driving, and what the game calls them. */
@@ -159,13 +163,18 @@ interface OsmWay {
 }
 
 /** Ways matching an Overpass filter over the site's bbox, with their geometry. */
-async function fetchOsm(site: SiteFile, filter: string): Promise<OsmWay[]> {
+function fetchOsm(site: SiteFile, filter: string): Promise<OsmWay[]> {
+  return overpass(site, (box) => `way${filter}(${box});out tags geom;`);
+}
+
+/** An Overpass query over the site's bbox (`body` gets it as south,west,north,east); its elements. */
+async function overpass<T>(site: SiteFile, body: (box: string) => string): Promise<T[]> {
   const [x0, y0, x1, y1] = site.bbox;
   const proj = proj4('EPSG:4326', site.proj4);
   const corners = [[x0, y0], [x1, y0], [x0, y1], [x1, y1]].map(([e, n]) => proj.inverse([e, n]));
   const lons = corners.map((c) => c[0]), lats = corners.map((c) => c[1]);
   const box = `${Math.min(...lats)},${Math.min(...lons)},${Math.max(...lats)},${Math.max(...lons)}`;
-  const query = `[out:json][timeout:600];way${filter}(${box});out tags geom;`;
+  const query = `[out:json][timeout:600];${body(box)}`;
   // The public server turns big queries away with a 502 or 504 when it is busy; wait and ask again.
   for (let tries = 4; ; tries--) {
     const res = await fetch(OVERPASS, {
@@ -173,11 +182,35 @@ async function fetchOsm(site: SiteFile, filter: string): Promise<OsmWay[]> {
       body: new URLSearchParams({ data: query }),
       headers: { 'User-Agent': 'driving-sim fetch-terrain (github.com/iloire/driving-sim)' },
     });
-    if (res.ok) return ((await res.json()) as { elements: OsmWay[] }).elements;
+    if (res.ok) return ((await res.json()) as { elements: T[] }).elements;
     if (res.status < 500 && res.status !== 429 || tries === 1) throw new Error(`Overpass: ${res.status} ${res.statusText}`);
     console.log(`Overpass: ${res.status}, again in a minute …`);
     await new Promise((r) => setTimeout(r, 60000));
   }
+}
+
+interface OsmPlace {
+  lat?: number;
+  lon?: number;
+  center?: { lat: number; lon: number };
+  tags: Record<string, string>;
+}
+
+/** The site's places of interest from OSM: named, inside the bbox, the few worth a label. */
+function toPlaces(site: SiteFile, spec: PlacesSpec, elements: OsmPlace[]): PlacesFile {
+  const [x0, y0, x1, y1] = site.bbox;
+  const proj = proj4('EPSG:4326', site.proj4);
+  const candidates: Place[] = [];
+  for (const el of elements) {
+    const at = el.center ?? (el.lat !== undefined && el.lon !== undefined ? { lat: el.lat, lon: el.lon } : undefined);
+    const n = placeName(el.tags);
+    if (!at || !n) continue;
+    const [e, nn] = proj.forward([at.lon, at.lat]);
+    if (e < x0 || e > x1 || nn < y0 || nn > y1) continue;
+    const ele = parseFloat(el.tags.ele);
+    candidates.push({ n, x: Math.round(e - x0), y: Math.round(nn - y0), ...(Number.isFinite(ele) && { ele: Math.round(ele) }) });
+  }
+  return { places: pickPlaces(candidates, spec) };
 }
 
 /** OSM building ways → footprints in the site frame (to the decimetre), slivers dropped. */
@@ -323,6 +356,17 @@ async function main(): Promise<void> {
   mkdirSync(objectsDir, { recursive: true });
   for (const [key, file] of objects) writeFileSync(join(objectsDir, `${key}.json`), JSON.stringify(file));
   console.log(`${buildings.length} buildings, ${lamps.length} lamps, ${posts.length} edge posts`);
+
+  if (site.places) {
+    const placesFile = join(cache, 'places-osm.json');
+    if (fresh(placesFile)) {
+      console.log('Places from OpenStreetMap (Overpass) …');
+      writeFileSync(placesFile, JSON.stringify(await overpass(site, (box) => `(${site.places!.osm.map((q) => `${q}(${box});`).join('')});out tags center;`)));
+    }
+    const places = toPlaces(site, site.places, JSON.parse(readFileSync(placesFile, 'utf8')) as OsmPlace[]);
+    writeFileSync(join(dir, 'places.json'), JSON.stringify(places, null, 1) + '\n');
+    console.log(`${places.places.length} places: ${places.places.map((p) => p.n).join(', ')}`);
+  }
   console.log('Done');
 }
 

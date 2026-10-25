@@ -63,6 +63,7 @@ export const GENERAL: Row[] = [
   { keys: ['C'], label: 'ctl.camera' },
   { keys: ['I'], label: 'ctl.replay', more: 'ctl.replay.more' },
   { keys: ['G'], label: 'ctl.map' },
+  { keys: ['L'], label: 'ctl.labels', more: 'ctl.labels.more' },
   { keys: ['V'], label: 'ctl.mute' },
   { keys: ['P'], label: 'ctl.pause' },
   { keys: ['M'], label: 'ctl.menu', more: 'ctl.menu.more' },

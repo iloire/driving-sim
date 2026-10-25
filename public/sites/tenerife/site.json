@@ -44,6 +44,12 @@
       "#ddd8cc"
     ]
   },
+  "places": {
+    "osm": [
+      "node[natural~\"^(peak|volcano)$\"][name][ele]"
+    ],
+    "max": 1
+  },
   "heightmap": {
     "file": "height.bin",
     "size": 2048,

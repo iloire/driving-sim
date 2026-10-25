@@ -3,6 +3,7 @@ import GUI from 'lil-gui';
 import * as THREE from 'three';
 import { CarAudio } from './game/audio';
 import { BalloonsView } from './game/balloons-view';
+import { PlacesView } from './game/places-view';
 import { BONNET_EYE, CameraRig } from './game/camera';
 import { cardHtml, HelpFold, modeName, modeOf, referenceHtml, type Mode } from './game/controls';
 import { currentLang, LANGS, setLang, t, translatePage, type Lang } from './game/i18n';
@@ -177,6 +178,8 @@ async function boot(): Promise<void> {
   const jetFx = new JetEffects();
   const explosion = new Explosion();
   scene.add(jetFx.group, explosion.group);
+  const placesView = new PlacesView(site.places, extent, heightAt);
+  scene.add(placesView.group);
   let best = readBest();
   const lastPos: [number, number, number] = [0, 0, 0];
 
@@ -400,6 +403,7 @@ async function boot(): Promise<void> {
     map: () => minimap.classList.toggle('hidden'),
     balloons: () => setBalloons(!settings.balloons),
     hud: () => { hudShown = !hudShown; },
+    labels: () => { placesView.visible = !placesView.visible; hud.say(t(placesView.visible ? 'say.labels.on' : 'say.labels.off'), 1.5); },
     replay: () => setReplay(replayAt === null),
     transform: () => {
       if (replayAt !== null) return;
@@ -706,6 +710,7 @@ async function boot(): Promise<void> {
 
     const road = onRoad(site.roads, view.pos[0], view.pos[1], 2);
     balloonsView.update(dt, field.balloons);
+    placesView.update(camera.position);
     hud.setScore(settings.balloons, field.score, field.popped, best);
     hud.update(dt, {
       speedKmh: (view.flying ? view.airspeed : view.speed) * 3.6, rpmShare: view.rpm / spec.engine.redline,

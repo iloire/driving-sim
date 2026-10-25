@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-25 08:25
+
+- Peaks have their names over them. Benasque labels its 10 highest mountains (Aneto, Posets, Maladeta,
+  Perdiguero …, one label per mountain, not one per needle), Tenerife labels Teide. **L** turns them
+  off and on. Which places a zone labels is a `places` block in its `site.json` (OSM selectors, how
+  many, how far apart), so another zone can label its own without code.
+
 ## 2026-10-25 08:14
 
 - The Jet starts with the green flight HUD off, for a clean view; **U** still brings it up. Swapping

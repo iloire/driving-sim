@@ -8,6 +8,7 @@ import proj4 from 'proj4';
 import { BuildingIndex, roofline } from '../sim/buildings';
 import type { BuildingStyle } from '../sim/objects';
 import { parseObjects, type TileObjects, type TileObjectsFile } from '../sim/objects';
+import type { Place, PlacesFile, PlacesSpec } from '../sim/places';
 import { isPaved, parseRoads, RoadIndex, type RoadsFile } from '../sim/roads';
 import { Heightmap } from '../sim/terrain';
 import type { Lang } from './i18n';
@@ -47,6 +48,8 @@ export interface SiteSpec {
   plainM?: number;
   /** How tall the buildings get and what colours they are (src/sim/objects.ts); omitted = Lanzarote's. */
   buildings?: Partial<BuildingStyle>;
+  /** Which places of interest get a label (src/sim/places.ts); omitted = none. */
+  places?: PlacesSpec;
   /** `unitM`: metres per stored step, omitted = 0.1. */
   heightmap: { file: string; size: number; unitM?: number };
   ortho: { file: string; size: number };
@@ -83,6 +86,8 @@ export interface Site {
   /** The buildings of the loaded tiles, for the car to crash into. */
   buildings: BuildingIndex;
   spawns: Spawn[];
+  /** The places of interest to label, from places.json. */
+  places: Place[];
   toLatLon(x: number, y: number): [number, number];
   /** Loads the heights of the detail tiles within `radius` of a point (they stay until the view frees them). */
   ensureDetail(x: number, y: number, radius?: number): Promise<void>;
@@ -105,10 +110,11 @@ export async function loadSite(id: string): Promise<Site> {
   const base = `${BASE}${id}/`;
   const spec = await json<SiteSpec>(`${base}site.json`);
   const detailDir = `${base}${spec.detail.dir}/`;
-  const [heights, roadsFile, index] = await Promise.all([
+  const [heights, roadsFile, index, placesFile] = await Promise.all([
     fetch(`${base}${spec.heightmap.file}`).then((r) => r.arrayBuffer()),
     json<RoadsFile>(`${base}roads.json`),
     json<{ size: number; tiles: [number, number][] }>(`${detailDir}tiles.json`),
+    spec.places ? json<PlacesFile>(`${base}places.json`) : { places: [] },
   ]);
   const [x0, y0, x1] = spec.bbox;
   const unitM = spec.heightmap.unitM ?? 0.1;
@@ -162,6 +168,7 @@ export async function loadSite(id: string): Promise<Site> {
     roads,
     buildings,
     spawns,
+    places: placesFile.places,
     toLatLon(x, y) {
       const [lon, lat] = proj.inverse([x + x0, y + y0]);
       return [lat, lon];

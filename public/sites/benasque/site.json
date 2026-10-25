@@ -37,6 +37,13 @@
       "#454a4f"
     ]
   },
+  "places": {
+    "osm": [
+      "node[natural=peak][name][ele]"
+    ],
+    "max": 10,
+    "spacingM": 2000
+  },
   "heightmap": {
     "file": "height.bin",
     "size": 2048,

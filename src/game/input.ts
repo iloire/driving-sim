@@ -38,10 +38,10 @@ export function stepKey(v: number, target: number, rate: number, back: number, d
 /** The plane's gentle stick curve: fine near the middle, up to `KEY_STICK_MAX` at the end. */
 export const shapeStick = (v: number) => KEY_STICK_MAX * v * Math.abs(v);
 
-export type Action = 'reset' | 'camera' | 'mute' | 'pause' | 'help' | 'menu' | 'next' | 'map' | 'transform' | 'balloons' | 'hud' | 'replay';
+export type Action = 'reset' | 'camera' | 'mute' | 'pause' | 'help' | 'menu' | 'next' | 'map' | 'transform' | 'balloons' | 'hud' | 'replay' | 'labels';
 
 const ACTION_KEYS: Record<string, Action> = {
-  KeyR: 'reset', KeyC: 'camera', KeyV: 'mute', KeyP: 'pause', KeyH: 'help', KeyM: 'menu', Escape: 'menu', KeyN: 'next', KeyG: 'map', KeyF: 'transform', KeyB: 'balloons', KeyU: 'hud', KeyI: 'replay',
+  KeyR: 'reset', KeyC: 'camera', KeyV: 'mute', KeyP: 'pause', KeyH: 'help', KeyM: 'menu', Escape: 'menu', KeyN: 'next', KeyG: 'map', KeyF: 'transform', KeyB: 'balloons', KeyU: 'hud', KeyI: 'replay', KeyL: 'labels',
 };
 // Standard-mapping gamepad buttons.
 const PAD = { A: 0, B: 1, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, BACK: 8, START: 9, L3: 10, R3: 11 };
