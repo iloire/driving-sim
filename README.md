@@ -121,6 +121,7 @@ nozzles. On a phone the left thumb climbs and sinks.
 The **arrows** are the hard stick, full almost at once, for snapping into a turn or pulling out of a dive. The stick snaps back when you let go. On the Jet the stick asks for how fast the nose comes round (20°/s at full), up to 9 g. The jet has a throttle lever, starting at cruise (60 %):
 **Shift** opens it, **Ctrl** closes it, and **1–4** jump to idle, cruise, 80 % and full. Keep holding **Shift** at
 full to light the afterburner. On the Jet, **Space** is the airbrake. The HUD shows the throttle next to the height.
+**U** shows or hides the green flight HUD; the Jet starts with it off, the 4×4 on wings with it on.
 To take off in the 4×4, transform, let it run past about 160 km/h, and pull **S**.
 
 **Gamepad** (standard mapping): RT throttle, LT brake, left stick steers, A/B handbrake, X transform,
@@ -148,7 +149,7 @@ in the air if you were flying, and seen the way you had it: the same camera, fli
 off, balloons and drivetrain. It opens already playing, so whoever opens it lands straight in the
 drive. The link looks like `?at=25256.0,11616.1,2.7,308,31` (x, y and z in site metres, heading in
 degrees, km/h) plus `&fly=1` in the air, and only the view settings you changed from the defaults:
-`&cam=bonnet|orbit`, `&hud=0`, `&map=0`, `&balloons=1`, `&drive=RWD|FWD`.
+`&cam=bonnet|orbit`, `&hud=0` (`&hud=1` in the Jet), `&map=0`, `&balloons=1`, `&drive=RWD|FWD`.
 
 ## Check it
 

@@ -46,6 +46,18 @@ describe('shared moments', () => {
     expect(readView(q, drives)).toEqual({ cam: 'bonnet', hud: false, map: false, balloons: true, drive: 'RWD' });
   });
 
+  it('leaves the HUD out of the link when it is at the vehicle\'s default, off in the Jet', () => {
+    const drives = ['AWD'];
+    const q = new URLSearchParams();
+    writeView({ cam: 'chase', hud: false, map: true, balloons: false, drive: 'AWD' }, q, false);
+    expect(q.toString()).toBe('');
+    expect(readView(q, drives, false).hud).toBe(false);
+    writeView({ cam: 'chase', hud: true, map: true, balloons: false, drive: 'AWD' }, q, false);
+    expect(q.get('hud')).toBe('1');
+    expect(readView(q, drives, false).hud).toBe(true);
+    expect(readView(new URLSearchParams('hud=0'), drives).hud).toBe(false);
+  });
+
   it('reads an unknown camera or drivetrain as the default', () => {
     expect(readView(new URLSearchParams('cam=drone&drive=4WD'), ['AWD', 'RWD'])).toMatchObject({ cam: 'chase', drive: 'AWD' });
   });

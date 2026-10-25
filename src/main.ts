@@ -209,8 +209,8 @@ async function boot(): Promise<void> {
   let spawn: Spawn = site.spawns.find((s) => s.spec.id === query.get('spawn')) ?? site.spawns[0];
   let car: CarState = createCar(spec, spawn.x, spawn.y, terrain.heightAt(spawn.x, spawn.y), spawn.heading);
   let paused = false;
-  /** U hides the green flight HUD (and its PULL UP warning) for a clean view. */
-  let hudShown = true;
+  /** U shows or hides the green flight HUD (and its PULL UP warning); the Jet starts with it off, for a clean view. */
+  let hudShown = !isJet(spec);
   const minimap = document.getElementById('minimap')!;
   const pausePanel = document.getElementById('paused')!;
   function setPaused(p: boolean): void {
@@ -453,6 +453,7 @@ async function boot(): Promise<void> {
     scene.remove(model.group);
     if (model.world) scene.remove(model.world);
     spec = { ...VEHICLES[id].spec };
+    hudShown = !isJet(spec);
     applyDrivetrain();
     setReplay(false);
     replay.clear(); // it would be drawn in the new body
@@ -491,7 +492,7 @@ async function boot(): Promise<void> {
   document.getElementById('share-btn')!.addEventListener('click', () => {
     const q = new URLSearchParams(location.search);
     writeMoment({ x: car.pos[0], y: car.pos[1], z: car.pos[2], heading: car.heading, speed: car.speed, flying: car.flying }, zone, q);
-    writeView({ cam: rig.mode, hud: hudShown, map: !minimap.classList.contains('hidden'), balloons: settings.balloons, drive: settings.drivetrain }, q);
+    writeView({ cam: rig.mode, hud: hudShown, map: !minimap.classList.contains('hidden'), balloons: settings.balloons, drive: settings.drivetrain }, q, !isJet(spec));
     q.set('time', formatHour(sky.hour));
     const url = `${location.origin}${location.pathname}?${q.toString().replace(/%2C/g, ',').replace(/%3A/g, ':')}`;
     track('share', { flying: car.flying });
@@ -507,7 +508,7 @@ async function boot(): Promise<void> {
   // A shared link is an invitation to that exact moment: straight in, no menu, seen as the sharer saw it.
   const moment = readMoment(query);
   if (moment && moment.x > 0 && moment.y > 0 && moment.x < extent && moment.y < extent) {
-    const view = readView(query, Object.keys(DRIVETRAINS));
+    const view = readView(query, Object.keys(DRIVETRAINS), !isJet(spec));
     while (rig.mode !== view.cam) rig.next();
     hudShown = view.hud;
     minimap.classList.toggle('hidden', !view.map);

@@ -423,7 +423,8 @@ The palette is black picón, lime-wash white, Manrique's shutter green and Timan
 
 On wings, a 2D canvas over the view draws a fighter's HUD in phosphor green, each line on a dark
 halo so it reads against a white sky. Every symbol is a world direction projected through the live
-camera, so it's true in chase, bonnet and orbit views alike:
+camera, so it's true in chase, bonnet and orbit views alike. **U** toggles it; the Jet starts with it
+off (and goes back to off whenever you swap into it), the 4×4 with it on:
 
 - **Flight path marker**: the velocity's direction, so where the plane is going, not where its nose points.
 - **Pitch ladder**: rungs every 5° within 22° of the flight path, built from the real horizon along

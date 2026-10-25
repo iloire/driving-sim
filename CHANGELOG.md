@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-25 08:14
+
+- The Jet starts with the green flight HUD off, for a clean view; **U** still brings it up. Swapping
+  into the Jet turns it off again, the 4×4 on wings keeps it on. A shared link from the Jet says
+  `hud=1` when the HUD was showing.
+
 ## 2026-10-25 08:05
 
 - Buildings take their zone's heights and colours: `site.json` has a `buildings` block (`maxStoreys`,
