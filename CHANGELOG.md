@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-25 22:10
+
+- A Screenshot button on the pause panel. It saves the 3D view on its own as a PNG
+  (`lanzarote-<date>-<time>.png`), without the panel, HUD, minimap or controls card. The canvas is
+  read straight after a fresh render, because WebGL clears it once the frame is shown.
+
 ## 2026-10-25 21:55
 
 - Starship launches from El Jable. Super Heavy and Ship stand on a 146 m tower with chopsticks in the

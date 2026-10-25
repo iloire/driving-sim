@@ -13,6 +13,7 @@ const en = {
   'paused.title': 'Paused',
   'replay.title': 'Replay',
   'paused.share': 'Share this moment',
+  'paused.shot': 'Screenshot',
   'paused.note': 'A link that starts here: this place, heading, speed, time of day and view. P to go on.',
 
   // Touch buttons
@@ -199,6 +200,7 @@ const es: Record<Key, string> = {
   'paused.title': 'Pausa',
   'replay.title': 'Repetición',
   'paused.share': 'Compartir este momento',
+  'paused.shot': 'Captura',
   'paused.note': 'Un enlace que empieza aquí: este lugar, rumbo, velocidad, hora del día y vista. P para seguir.',
 
   'touch.camera': 'CÁM',

@@ -598,6 +598,22 @@ async function boot(): Promise<void> {
     );
   });
 
+  // Paused, a picture of the scene alone: the canvas holds only the 3D view, so the panel and HUD stay out of it.
+  // The drawing buffer is cleared once shown, so the frame loop saves it straight after rendering.
+  let shotPending = false;
+  document.getElementById('shot-btn')!.addEventListener('click', () => { shotPending = true; });
+  function saveShot(): void {
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `lanzarote-${new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')}.png`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }, 'image/png');
+    track('screenshot', { flying: car.flying });
+  }
+
   // A shared link is an invitation to that exact moment: straight in, no menu, seen as the sharer saw it.
   const moment = readMoment(query);
   if (moment && moment.x > 0 && moment.y > 0 && moment.x < extent && moment.y < extent) {
@@ -914,6 +930,7 @@ async function boot(): Promise<void> {
 
     const t2 = performance.now();
     renderer.render(scene, camera);
+    if (shotPending) { shotPending = false; saveShot(); }
     perf.render += performance.now() - t2;
     perf.frames++;
     perf.worst = Math.max(perf.worst, dt);
