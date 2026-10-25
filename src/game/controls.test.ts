@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DICTIONARIES } from './i18n';
-import { HelpFold, MODES, modeOf, PEEK_SECONDS, SETTLE_SECONDS } from './controls';
+import { HelpFold, MODES, modeOf, modesOf, PEEK_SECONDS, referenceOrder, SETTLE_SECONDS } from './controls';
 
 describe('controls card', () => {
   it('picks the keys for what the car is doing', () => {
@@ -8,6 +8,12 @@ describe('controls card', () => {
     expect(modeOf(true, true, false)).toBe('hover');
     expect(modeOf(true, false, false)).toBe('wings');
     expect(modeOf(false, false, true)).toBe('jet');
+  });
+
+  it("lists the picked vehicle's modes first in the menu, then the rest", () => {
+    expect(referenceOrder(modesOf(false, true))).toEqual(['jet', 'drive', 'hover', 'wings']);
+    expect(referenceOrder(modesOf(false, false))).toEqual(['drive', 'wings', 'hover', 'jet']);
+    expect(referenceOrder(modesOf(true, false))).toEqual(['drive', 'hover', 'wings', 'jet']);
   });
 
   it('keeps each mode short enough to read at a glance, in every language', () => {

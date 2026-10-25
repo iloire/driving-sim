@@ -416,7 +416,8 @@ Here all 105 land tiles have detail (about 74 MB of heights), so they load lazil
 The page opens on a menu laid over the live scene, set out as a rally roadbook: a tilted paper sheet
 whose numbered boxes are the zone, the place (with a tulip that turns as you step through places, ← → or
 the Places tab) and the vehicle, the picked one under a stroke of yellow highlighter. Then Drive. The sun
-starts at `DEFAULT_HOUR` (afternoon) unless a shared link says otherwise. Under it the
+starts at `DEFAULT_HOUR` (afternoon) unless a shared link says otherwise. The side panel's Controls
+tab lists every mode's keys, the picked vehicle's modes first (`referenceOrder` in `controls.ts`). Under it the
 physics stops and the audio is paused. The HUD, the settings panel and the touch buttons are hidden by
 `body.in-menu`. `CameraRig.showcase()` circles the car slowly, wider and higher with the wings out. A
 place far across the island is a cut, not a sweep over the mountains. `drive()` blends into the camera

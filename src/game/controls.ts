@@ -1,6 +1,6 @@
 // The controls, written once: the in-game card shows only the keys for what you're doing now
 // (driving, hovering, on wings, the Jet) and a line of the keys that work everywhere; the menu's
-// Controls tab shows them all, with the longer notes. The words are in i18n.ts.
+// Controls tab shows them all, the picked vehicle's first, with the longer notes. The words are in i18n.ts.
 
 import { t, type Key } from './i18n';
 
@@ -77,6 +77,12 @@ export function modeOf(flying: boolean, thrusters: boolean, jet: boolean): Mode 
   return thrusters ? 'hover' : 'wings';
 }
 
+/** The modes a vehicle has, on the ground first: the Roadster drives and hovers, the 4×4 drives and
+ * flies on wings, the Jet only flies. */
+export function modesOf(thrusters: boolean, jet: boolean): Mode[] {
+  return [...new Set([modeOf(false, thrusters, jet), modeOf(true, thrusters, jet)])];
+}
+
 export const modeName = (mode: Mode) => t(`mode.${mode}`);
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -91,11 +97,16 @@ export function cardHtml(mode: Mode, gamepad: boolean): string {
   return `${table(MODES[mode], false)}<p class="help-general">${general}</p>${pad}`;
 }
 
-/** The menu's full list: every mode, the general keys and the pad, with the notes. */
-export function referenceHtml(): string {
+/** The order of the menu's list: the picked vehicle's modes first, then the rest as written. */
+export function referenceOrder(first: Mode[]): Mode[] {
+  return [...new Set([...first, ...(Object.keys(MODES) as Mode[])])];
+}
+
+/** The menu's full list: every mode (the picked vehicle's first), the general keys and the pad, with the notes. */
+export function referenceHtml(first: Mode[] = []): string {
   const section = (title: string, rows: Row[]) => `<h3>${esc(title)}</h3>${table(rows, true)}`;
   return [
-    ...(Object.keys(MODES) as Mode[]).map((m) => section(modeName(m), MODES[m])),
+    ...referenceOrder(first).map((m) => section(modeName(m), MODES[m])),
     section(t('ctl.anywhere'), GENERAL),
     `<p>${esc(t('ctl.arrows'))}</p><h3>${esc(t('ctl.gamepad'))}</h3><p>${esc(t('ctl.gamepad.keys'))}</p>`,
   ].join('');

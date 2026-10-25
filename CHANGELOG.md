@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-25 10:47
+
+- The welcome screen's Controls tab starts with the picked vehicle's keys: Jet first in the Jet,
+  Driving and Hovering in the Roadster, Driving and On wings in the 4×4, then the rest. It
+  reorders as you switch vehicles.
+
 ## 2026-10-25 10:21
 
 - A first visit starts in the Jet: with no `?car` in the link the welcome screen has the Jet picked and

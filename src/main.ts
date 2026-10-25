@@ -5,7 +5,7 @@ import { CarAudio } from './game/audio';
 import { BalloonsView } from './game/balloons-view';
 import { PlacesView } from './game/places-view';
 import { BONNET_EYE, CameraRig } from './game/camera';
-import { cardHtml, HelpFold, modeName, modeOf, referenceHtml, type Mode } from './game/controls';
+import { cardHtml, HelpFold, modeName, modeOf, modesOf, referenceHtml, type Mode } from './game/controls';
 import { currentLang, LANGS, setLang, t, translatePage, type Lang } from './game/i18n';
 import { createCarModel, type CarModel } from './game/car-model';
 import { TileDresser } from './game/dress';
@@ -48,7 +48,7 @@ const START_HINT = (spec: CarSpec) => isJet(spec)
   ? t(TOUCH ? 'start.jet.touch' : 'start.jet')
   : t(TOUCH ? 'start.car.touch' : 'start.car');
 
-/** The cars on offer: the default Roadster, which hovers on thrusters, the 4×4, which unfolds wings, and the Jet, which only flies. */
+/** The cars on offer: the Roadster, which hovers on thrusters, the 4×4, which unfolds wings, and the Jet, which only flies. */
 const VEHICLES: Record<string, { name: string; line: 'car.roadster' | 'car.4x4' | 'car.jet'; spec: CarSpec; model: (spec: CarSpec, heightAt: (x: number, y: number) => number) => CarModel }> = {
   roadster: { name: 'Roadster', line: 'car.roadster', spec: ROADSTER, model: createRoadsterModel },
   '4x4': { name: 'Armoured 4×4', line: 'car.4x4', spec: TRUCK, model: createCarModel },
@@ -356,7 +356,7 @@ async function boot(): Promise<void> {
     },
     resume: leaveMenu,
     lang: (l) => relabel(l),
-  }, referenceHtml);
+  }, () => referenceHtml(modesOf(!!spec.thrusters, isJet(spec))));
 
   /** From a drive the menu offers to carry on; at boot there is nothing to carry on. */
   function openMenu(fromDrive = true): void {
