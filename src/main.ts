@@ -710,7 +710,7 @@ async function boot(): Promise<void> {
 
     const road = onRoad(site.roads, view.pos[0], view.pos[1], 2);
     balloonsView.update(dt, field.balloons);
-    placesView.update(camera.position);
+    placesView.update(camera);
     hud.setScore(settings.balloons, field.score, field.popped, best);
     hud.update(dt, {
       speedKmh: (view.flying ? view.airspeed : view.speed) * 3.6, rpmShare: view.rpm / spec.engine.redline,

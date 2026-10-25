@@ -13,6 +13,50 @@
     658000,
     3235000
   ],
+  "places": {
+    "spots": [
+      {
+        "name": "Mirador del Río",
+        "lat": 29.21442,
+        "lon": -13.4813
+      },
+      {
+        "name": "Peñas del Chache",
+        "lat": 29.11941,
+        "lon": -13.52092
+      },
+      {
+        "name": "Jameos del Agua",
+        "lat": 29.15744,
+        "lon": -13.43166
+      },
+      {
+        "name": "Cueva de los Verdes",
+        "lat": 29.16042,
+        "lon": -13.43937
+      },
+      {
+        "name": "Jardín de Cactus",
+        "lat": 29.08064,
+        "lon": -13.47619
+      },
+      {
+        "name": "Castillo de Santa Bárbara",
+        "lat": 29.05791,
+        "lon": -13.55007
+      },
+      {
+        "name": "Fundación César Manrique",
+        "lat": 29.00306,
+        "lon": -13.54768
+      },
+      {
+        "name": "Montañas del Fuego",
+        "lat": 29.00597,
+        "lon": -13.75313
+      }
+    ]
+  },
   "heightmap": {
     "file": "height.bin",
     "size": 2048

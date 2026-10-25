@@ -357,11 +357,11 @@ async function main(): Promise<void> {
   for (const [key, file] of objects) writeFileSync(join(objectsDir, `${key}.json`), JSON.stringify(file));
   console.log(`${buildings.length} buildings, ${lamps.length} lamps, ${posts.length} edge posts`);
 
-  if (site.places) {
+  if (site.places?.osm) {
     const placesFile = join(cache, 'places-osm.json');
     if (fresh(placesFile)) {
       console.log('Places from OpenStreetMap (Overpass) …');
-      writeFileSync(placesFile, JSON.stringify(await overpass(site, (box) => `(${site.places!.osm.map((q) => `${q}(${box});`).join('')});out tags center;`)));
+      writeFileSync(placesFile, JSON.stringify(await overpass(site, (box) => `(${site.places!.osm!.map((q) => `${q}(${box});`).join('')});out tags center;`)));
     }
     const places = toPlaces(site, site.places, JSON.parse(readFileSync(placesFile, 'utf8')) as OsmPlace[]);
     writeFileSync(join(dir, 'places.json'), JSON.stringify(places, null, 1) + '\n');

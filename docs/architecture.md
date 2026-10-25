@@ -37,7 +37,7 @@ Each zone is a folder with a `site.json`, which `scripts/fetch-terrain.ts` fills
 | `bbox` | the square, in that projection's metres: a multiple of `detail.tileM` a side |
 | `plainM` | inland only: the farmland's height around the square. Omitted means an island with sea all round |
 | `buildings` | how the buildings stand and look, every field optional, Lanzarote's by default: `maxStoreys` the tallest a building gets (two, the island's planning rule), `storeys` the relative odds of one, two, three … storeys for a building OSM gives no height (`[0.7, 0.3]`), `walls` and `roofs` the colours one is picked from per building (list one twice to make it twice as common; Lanzarote's are all near-whites) |
-| `places` | the places of interest labelled over the land (`src/sim/places.ts`), omitted = none: `osm` the Overpass selectors to ask for (one element type and its tags each, e.g. `node[natural=peak][name][ele]`), `max` how many labels, highest first, `spacingM` a place closer than this to a higher one already kept is dropped, so each mountain gets one label rather than one per needle. The build writes them to `places.json`, named in Spanish where OSM has it |
+| `places` | the places of interest labelled over the land (`src/sim/places.ts`), omitted = none: `osm` the Overpass selectors to ask for (one element type and its tags each, e.g. `node[natural=peak][name][ele]`), `max` how many labels, highest first, `spacingM` a place closer than this to a higher one already kept is dropped, so each mountain gets one label rather than one per needle. The build writes them to `places.json`, named in Spanish where OSM has it. And/or `spots`, a hand-picked list of `{ name, lat, lon }` (like `spawns`), always labelled and read as the page loads, so adding one needs no rebuild |
 | `heightmap.unitM` | metres per stored step. 0.1 (default) holds 3,276 m. Tenerife and Benasque use 0.2 for Teide and Aneto |
 | `spawns` | the places, as lat/lon, snapped to the nearest paved road; `toward` starts on a runway facing that way |
 
@@ -53,9 +53,12 @@ Buildings have flat roofs everywhere; their heights and colours are the zone's (
 
 Labels (`src/game/places-view.ts`): Benasque labels its 10 highest peaks, 2 km apart at least
 (`natural=peak`); Tenerife Teide alone (`max: 1` over peaks and volcanoes, since OSM tags Teide a
-`volcano`); Lanzarote and Zaragoza have none yet. Each is a sprite on a pin 25 m over the summit,
-the same size on screen at any range, hidden by the hills in front, fading out past 30 km and
-when you are on top of it. **L** shows or hides them.
+`volcano`); Lanzarote eight `spots` (Mirador del Río, Peñas del Chache, Jameos del Agua, Cueva de los
+Verdes, Jardín de Cactus, Castillo de Santa Bárbara, Fundación César Manrique, Montañas del Fuego;
+El Golfo, Los Hervideros, Janubio and Papagayo are outside its square); Zaragoza none yet. Each is a
+sprite on a pin 25 m over the ground (the OSM summit height when it has one), the same size on screen
+at any range, hidden by the hills in front, fading out past 30 km and when you are on top of it.
+Where two overlap on screen the nearer shows. **L** shows or hides them.
 
 ## Frames
 

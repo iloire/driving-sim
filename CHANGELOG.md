@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-10-25 08:28
+
+- Lanzarote labels its sights: Mirador del Río, Peñas del Chache, Jameos del Agua, Cueva de los Verdes,
+  Jardín de Cactus, Castillo de Santa Bárbara, Fundación César Manrique and Montañas del Fuego. A zone
+  can now hand-pick spots by lat/lon (`places.spots` in `site.json`) next to, or instead of, a class
+  of OSM features. Where two labels overlap on screen the nearer one shows.
+
 ## 2026-10-25 08:25
 
 - Peaks have their names over them. Benasque labels its 10 highest mountains (Aneto, Posets, Maladeta,

@@ -114,7 +114,7 @@ export async function loadSite(id: string): Promise<Site> {
     fetch(`${base}${spec.heightmap.file}`).then((r) => r.arrayBuffer()),
     json<RoadsFile>(`${base}roads.json`),
     json<{ size: number; tiles: [number, number][] }>(`${detailDir}tiles.json`),
-    spec.places ? json<PlacesFile>(`${base}places.json`) : { places: [] },
+    spec.places?.osm ? json<PlacesFile>(`${base}places.json`) : { places: [] },
   ]);
   const [x0, y0, x1] = spec.bbox;
   const unitM = spec.heightmap.unitM ?? 0.1;
@@ -159,6 +159,11 @@ export async function loadSite(id: string): Promise<Site> {
     return hit ? { spec: s, x: hit.x, y: hit.y, heading: hit.heading } : { spec: s, x: e - x0, y: n - y0, heading: 0 };
   });
 
+  const spots = (spec.places?.spots ?? []).map((s): Place => {
+    const [e, n] = proj.forward([s.lon, s.lat]);
+    return { n: s.name, x: e - x0, y: n - y0 };
+  });
+
   return {
     spec,
     terrain,
@@ -168,7 +173,7 @@ export async function loadSite(id: string): Promise<Site> {
     roads,
     buildings,
     spawns,
-    places: placesFile.places,
+    places: [...placesFile.places, ...spots],
     toLatLon(x, y) {
       const [lon, lat] = proj.inverse([x + x0, y + y0]);
       return [lat, lon];
