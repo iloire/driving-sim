@@ -37,6 +37,10 @@ zone, place and vehicle; **M** / **Esc** brings it back.
   launch goes up from El Jable every few minutes.
 - **Towns**: OSM buildings, solid, styled per zone (Lanzarote's white houses, Zaragoza's brick
   flats), lit at dusk, with street lamps and edge posts.
+- **A living island**: trees, bushes, grass and rocks grow in round you, picked from the aerial
+  photo (palms on Lanzarote, firs at Benasque, boulders on the lava); traffic on the roads and
+  people on the pavements, both of which you can crash into; flocks of gulls overhead, and in the
+  fields ahead ready to scatter.
 - **Peak and sight labels** (**L**): Aneto, Teide, Mirador del Río …
 - **Instant replay** (**I**): the last 30 seconds, crashes included.
 - **Weather**: clouds you can fly through, with shadows that drift over the land. Each zone has its own:
