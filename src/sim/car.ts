@@ -32,6 +32,27 @@ const BODY_C = 15000;
 /** Walls: stiff and close to critically damped, so a crash stops the car rather than bouncing it. */
 const WALL_K = 1000000;
 const WALL_C = 40000;
+/**
+ * Driver aids, on the ground only: the physics stays honest underneath, but a game wants a car
+ * that stops when you brake, turns where you point it and doesn't swap ends at speed.
+ * The handbrake switches the slide damper and the stability control off, so it still drifts.
+ */
+const ASSIST = {
+  /** Tyre friction multiplier: arcade rubber. */
+  grip: 1.3,
+  /** Brake force multiplier: the tyres, not the brakes, set the stopping distance. */
+  brake: 1.6,
+  /** Downforce as a share of the weight: (speed / downforceSpeed)², capped at `downforceMax`. */
+  downforceSpeed: 45,
+  downforceMax: 0.6,
+  /** Per second: how fast a sideways slide of the body is damped out, and its cap in g. */
+  side: 2.5,
+  sideMax: 0.5,
+  /** Stability control: per-second gain pulling the yaw rate to the one the front wheels ask for, the cornering it allows (g), and its cap (rad/s²). */
+  yaw: 6,
+  lateral: 1.4,
+  yawMax: 4,
+};
 
 export interface Controls {
   /** 0..1 — the accelerator, or reverse when backing up. */
@@ -428,11 +449,11 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
 
     const surface = env.surface(at[0], at[1]);
     // Knobbly all-terrain tyres claw back part of what loose ground takes away.
-    const grip = spec.mu * (surface.grip + (1 - surface.grip) * spec.allTerrain) * load;
+    const grip = spec.mu * (s.flying ? 1 : ASSIST.grip) * (surface.grip + (1 - surface.grip) * spec.allTerrain) * load;
     const axleDrive = wheel.front ? spec.driveFront : 1 - spec.driveFront;
     const axleBrake = wheel.front ? spec.brakeFront : 1 - spec.brakeFront;
     const locked = lockRear && !wheel.front;
-    const brakeCap = brake * spec.brakeForce * axleBrake / 2 + (locked ? spec.brakeForce : 0);
+    const brakeCap = brake * spec.brakeForce * (s.flying ? 1 : ASSIST.brake) * axleBrake / 2 + (locked ? spec.brakeForce : 0);
     let fx = (drive * axleDrive) / 2
       - clamp(vx * BRAKE_STIFFNESS, -brakeCap, brakeCap)
       - surface.rolling * (1 - 0.5 * spec.allTerrain) * load * clamp(vx * 2, -1, 1);
@@ -459,6 +480,28 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
 
     const spinning = !locked && fx > 0 && total > grip ? slip * 25 : 0; // wheelspin, for the eye
     if (!locked) wheel.spin += (vx / spec.wheelRadius + spinning) * dt;
+  }
+
+  // Driver aids, for as much of the car as is on the ground.
+  const grounded = s.wheels.filter((wh) => wh.contact).length / s.wheels.length;
+  if (!s.flying && grounded > 0) {
+    const v = s.speed;
+    const down = Math.min((v / ASSIST.downforceSpeed) ** 2, ASSIST.downforceMax) * spec.mass * G * grounded;
+    apply(scale(up, -down), s.pos);
+    if (!c.handbrake) {
+      // Loose ground gives the aids less to work with, as it does the tyres.
+      const loose = env.surface(s.pos[0], s.pos[1]).grip;
+      const ground = loose + (1 - loose) * spec.allTerrain;
+      const side = rotate(s.q, [0, 1, 0]);
+      const slide = dot(s.vel, side);
+      const sideMax = ASSIST.sideMax * ground * spec.mass * G;
+      apply(scale(side, clamp(-slide * ASSIST.side * spec.mass, -sideMax, sideMax) * grounded), s.pos);
+      // The yaw rate the front wheels ask for (a bicycle model), no more than the grip allows.
+      const most = (ASSIST.lateral * ground * G) / Math.max(Math.abs(v), 1);
+      const want = clamp((v * Math.tan(s.steer)) / spec.wheelbase, -most, most);
+      const yawMax = ASSIST.yawMax * spec.inertia[2];
+      torque = add(torque, scale(up, clamp((want - dot(s.w, up)) * ASSIST.yaw * spec.inertia[2], -yawMax, yawMax) * grounded));
+    }
   }
 
   // Body corners that dig in: a roll, a bottomed-out landing, the car on its roof.

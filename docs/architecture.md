@@ -146,6 +146,13 @@ by `logo.ts`) sits on the nose and both sides.
 - **Brakes and handbrake.** A brake resists rolling like a stiff damper up to its cap, so a car
   stops dead instead of oscillating. The handbrake locks the rear wheels, which then skate with
   kinetic friction against their sliding direction.
+- **Driver aids** (`ASSIST`, on the ground only, never on wings). Honest tyres made the car slow to
+  stop, loose at speed and hard to turn, so a game layer sits on top. The tyres get 1.3× the
+  friction and the brakes 1.6× the force. Downforce grows with the square of speed, up to 0.6 g
+  of extra load at 160 km/h. A damper bleeds off the body's sideways slide (up to 0.5 g). A
+  stability control pulls the yaw rate towards the one the front wheels ask for (a bicycle model),
+  capped at the 1.4 g the grip allows. The damper and the stability control scale with the ground's
+  grip, so loose picón is still loose, and the handbrake switches both off, so it still drifts.
 - **Powertrain.** The torque curve is a broad hump (a V8's 520 N m peak at 4000 rpm, nothing past
   the 6200 redline), feeding six gears, a 4.1 final drive and 90 % efficiency. It does 0–100 km/h
   in 5.3 s and tops out at about 230 km/h. The clutch slips
@@ -164,7 +171,8 @@ by `logo.ts`) sits on the nose and both sides.
   speed, and is handed the force it takes back (`WallContact.react`).
 
 `src/sim/car.test.ts` pins the envelope: 0–100 km/h in 5–9 s, a top speed of 200–260 km/h,
-100–0 km/h in 35–50 m, under ~1.1 g steady cornering, holding on a 10 % grade, the handbrake
+100–0 km/h in 22–34 m, 150–0 km/h in under 65 m, under ~1.5 g steady cornering, a full-lock turn
+at 130 km/h with under 6° of sideslip, holding on a 10 % grade, the handbrake
 kicking the tail out, keeping more grip on picón than plain tyres would, surviving an upside-down landing, stopping against a wall, and noticing the sea.
 
 ## The vehicles

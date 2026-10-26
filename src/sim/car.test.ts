@@ -61,7 +61,7 @@ describe('straight line', () => {
     expect(s.speed * 3.6).toBeLessThan(260);
   });
 
-  it('stops from 100 km/h in 35–50 m', () => {
+  it('stops from 100 km/h in 22–34 m', () => {
     const s = createCar(TRUCK, 0, 0, 10, 0);
     s.vel = [0, 100 / 3.6, 0];
     s.gear = 4;
@@ -70,8 +70,8 @@ describe('straight line', () => {
     let stopY = 0;
     run(s, { ...idle(), brake: 1 }, 6, flat, () => { if (!stopY && s.speed < 0.1) stopY = s.pos[1]; });
     const scaled = ((stopY - y0) * (100 / 3.6) ** 2) / v0 ** 2;
-    expect(scaled).toBeGreaterThan(35);
-    expect(scaled).toBeLessThan(50);
+    expect(scaled).toBeGreaterThan(22);
+    expect(scaled).toBeLessThan(34);
   });
 
   it('backs up when the brake is held at a standstill', () => {
@@ -103,7 +103,7 @@ describe('turbo', () => {
 });
 
 describe('cornering', () => {
-  it('turns left on positive steer, holding under ~1.1 g', () => {
+  it('turns left on positive steer, holding under ~1.5 g', () => {
     const s = createCar(TRUCK, 0, 0, 10, 0);
     s.vel = [0, 20, 0];
     s.gear = 3;
@@ -114,7 +114,7 @@ describe('cornering', () => {
     });
     expect(s.w[2]).toBeGreaterThan(0); // counter-clockwise seen from above = left
     expect(maxLat).toBeGreaterThan(0.5);
-    expect(maxLat).toBeLessThan(1.2);
+    expect(maxLat).toBeLessThan(1.6);
     expect(Math.abs(s.pos[2] - 10 - TRUCK.cgHeight)).toBeLessThan(0.3); // still on its wheels
   });
 
@@ -142,6 +142,42 @@ describe('cornering', () => {
     run(pull, { ...idle(), steer: 0.6, handbrake: true }, 1);
     expect(Math.abs(pull.w[2])).toBeGreaterThan(Math.abs(grip.w[2]));
     expect(pull.wheels[2].slip).toBe(1);
+  });
+});
+
+describe('driver aids at speed', () => {
+  /** A truck rolling north at `kmh`, settled on its springs. */
+  const rolling = (kmh: number) => {
+    const s = createCar(TRUCK, 0, 0, 10, 0);
+    s.vel = [0, kmh / 3.6, 0];
+    s.gear = 5;
+    run(s, idle(), 0.5);
+    return s;
+  };
+  /** Degrees between where the nose points and where the car is going. */
+  const sideslip = (s: CarState) => {
+    const course = Math.atan2(s.vel[0], s.vel[1]);
+    return (Math.abs(((course - s.heading + 3 * Math.PI) % (2 * Math.PI)) - Math.PI) * 180) / Math.PI;
+  };
+  const turned = (s: CarState) => ((s.heading > Math.PI ? 2 * Math.PI - s.heading : s.heading) * 180) / Math.PI;
+
+  it('stops from 150 km/h in under 65 m', () => {
+    const s = rolling(150);
+    const y0 = s.pos[1];
+    let stopY = 0;
+    run(s, { ...idle(), brake: 1 }, 10, flat, () => { if (!stopY && s.speed < 0.1) stopY = s.pos[1]; });
+    expect(stopY - y0).toBeGreaterThan(0);
+    expect(stopY - y0).toBeLessThan(65);
+  });
+
+  it('carves a full-lock turn at 130 km/h without the tail stepping out, and turns in sharply', () => {
+    const s = rolling(130);
+    let slip = 0;
+    run(s, { ...idle(), throttle: 0.5, steer: 1 }, 1.5, flat, () => { slip = Math.max(slip, sideslip(s)); });
+    expect(turned(s)).toBeGreaterThan(45);
+    run(s, { ...idle(), throttle: 0.5 }, 2.5, flat, () => { slip = Math.max(slip, sideslip(s)); });
+    expect(slip).toBeLessThan(6);
+    expect(Math.abs(s.w[2])).toBeLessThan(0.05); // straightened up when let go
   });
 });
 

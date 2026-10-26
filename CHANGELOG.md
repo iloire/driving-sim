@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-10-26 16:25
+
+- Driving is more fun at speed. The cars were too honest: slow to stop, sliding wide, the tail
+  stepping out when you turned in hard. On the ground they now have arcade driver aids: stickier
+  tyres, stronger brakes, downforce that builds with speed, a damper on sideways slides and
+  stability control that turns the car where the front wheels point. 150–0 km/h takes 57 m
+  instead of 90, a full-lock turn at 130 km/h slides 3° instead of 15° and turns in half as
+  fast again. The handbrake switches the slide damper and stability control off, so drifts still
+  work, and loose ground still gives less grip than tarmac.
+
 ## 2026-10-26 16:03
 
 - The green flight HUD is the Jet's alone. The 4×4 and the other cars on wings fly with the plain
