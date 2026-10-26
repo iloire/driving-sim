@@ -16,7 +16,7 @@ zone, place and vehicle; **M** / **Esc** brings it back.
 
 ![The welcome screen: Lanzarote Drive over the Roadster on the LZ-67 in Timanfaya](docs/screenshots/welcome.png)
 
-![Driving the LZ-30 through La Geria in the late afternoon](docs/screenshots/la-geria.png)
+![The Roadster on the LZ-67 through the lava fields of Timanfaya, Montañas del Fuego behind](docs/screenshots/roadster.png)
 
 ## What's in it
 
@@ -47,15 +47,34 @@ zone, place and vehicle; **M** / **Esc** brings it back.
   trade-wind cumulus, Tenerife's sea of clouds, calima, fog in the Benasque valley (`?wx=`, or Settings).
 - **Surfaces, sound, map, road signs**, and the real sun position for any time of day.
 
-![The Roadster hovering on its floor thrusters above the LZ-203 at dusk](docs/screenshots/roadster-hover.png)
+### The cars
 
-![The Buggy on the LZ-67 in Timanfaya: roll cage, spiked wheels, the Piratas Aéreos badge on the nose and side](docs/screenshots/buggy.png)
+| | |
+|---|---|
+| ![The Roadster hovering on its floor thrusters over the Timanfaya lava](docs/screenshots/roadster-hover.png) | ![The Buggy on the LZ-67: roll cage, spiked wheels, the Piratas Aéreos badge on the nose](docs/screenshots/buggy.png) |
+| **Roadster**, **F**: hovering on its floor thrusters over Timanfaya | **Buggy** on the LZ-67 |
 
-![Calle Trinidad, Arrecife: the OSM buildings drawn as the island's white houses](docs/screenshots/arrecife.png)
+![The Buggy on its fighter wings along the Famara cliffs, red-striped leading edges and twin canted fins](docs/screenshots/buggy-wings.png)
 
-![Off runway 03 at Lanzarote Airport, wings out, climbing over Arrecife](docs/screenshots/flying.png)
+*The Buggy with its wings out, flying along the Famara cliffs.*
 
-![Starship climbing off its tower in El Jable, Teguise and the Atlantic ahead, the webcast telemetry below](docs/screenshots/starship.png)
+### The Jet
+
+| | |
+|---|---|
+| ![The Jet at wave-top height off Famara crossing Mach 1, the cliffs and Mirador del Río ahead](docs/screenshots/jet-supersonic.png) | ![The Jet pulling straight up on afterburner, wingtip vapour trailing over the clouds](docs/screenshots/jet-afterburner.png) |
+| Mach 1 at 30 m over the sea off Famara | Pulling into the vertical on afterburner, vapour off the wingtips |
+| ![Inverted over a Timanfaya crater at 7 g, the view drained of colour](docs/screenshots/jet-greyout.png) | ![8 g held: the view tunnels toward black as the pilot nears G-LOC](docs/screenshots/jet-blackout.png) |
+| Greying out, inverted over a crater at 7 g | Tunnel vision as the g holds: hold it longer and the pilot blacks out |
+
+### Starship
+
+| | |
+|---|---|
+| ![Starship lifting off its tower in El Jable, Teguise and the Atlantic ahead](docs/screenshots/starship-liftoff.png) | ![Starship climbing over Lanzarote, the webcast telemetry below](docs/screenshots/starship-ascent.png) |
+| Liftoff from El Jable | Climbing out over the island |
+| ![Hot staging at 56 km: Starship lights its engines and pulls away from Super Heavy](docs/screenshots/starship-staging.png) | ![Super Heavy's landing burn, dropping back into the tower's chopsticks](docs/screenshots/starship-catch.png) |
+| Hot staging at 56 km | Super Heavy's landing burn, back into the chopsticks |
 
 ## Run it
 

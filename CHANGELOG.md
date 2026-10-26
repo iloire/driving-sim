@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-26 19:03
+
+- New README screenshots: the welcome screen, the Roadster on the LZ-67 and hovering over Timanfaya,
+  the Buggy on the road and on its fighter wings along Famara, the Jet through Mach 1 at wave-top
+  height, climbing on afterburner, greying out and tunnelling toward a blackout, and Starship's
+  liftoff, climb, hot staging and the booster's landing burn. Afternoon sun, behind the camera.
+  The old La Geria, Arrecife, wings and Starship shots (retired cars, the settings panel) are gone.
+
 ## 2026-10-26 16:45
 
 - The Buggy's wings look meaner: a fighter planform with a root extension along the tub, a
