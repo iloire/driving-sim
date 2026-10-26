@@ -275,6 +275,38 @@ export class CarAudio {
     this.turbine.buffet.gain.setTargetAtTime(this.jet ? out * air * air * 0.6 : 0, t, 0.08);
   }
 
+  /**
+   * Hitting something that gives: the thud of the bodies, a crumpling crunch of metal, and a few
+   * bits of glass after, louder the harder it was (`strength` 0..1).
+   */
+  crash(strength: number): void {
+    const ctx = this.ctx;
+    if (!ctx || !this.master) return;
+    const t = ctx.currentTime, k = Math.min(Math.max(strength, 0.15), 1);
+    this.clunk(t, k * 1.6);
+    const n = Math.floor(ctx.sampleRate * 0.7);
+    const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    let crackle = 0;
+    for (let i = 0; i < n; i++) {
+      if (Math.random() < 0.004) crackle = 0.6 + Math.random() * 0.4;
+      crackle *= 0.99;
+      const crunch = Math.exp(-i / (ctx.sampleRate * 0.09));
+      d[i] = (Math.random() * 2 - 1) * (crunch + 0.25 * crackle * Math.exp(-i / (ctx.sampleRate * 0.3)));
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const band = ctx.createBiquadFilter();
+    band.type = 'bandpass';
+    band.frequency.setValueAtTime(1800, t);
+    band.frequency.exponentialRampToValueAtTime(700, t + 0.3);
+    band.Q.value = 0.8;
+    const g = ctx.createGain();
+    g.gain.value = 1.1 * k;
+    src.connect(band).connect(g).connect(this.master);
+    src.start(t);
+  }
+
   /** A hydraulic clunk: a short knock of low noise over a dropping sine, `weight` 0..1. */
   private clunk(t: number, weight: number): void {
     const ctx = this.ctx!;

@@ -11,6 +11,7 @@ src/sim/    pure TypeScript, no three.js, no DOM — unit-tested
   roads.ts    road model: profiles, carving, nearest-road index
   scatter.ts  trees, bushes, grass and rocks round the car, picked from the aerial photo
   birds.ts    flocks round the camera: soaring, passing, and perched ones the car startles
+  traffic.ts  cars on the roads round the camera: lanes, bends, queues, junctions, crashes
   buildings.ts  building footprints as obstacles: point-in-polygon, way out, per-tile index
   objects.ts  per-tile objects file, building heights, lamp and edge-post placement
   terrain.ts  Heightmap with 5 m detail tiles (shared with paragliding-sim)
@@ -157,7 +158,9 @@ by `logo.ts`) sits on the nose and both sides.
 - **Walls.** Eight points round the body's waist are pushed back out of any building they enter
   below its roofline, along the nearest wall's outward normal. The push is stiff (1 MN/m) and close to
   critically damped (40 kN·s/m), so a crash stops the car without bouncing it back, and the rub
-  along the wall is capped like the ground friction.
+  along the wall is capped like the ground friction. The same goes for trees, boulders and other
+  cars (`env.wall`); a wall that moves gives its velocity, so the damping works on the closing
+  speed, and is handed the force it takes back (`WallContact.react`).
 
 `src/sim/car.test.ts` pins the envelope: 0–100 km/h in 5–9 s, a top speed of 200–260 km/h,
 100–0 km/h in 35–50 m, under ~1.1 g steady cornering, holding on a 10 % grade, the handbrake
@@ -536,6 +539,35 @@ the car is on the ground, two perched.
   flap phase and strength; the vertex shader beats the wings, folds them and lets the legs down
   when standing, tucks the legs up in flight, and grows a bird in over the last quarter of its 1.2 km
   reach. The CPU only places them, nose along the way they fly.
+
+## Traffic (`src/sim/traffic.ts`, `src/game/traffic-view.ts`)
+
+About fourteen cars on the paved roads round the camera (highway to minor; not service roads,
+tracks or bridges), stepped at 120 Hz like the car.
+
+- **Lanes.** A car follows its road's polyline, a quarter of the carriageway to the right of the
+  centreline (Spain drives on the right). The offset is taken off its eased heading rather than the
+  segment's, so it doesn't jump sideways at each vertex. OSM's dual carriageways are two roads with
+  no one-way tag in `roads.json`, so each carries traffic both ways, in its two lanes.
+- **Speed.** The road's pace (27 m/s on a highway, 22 primary, 19 secondary, 15 tertiary, 11 minor),
+  capped for the sharpest bend in the next 40 m at 3 m/s² of sideways grip, and for anything in its
+  lane within 70 m (another car, a wreck, or the player): it aims to stop 8 m short. It speeds up at
+  2.5 m/s² and brakes at up to 7.
+- **Junctions.** At the end of its road it looks for other roads with a vertex at the same point
+  (`RoadIndex.within`) and picks one, the straighter the likelier (no U-turns); with none it turns
+  round. A road it meets mid-way it drives straight through.
+- **Crashes.** Each car is a 4.4 × 1.8 m box, 1.5 m tall, fattened by 0.3 m. `contact` is the
+  player car's `env.wall` for it, giving the way out of the nearest side, the car's velocity, and a
+  `react` that applies the force the player puts on it at that point (1300 kg, a box's inertia). The
+  first push makes it a wreck: it slides on 7 m/s² of friction, its spin dying away, pushed out of
+  buildings, and the crash sound plays scaled by the speed the player lost. Once still for 3 s
+  within 4 m of a road and facing along it (either way), it drives on; otherwise it goes after 40 s,
+  once 120 m from the camera.
+- **Coming and going.** A new car appears on a random driven road 220–650 m from the camera, at
+  least 40 m from any other; one past 900 m goes.
+- **Drawing.** Three models from extruded side profiles (a hatchback, a saloon and a van), each
+  two `InstancedMesh`es: the paintwork, tinted per car from a palette that is mostly white and
+  silver, and everything else (glass, tyres, bumpers, lamps). Pitched to the ground under the axles.
 
 ## Terrain loading (`src/game/site.ts`, `terrain-view.ts`)
 

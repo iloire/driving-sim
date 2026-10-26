@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-10-26 15:25
+
+- Traffic. About fourteen cars drive the paved roads round you: hatchbacks, saloons and vans,
+  mostly white and silver like the island's hire cars. They keep to the right-hand lane at the
+  road's pace (100 km/h on a highway, 40 on a back street), slow for bends, queue behind whatever
+  is in their lane (you included), and take a road at random where theirs ends. They're solid, and
+  they push back: the car pushes off them like a wall that moves, and they take the force, so a
+  hit sends one sliding and spinning as a wreck, with a crunch, while you lose the speed it
+  gained. A wreck that comes to rest in its lane drives on. They appear out of sight 220–650 m
+  away and go once far behind (`src/sim/traffic.ts`, `src/game/traffic-view.ts`, with tests).
+
 ## 2026-10-26 14:40
 
 - Birds. A few flocks of gulls are always about: wheeling on the breeze in loose circles, gliding

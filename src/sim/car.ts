@@ -58,8 +58,18 @@ export interface CarEnv {
   /** Terrain height (m) at a point of the site frame; below 0 is sea floor. */
   height(x: number, y: number): number;
   surface(x: number, y: number): Surface;
-  /** The way out of a building a point is inside (horizontal outward normal, depth in m), or null. */
-  wall?(x: number, y: number, z: number): { nx: number; ny: number; depth: number } | null;
+  /** The way out of a building (or anything solid) a point is inside, or null. */
+  wall?(x: number, y: number, z: number): WallContact | null;
+}
+
+/** Horizontal outward normal and depth (m); something that moves gives its velocity, and is told the force it takes back. */
+export interface WallContact {
+  nx: number;
+  ny: number;
+  depth: number;
+  vel?: V3;
+  /** The force (N) the car puts on it at `at`, over `dt` seconds. */
+  react?(force: V3, at: V3, dt: number): void;
 }
 
 export interface CarSpec {
@@ -476,13 +486,15 @@ function substep(s: CarState, spec: CarSpec, c: Controls, env: CarEnv, dt: numbe
       const hit = env.wall(p[0], p[1], p[2]);
       if (!hit) continue;
       const n: V3 = [hit.nx, hit.ny, 0];
-      const v = add(s.vel, cross(s.w, sub(p, s.pos)));
+      const v = sub(add(s.vel, cross(s.w, sub(p, s.pos))), hit.vel ?? [0, 0, 0]);
       const vn = dot(v, n);
       const press = Math.max(WALL_K * Math.min(hit.depth, 1) - WALL_C * vn, 0);
       const vt = sub(v, scale(n, vn));
       const vtLen = Math.hypot(...vt);
       const rub = vtLen > 1e-6 ? scale(vt, -Math.min(0.3 * press, (vtLen * spec.mass) / (4 * dt)) / vtLen) : vt;
-      apply(add(scale(n, press), rub), p);
+      const f = add(scale(n, press), rub);
+      apply(f, p);
+      hit.react?.(scale(f, -1), p, dt);
     }
   }
 

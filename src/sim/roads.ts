@@ -197,6 +197,29 @@ export class RoadIndex {
     });
   }
 
+  /** Every segment passing within `r` metres of a point: its road and the index in `pts` of its first vertex's x. */
+  within(x: number, y: number, r: number): { road: Road; i: number }[] {
+    const C = RoadIndex.CELL;
+    const seen = new Set<number>();
+    const out: { road: Road; i: number }[] = [];
+    for (let cy = Math.floor((y - r) / C); cy <= Math.floor((y + r) / C); cy++) {
+      for (let cx = Math.floor((x - r) / C); cx <= Math.floor((x + r) / C); cx++) {
+        const list = this.cells.get(cy * 100000 + cx);
+        if (!list) continue;
+        for (let j = 0; j < list.length; j += 2) {
+          const ri = list[j], i = list[j + 1], key = ri * 1e7 + i;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const p = this.roads[ri].pts;
+          const ax = p[i], ay = p[i + 1], dx = p[i + 2] - ax, dy = p[i + 3] - ay;
+          const t = Math.min(Math.max(((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1), 0), 1);
+          if (Math.hypot(x - ax - t * dx, y - ay - t * dy) <= r) out.push({ road: this.roads[ri], i });
+        }
+      }
+    }
+    return out;
+  }
+
   /** The closest road within `maxDist` metres that passes `accept`, or undefined. */
   nearest(x: number, y: number, maxDist: number, accept: (r: Road) => boolean = () => true): RoadHit | undefined {
     const C = RoadIndex.CELL;

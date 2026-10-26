@@ -18,6 +18,7 @@ import { buffet, JetEffects } from './game/jet-effects';
 import { Explosion } from './game/explosion';
 import { createJetModel } from './game/jet-model';
 import { createRoadsterModel } from './game/roadster-model';
+import { TrafficView } from './game/traffic-view';
 import { GroundPhoto, ScatterView } from './game/scatter-view';
 import { RocketHud } from './game/rocket-hud';
 import { createLaunchView } from './game/starship-model';
@@ -33,6 +34,7 @@ import { drawCloudShadows, setCloudShadows, shadeByClouds } from './game/cloud-s
 import { setSeaWind, stepSea } from './game/sea';
 import { Birds } from './sim/birds';
 import { buildingStyle } from './sim/objects';
+import { Traffic } from './sim/traffic';
 import { FAR_LAYERS, NEAR_LAYERS, ScatterField, scatterSpec, type ScatterWorld } from './sim/scatter';
 import { createPilot, PILOT, stepPilot } from './sim/pilot';
 import { createCar, JET, ROADSTER, TRUCK, stepCar, type CarEnv, type CarSpec, type CarState, type Surface } from './sim/car';
@@ -240,8 +242,13 @@ async function boot(): Promise<void> {
   const birds = new Birds();
   const birdsView = new BirdsView(extent);
   scene.add(birdsView.mesh);
-  /** What the car hits: a building, a tree or a boulder. */
-  const obstacle = (x: number, y: number, z: number) => site.buildings.wall(x, y, z) ?? farScatter.solid(x, y, z);
+  // Cars on the roads round the camera, solid to crash into.
+  const traffic = new Traffic({ roads: site.roads, height: heightAt, wall: (x, y, z) => site.buildings.wall(x, y, z) });
+  const trafficView = new TrafficView(extent, heightAt);
+  scene.add(trafficView.group);
+  let trafficAcc = 0;
+  /** What the car hits: a building, a tree or a boulder, or another car. */
+  const obstacle = (x: number, y: number, z: number) => site.buildings.wall(x, y, z) ?? farScatter.solid(x, y, z) ?? traffic.contact(x, y, z);
 
   const env: CarEnv = {
     height: (x, y) => terrain.heightAt(x, y),
@@ -662,7 +669,7 @@ async function boot(): Promise<void> {
 
   // Dev builds expose the live state for poking at from the console.
   const perf = { physics: 0, terrain: 0, scatter: 0, render: 0, frames: 0, worst: 0 };
-  if (import.meta.env.DEV) Object.assign(window, { drive: { car: () => car, pilot: () => pilot, controls: input.controls, terrain, site, perf, renderer, clouds: () => clouds, launch: () => launch, birds,
+  if (import.meta.env.DEV) Object.assign(window, { drive: { car: () => car, pilot: () => pilot, controls: input.controls, terrain, site, perf, renderer, clouds: () => clouds, launch: () => launch, birds, traffic,
     // Fast-forwards the launch on its autopilot, for looking at a phase without waiting for it.
     skip: (seconds: number) => {
       for (let t = 0; launch && t < seconds; t += STEP) {
@@ -759,6 +766,7 @@ async function boot(): Promise<void> {
       acc += dt;
       const t0 = performance.now();
       const v0 = [...car.vel];
+      const hits = traffic.hits;
       let steps = 0;
       while (acc >= STEP) {
         prevPos.splice(0, 3, ...car.pos);
@@ -768,6 +776,7 @@ async function boot(): Promise<void> {
         acc -= STEP;
         steps++;
       }
+      if (traffic.hits > hits) audio.crash(Math.hypot(...car.vel.map((v, i) => v - v0[i])) / 12);
       if (steps) {
         const up = rotate(car.q, [0, 0, 1]);
         const a = car.vel.map((v, i) => (v - v0[i]) / (steps * STEP) + (i === 2 ? G : 0));
@@ -923,6 +932,11 @@ async function boot(): Promise<void> {
     if (!paused) birds.update(dt, [eye.x, eye.y, camera.position.y], view.pos, followHeading, heightAt,
       (x, y) => !terrain.isWater(x, y) && scatterWorld.clear(x, y, 4), !view.flying && !rocketMode);
     birdsView.update(paused ? 0 : dt, birds.poses());
+    if (!paused && live) {
+      trafficAcc = Math.min(trafficAcc + dt, 4 * STEP);
+      for (; trafficAcc >= STEP; trafficAcc -= STEP) traffic.step(STEP, [eye.x, eye.y, 0], [{ pos: car.pos, vel: car.vel }]);
+    }
+    trafficView.update(traffic.cars);
     perf.scatter += performance.now() - t3;
 
     const road = onRoad(site.roads, view.pos[0], view.pos[1], 2);
