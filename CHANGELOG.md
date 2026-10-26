@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-10-26 14:40
+
+- Birds. A few flocks of gulls are always about: wheeling on the breeze in loose circles, gliding
+  with the odd flap, or passing over in a ragged V. Others sit in the fields ahead of the car and
+  burst into the air when you drive within 45 m, scattering away from you, then form up and fly
+  off. They grow into view at a distance as you move, and go once left well behind. One draw call;
+  the wings beat in the vertex shader (`src/sim/birds.ts`, `src/game/birds-view.ts`, with tests).
+
 ## 2026-10-26 14:05
 
 - Trees, bushes, grass and rocks off the roads. The land round the car fills with low-poly

@@ -10,6 +10,7 @@ src/sim/    pure TypeScript, no three.js, no DOM — unit-tested
   starship.ts   Starship: the stack, staging, the booster flown home and caught, and its autopilot
   roads.ts    road model: profiles, carving, nearest-road index
   scatter.ts  trees, bushes, grass and rocks round the car, picked from the aerial photo
+  birds.ts    flocks round the camera: soaring, passing, and perched ones the car startles
   buildings.ts  building footprints as obstacles: point-in-polygon, way out, per-tile index
   objects.ts  per-tile objects file, building heights, lamp and edge-post placement
   terrain.ts  Heightmap with 5 m detail tiles (shared with paragliding-sim)
@@ -516,6 +517,25 @@ visit: the land is cut into cells, and each cell rolls its own dice (a hash of i
   car feels walls at eight points round its waist about a metre apart and a bare trunk could slip
   between two. Above the tree top there's nothing, so the Jet clears a forest it flies over, and
   crashes into one it doesn't.
+
+## Birds (`src/sim/birds.ts`, `src/game/birds-view.ts`)
+
+A handful of flocks of gulls round the camera, never more: three soaring, two passing and, while
+the car is on the ground, two perched.
+
+- **Soaring** flocks circle a fixed point 35–125 m across, each bird at its own radius and height,
+  gliding with a few wingbeats every so often. **Passing** ones fly straight across the camera's
+  patch of sky in a loose V behind a leader. Both appear 150–700 m from the camera, 20–140 m over
+  the ground, and are dropped past 1.3 km.
+- **Perched** flocks settle 120–320 m ahead of the car, roughly the way it's going, on dry ground
+  off the roads and out of the buildings, standing with their wings folded. When the car comes
+  within 45 m they **flee**: each bird takes off away from it, fanned out and climbing, and after six
+  seconds the flock forms up into a passing V. A perched flock left 450 m behind goes.
+- **Drawing.** One small gull (white body, grey wings with black tips, yellow legs), 1.5 times life
+  size so a flock reads at a few hundred metres, in one `InstancedMesh`. Each instance carries its
+  flap phase and strength; the vertex shader beats the wings, folds them and lets the legs down
+  when standing, tucks the legs up in flight, and grows a bird in over the last quarter of its 1.2 km
+  reach. The CPU only places them, nose along the way they fly.
 
 ## Terrain loading (`src/game/site.ts`, `terrain-view.ts`)
 
