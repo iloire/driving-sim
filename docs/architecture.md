@@ -159,7 +159,7 @@ by `logo.ts`) sits on the nose and both sides.
 - **Walls.** Eight points round the body's waist are pushed back out of any building they enter
   below its roofline, along the nearest wall's outward normal. The push is stiff (1 MN/m) and close to
   critically damped (40 kN·s/m), so a crash stops the car without bouncing it back, and the rub
-  along the wall is capped like the ground friction. The same goes for trees, boulders and other
+  along the wall is capped like the ground friction. The same goes for trees and other
   cars (`env.wall`); a wall that moves gives its velocity, so the damping works on the closing
   speed, and is handed the force it takes back (`WallContact.react`).
 
@@ -516,11 +516,13 @@ visit: the land is cut into cells, and each cell rolls its own dice (a hash of i
   reach (grass 110 m, bushes 220 m, trees 640 m), which is the pop-in, and sway grass and leaves
   with the square of their height, more in a stronger wind. The CPU only refills the instance lists
   when cells come or go, at most four times a second, copying matrices worked out once per cell.
-- **Collisions.** Trees and boulders are solid: `env.wall` asks the far field after the buildings,
-  and a trunk pushes the car out radially. Each obstacle is fattened by half a metre, because the
-  car feels walls at eight points round its waist about a metre apart and a bare trunk could slip
-  between two. Above the tree top there's nothing, so the Jet clears a forest it flies over, and
-  crashes into one it doesn't.
+- **Collisions.** Trees are solid: `env.wall` asks the far field after the buildings, and a trunk
+  pushes the car out radially. Each trunk is fattened by half a metre, because the car feels walls
+  at eight points round its waist about a metre apart and a bare trunk could slip between two.
+  Above the tree top there's nothing, so the Jet clears a forest it flies over, and crashes into one
+  it doesn't. Boulders are ground instead (`ScatterField.ground`, added to `env.height`): a dome the
+  shape of the drawn rock, up to 2.5 m tall, that the wheels ride up and the body scrapes over. As
+  walls they trapped the car: a car astride one wider than itself was pushed out both ways at once.
 
 ## Birds (`src/sim/birds.ts`, `src/game/birds-view.ts`)
 

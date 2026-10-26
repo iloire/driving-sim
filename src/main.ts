@@ -262,11 +262,12 @@ async function boot(): Promise<void> {
   });
   const peopleView = new PeopleView(extent);
   scene.add(peopleView.mesh);
-  /** What the car hits: a building, a tree or a boulder, or another car. */
+  /** What the car hits: a building, a tree, or another car. */
   const obstacle = (x: number, y: number, z: number) => site.buildings.wall(x, y, z) ?? farScatter.solid(x, y, z) ?? traffic.contact(x, y, z);
 
   const env: CarEnv = {
-    height: (x, y) => terrain.heightAt(x, y),
+    // Boulders are ground, to drive up and over.
+    height: (x, y) => Math.max(terrain.heightAt(x, y), farScatter.ground(x, y)),
     surface: (x, y) => {
       const road = onRoad(site.roads, x, y, 0.75);
       return !road ? OFFROAD : isPaved(road.kind) ? TARMAC : GRAVEL;
@@ -277,7 +278,7 @@ async function boot(): Promise<void> {
   let spawn: Spawn = site.spawns.find((s) => s.spec.id === query.get('spawn')) ?? site.spawns[0];
   let car: CarState = createCar(spec, spawn.x, spawn.y, terrain.heightAt(spawn.x, spawn.y), spawn.heading);
   let paused = false;
-  /** U shows or hides the green flight HUD (and its PULL UP warning); the Jet starts with it off, for a clean view. */
+  /** U shows or hides the green flight HUD (and its PULL UP warning), which only the Jet has; it starts off, for a clean view. */
   let hudShown = !isJet(spec);
   const minimap = document.getElementById('minimap')!;
   const pausePanel = document.getElementById('paused')!;
@@ -480,7 +481,7 @@ async function boot(): Promise<void> {
     menu: () => { if (!welcome.isOpen) openMenu(); else if (canResume) leaveMenu(); },
     next: () => void goTo(site.spawns[(site.spawns.indexOf(spawn) + 1) % site.spawns.length]),
     map: () => minimap.classList.toggle('hidden'),
-    hud: () => { hudShown = !hudShown; },
+    hud: () => { if (isJet(spec)) hudShown = !hudShown; },
     labels: () => { placesView.visible = !placesView.visible; hud.say(t(placesView.visible ? 'say.labels.on' : 'say.labels.off'), 1.5); },
     replay: () => { if (!rocketMode) setReplay(replayAt === null); },
     warp: () => {
@@ -684,7 +685,7 @@ async function boot(): Promise<void> {
 
   // Dev builds expose the live state for poking at from the console.
   const perf = { physics: 0, terrain: 0, scatter: 0, render: 0, frames: 0, worst: 0 };
-  if (import.meta.env.DEV) Object.assign(window, { drive: { car: () => car, pilot: () => pilot, controls: input.controls, terrain, site, perf, renderer, clouds: () => clouds, launch: () => launch, birds, traffic, people,
+  if (import.meta.env.DEV) Object.assign(window, { drive: { car: () => car, pilot: () => pilot, controls: input.controls, terrain, site, perf, renderer, clouds: () => clouds, launch: () => launch, birds, traffic, people, farScatter, env,
     // Fast-forwards the launch on its autopilot, for looking at a phase without waiting for it.
     skip: (seconds: number) => {
       for (let t = 0; launch && t < seconds; t += STEP) {
@@ -928,7 +929,7 @@ async function boot(): Promise<void> {
     const eyes = welcome.isOpen || shown ? { grey: 0, red: 0, out: false, felt: 1 } : pilot;
     hud.setVeil(eyes.grey, eyes.red);
     audio.setMuffle(eyes.grey);
-    flightHud.update(camera, plane && hudShown ? { vel: carVel, heading: followHeading, g, alpha: view.alpha, pullUp, airbrake: view.airbrake } : null, now / 1000);
+    flightHud.update(camera, plane && isJet(spec) && hudShown ? { vel: carVel, heading: followHeading, g, alpha: view.alpha, pullUp, airbrake: view.airbrake } : null, now / 1000);
     sunlight.follow(rocketMode && launchView ? launchView.focus.position : carPos);
     clouds?.step(paused ? 0 : dt, weather.wind ?? [0, 0]);
     stepSea(paused ? 0 : dt);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createCar, stepCar, TRUCK } from './car';
-import { FAR_LAYERS, groundOf, NEAR_LAYERS, ScatterField, scatterCell, scatterSpec, SOLID, type Ground, type ScatterWorld } from './scatter';
+import { BOULDER, FAR_LAYERS, groundOf, NEAR_LAYERS, ScatterField, scatterCell, scatterSpec, SOLID, type Ground, type ScatterWorld } from './scatter';
 
 const FOREST = groundOf(0.2, 0.28, 0.17);
 const LAVA = groundOf(0.22, 0.22, 0.24);
@@ -85,6 +85,15 @@ describe('ScatterField', () => {
     const f = new ScatterField(FAR_LAYERS, 50, 200, { ...world(), ready: (x) => x < 1000 }, spec);
     f.update(1000, 1000, Infinity);
     for (const c of f.cells.values()) expect(c.cx * 50).toBeLessThan(1000);
+  });
+
+  it('makes boulders ground to drive over, not walls', () => {
+    const f = new ScatterField(FAR_LAYERS, 50, 200, world(), spec);
+    f.cells.set(0, { cx: 0, cy: 0, items: [{ kind: 'boulder', x: 20, y: 20, z: 10, size: 2, turn: 0, tint: [1, 1, 1] }] });
+    expect(f.ground(20, 20)).toBeCloseTo(10 + 2 * (BOULDER.centre + BOULDER.rise));
+    expect(f.ground(21, 20)).toBeLessThan(f.ground(20, 20));
+    expect(f.ground(24, 20)).toBe(-Infinity);
+    expect(f.solid(20, 20, 10.5)).toBeNull();
   });
 
   it('pushes the car out of a trunk, and not over the tree top', () => {

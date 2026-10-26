@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-26 16:05
+
+- The green flight HUD is the Jet's alone. The 4×4 and the other cars on wings fly with the plain
+  dashboard now; U (and its line on the wings control card) does nothing outside the Jet. PULL UP
+  still sounds in every car on wings.
+
+## 2026-10-26 16:20
+
+- Boulders are ground to drive over, not walls. A car that ended up astride one wider than itself
+  was pushed out both ways at once and held there for good; now the wheels ride up the rock and
+  the body scrapes over it, so a buggy climbs a small one, a big one stops you, and you can always
+  drive or reverse off. Trees stay solid (`ScatterField.ground`, with a test).
+
 ## 2026-10-26 15:55
 
 - People. Two dozen blocky townsfolk walk the pavements by the street lamps, each in their own

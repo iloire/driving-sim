@@ -2,7 +2,8 @@
 // round the car, a cell at a time, and the same every visit (each cell seeds its own dice). What a
 // spot gets follows the aerial photo under it (`Ground`): green ground grows trees and grass, black
 // lava lies under rocks, brown farmland gets bushes and tufts, and bright sand or snow little at all.
-// The zone picks the species (site.json `scatter`). Trees and boulders are solid; the rest isn't.
+// The zone picks the species (site.json `scatter`). Trees are solid, boulders are ground to drive
+// over, and the rest is driven through.
 
 import type { WallHit } from './buildings';
 
@@ -65,8 +66,14 @@ export interface ScatterItem {
 /** Per kind: trunk (or rock) radius and height at size 1 (m) for the solid ones, 0 for those driven through. */
 export const SOLID: Partial<Record<ScatterKind, { radius: number; height: number }>> = {
   broadleaf: { radius: 0.3, height: 7 }, pine: { radius: 0.3, height: 12 }, umbrella: { radius: 0.35, height: 9 },
-  cypress: { radius: 0.35, height: 10 }, palm: { radius: 0.35, height: 9 }, boulder: { radius: 1.1, height: 1.6 },
+  cypress: { radius: 0.35, height: 10 }, palm: { radius: 0.35, height: 9 },
 };
+/**
+ * A boulder as ground, at size 1: a dome this wide (m) and its centre this high, rising this much more,
+ * the shape scatter-view draws (sunk 0.15 m a size). Wider than the car, it can't be a wall: a car
+ * astride one would be pushed out both ways at once and held there.
+ */
+export const BOULDER = { radius: 1.27, centre: 0.3, rise: 0.82 };
 /**
  * Obstacles are fattened by this much (m): the car feels them at eight points round its waist about
  * a metre apart, and a bare trunk could slip between two.
@@ -249,7 +256,27 @@ export class ScatterField {
     this.version++;
   }
 
-  /** The way out of a trunk or boulder (x, y, z) is in, or null. */
+  /** The top of whatever boulder is under (x, y), or -Infinity: the ground to drive over there. */
+  ground(x: number, y: number): number {
+    const C = this.cellM;
+    let top = -Infinity;
+    for (let cy = Math.floor(y / C - 0.5); cy <= Math.floor(y / C + 0.5); cy++) {
+      for (let cx = Math.floor(x / C - 0.5); cx <= Math.floor(x / C + 0.5); cx++) {
+        const cell = this.cells.get(key(cx, cy));
+        if (!cell) continue;
+        for (const it of cell.items) {
+          if (it.kind !== 'boulder') continue;
+          const r = BOULDER.radius * it.size, dx = x - it.x, dy = y - it.y;
+          if (Math.abs(dx) > r || Math.abs(dy) > r) continue;
+          const q = 1 - (dx * dx + dy * dy) / (r * r);
+          if (q > 0) top = Math.max(top, it.z + it.size * (BOULDER.centre + BOULDER.rise * Math.sqrt(q)));
+        }
+      }
+    }
+    return top;
+  }
+
+  /** The way out of a trunk (x, y, z) is in, or null. */
   solid(x: number, y: number, z: number): WallHit | null {
     const C = this.cellM;
     let best: WallHit | null = null;
