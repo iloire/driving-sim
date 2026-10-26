@@ -1,4 +1,4 @@
-// The flying HUD, drawn over the view on wings: a flight path marker where the plane is actually
+// The flying HUD, drawn over the view in the Jet (the cars on wings fly without it): a flight path marker where the plane is actually
 // going, a pitch ladder fixed to the real horizon (so it tilts as the view banks), a heading tape,
 // the g and angle of attack, an amber AIRBRAKE box while it's out (flashing as the panel swings),
 // and a flashing PULL UP when the line it's flying meets the ground.

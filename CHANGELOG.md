@@ -1,6 +1,6 @@
 # Changelog
 
-## 2026-10-26 16:05
+## 2026-10-26 16:03
 
 - The green flight HUD is the Jet's alone. The 4×4 and the other cars on wings fly with the plain
   dashboard now; U (and its line on the wings control card) does nothing outside the Jet. PULL UP
