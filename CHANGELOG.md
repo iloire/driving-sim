@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-26 16:45
+
+- The Buggy's wings look meaner: a fighter planform with a root extension along the tub, a
+  hard-swept leading edge striped red and clipped tips, twin canted fins with red tips in place of
+  the single fin, and a swept tailplane in place of the flat plank. Looks only; it flies the same.
+
 ## 2026-10-26 16:25
 
 - Driving is more fun at speed. The cars were too honest: slow to stop, sliding wide, the tail

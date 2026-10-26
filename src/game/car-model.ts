@@ -1,8 +1,8 @@
 // The car's look: a desert buggy in matte black and gunmetal, on 1.16 m paddle tyres with steel spikes. An open
 // roll cage over two bucket seats, a short nose with the Piratas Aéreos badge on it, a V8 out in the open at the
 // back, and long-travel arms and coilovers you can watch work. The wheels steer, spin and ride their struts as the sim says. Its plane half folds away
-// inside it: the wings rise from the waist as short stubs and swing out to full span, a fin and
-// tailplane grow over the engine, and a jet nozzle slides out under the rear bumper, all driven by
+// inside it: swept fighter wings rise from the waist as short stubs and swing out to full span, twin
+// canted fins and a swept tailplane grow over the engine, and a jet nozzle slides out under the rear bumper, all driven by
 // the sim's `wings` 0..1. Built in the sim's body frame turned into three.js axes: forward +X,
 // up +Y, left −Z, origin at the centre of mass.
 
@@ -91,14 +91,25 @@ export interface CarModel {
   update(s: CarState, braking: boolean, extent: number, thrust: number, boost: boolean, camera?: THREE.Camera, dt?: number): void;
 }
 
-/** One wing, root at the origin, swept, span along +Y before it is laid out. */
+/** A flat planform (x forward, y out along the span) extruded `depth` thick, centred on z = 0. */
+function plate(points: [number, number][], depth: number): THREE.BufferGeometry {
+  const shape = new THREE.Shape(points.map(([x, y]) => new THREE.Vector2(x, y)));
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 1 });
+  return g.translate(0, 0, -depth / 2);
+}
+
+/**
+ * One wing, root at the origin, span along +Y before it is laid out: a fighter's planform, a
+ * root extension running forward along the tub, a hard-swept leading edge and a clipped tip.
+ */
 function wingGeometry(span: number): THREE.BufferGeometry {
-  const shape = new THREE.Shape([
-    new THREE.Vector2(0.7, 0), new THREE.Vector2(-1.3, 0), new THREE.Vector2(-1.1, span), new THREE.Vector2(-0.2, span),
-  ]);
-  const g = new THREE.ExtrudeGeometry(shape, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 1 });
-  g.translate(0, 0, -0.04);
-  return g;
+  return plate([[1.7, 0], [0.5, 0.6], [-1.55, span], [-2.15, span], [-1.75, span * 0.6], [-1.4, 0]], 0.08);
+}
+
+/** The red stripe along the wing's swept leading edge, standing just proud of it. */
+function wingStripe(span: number): THREE.BufferGeometry {
+  const [x0, y0, x1, y1] = [0.5, 0.6, -1.55, span];
+  return plate([[x0, y0], [x1, y1], [x1 - 0.22, y1], [x0 - 0.3, y0]], 0.1);
 }
 
 const ease = (t: number) => t * t * (3 - 2 * t);
@@ -234,22 +245,37 @@ export function createCarModel(spec: CarSpec): CarModel {
     hinge.position.set(-0.2, 0.55 + LIFT, side * 0.96);
     // The span (+Y in the shape) onto ±Z: right wing towards +Z, left towards −Z.
     const wing = new THREE.Mesh(wingGeometry(half).rotateX(side * Math.PI / 2), paint);
+    wing.add(new THREE.Mesh(wingStripe(half).rotateX(side * Math.PI / 2), red));
     wing.castShadow = true;
     hinge.add(wing);
     group.add(hinge);
     return { hinge, wing, side };
   });
-  const fin = new THREE.Mesh(slab([[0, 0], [-0.9, 0], [-1.1, 1.05], [-0.65, 1.05]], 0.08, 0.02), paint);
-  fin.position.set(-1.2, 0.7 + LIFT, 0);
-  const tailplane = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.06, 3.0), paint);
-  tailplane.position.set(-2.05, 0.75 + LIFT, 0);
+  // Twin fins canted out over the engine, swept hard, with red tips.
+  const finGeo = slab([[0, 0], [-1.0, 0], [-1.35, 1.15], [-0.95, 1.15]], 0.07, 0.015);
+  const finTip = slab([[-0.95, 1.0], [-1.31, 1.0], [-1.35, 1.15], [-0.95, 1.15]], 0.09, 0.01);
+  const fin = new THREE.Group();
+  for (const side of [1, -1]) {
+    const f = new THREE.Mesh(finGeo, paint);
+    f.add(new THREE.Mesh(finTip, red));
+    f.position.z = side * 0.55;
+    f.rotation.x = side * 0.38;
+    f.castShadow = true;
+    fin.add(f);
+  }
+  fin.position.set(-1.1, 0.7 + LIFT, 0);
+  // A swept tailplane, its planform drawn flat and laid across the car (span onto ±Z).
+  const tailplane = new THREE.Mesh(plate([
+    [0.25, 0], [-0.5, 1.6], [-0.85, 1.6], [-0.7, 0.35], [-0.7, -0.35], [-0.85, -1.6], [-0.5, -1.6],
+  ], 0.06).rotateX(Math.PI / 2), paint);
+  tailplane.position.set(-1.85, 0.75 + LIFT, 0);
   const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.27, 0.55, 18, 1, true).rotateZ(Math.PI / 2), armour);
   nozzle.position.set(-2.5, 0.05 + LIFT, 0);
   const flameMat = new THREE.MeshBasicMaterial({ color: 0xffa040, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false });
   // A cone with its base at the nozzle, pointing back (−X).
   const flame = new THREE.Mesh(new THREE.ConeGeometry(0.2, 1, 14).rotateZ(Math.PI / 2).translate(-0.5, 0, 0), flameMat);
   flame.position.set(-2.78, 0.05 + LIFT, 0);
-  for (const m of [fin, tailplane]) m.castShadow = true;
+  tailplane.castShadow = true;
   group.add(fin, tailplane, nozzle, flame);
   // Nitro: twin blue-white jets from under the rear bumper.
   const nitroMat = new THREE.MeshBasicMaterial({ color: 0x8fd0ff, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
