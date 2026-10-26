@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-10-26 15:55
+
+- People. Two dozen blocky townsfolk walk the pavements by the street lamps, each in their own
+  shirt, trousers and skin tone, swinging their arms, turning back at the end of the street. Aim
+  at one and they jump clear, after a moment's shock; come too fast and they freeze. Hit one and
+  they go tumbling through the air like a skittle, bounce off the ground (or a wall), lie there a
+  couple of seconds, get up and wander off. Only in town (where there are lamps), and one draw call
+  for all of them, the limbs swung in the vertex shader (`src/sim/people.ts`, `src/game/people-view.ts`, with tests).
+
 ## 2026-10-26 15:25
 
 - Traffic. About fourteen cars drive the paved roads round you: hatchbacks, saloons and vans,

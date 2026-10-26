@@ -36,6 +36,10 @@ calls), not the polygon count.
 - **Lamps and posts.** One street lamp and one edge post (*hito*) are built once. Each tile draws
   them with a `THREE.InstancedMesh`: the same triangles, plus a list of positions and rotations.
   The GPU stamps out every copy in a single call per tile.
+- **Life round the car.** Birds, people and traffic are instanced too: one mesh for every bird,
+  one for every pedestrian, two per car model. Wings beat and limbs swing in the vertex shader.
+  With the scatter, it all adds 27 draw calls and about 0.5 ms of CPU a frame in Arrecife
+  (352 → 379 calls at the Arrecife spawn).
 - **Scatter.** Trees, bushes, grass and rocks are one `InstancedMesh` per kind, ten draw calls for
   all of them, their matrices worked out once per 25 or 50 m cell. Growing in with distance and
   swaying in the wind happen in the vertex shader, so nothing is updated per instance per frame

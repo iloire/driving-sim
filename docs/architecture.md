@@ -12,6 +12,7 @@ src/sim/    pure TypeScript, no three.js, no DOM — unit-tested
   scatter.ts  trees, bushes, grass and rocks round the car, picked from the aerial photo
   birds.ts    flocks round the camera: soaring, passing, and perched ones the car startles
   traffic.ts  cars on the roads round the camera: lanes, bends, queues, junctions, crashes
+  people.ts   pedestrians on the town pavements: walking, dodging, knocked flying, getting up
   buildings.ts  building footprints as obstacles: point-in-polygon, way out, per-tile index
   objects.ts  per-tile objects file, building heights, lamp and edge-post placement
   terrain.ts  Heightmap with 5 m detail tiles (shared with paragliding-sim)
@@ -568,6 +569,29 @@ tracks or bridges), stepped at 120 Hz like the car.
 - **Drawing.** Three models from extruded side profiles (a hatchback, a saloon and a van), each
   two `InstancedMesh`es: the paintwork, tinted per car from a palette that is mostly white and
   silver, and everything else (glass, tyres, bumpers, lamps). Pitched to the ground under the axles.
+
+## People (`src/sim/people.ts`, `src/game/people-view.ts`)
+
+Up to 24 pedestrians round the camera, only in town: they appear by a street lamp 70–220 m away
+(the lamps of the loaded tiles, which stand only where buildings are close) and go past 320 m.
+
+- **Walking.** Each walks its street's polyline 1.6 m past the kerb on the lamp's side, at
+  1.1–1.6 m/s, and turns back at the end of the street, on the same pavement. Highways, tracks,
+  runways and bridges have no pavement.
+- **Dodging.** A car faster than 4 m/s whose line passes within a metre of its side of them, and
+  that will be on them in 0.5–2 s, makes them jump clear: 0.35 s of shock, then 1.1 s running at
+  4 m/s across its line, away to the side they were already on. Any closer than half a second and
+  they freeze. After a dodge they wander: a straight walk that turns away from walls.
+- **Hit.** The car's body box (from `spec.body`, fattened 0.25 m) over someone at more than
+  1.5 m/s throws them along with it at 1.1–1.4 times its speed, a quarter of that out to its side
+  and up 2 m/s plus a quarter of the speed, tumbling. They bounce off the ground (keeping 55 % of
+  the speed and 30 % of the fall) and off walls until they're slower than 1.5 m/s, lie on their
+  back for 2.5 s, take a second to get up, and wander off. The car feels nothing; a thud plays.
+- **Drawing.** One blocky figure, 1.8 m tall, facing +Z, in one `InstancedMesh`. Its vertex colours
+  are marks (red shirt, green trousers, blue skin, black shoes and hair), which the vertex shader
+  turns into the instance's own three colours; it also swings the legs from the hips and the arms
+  from the shoulders by the stride's phase (more when running, flailing in the air). Tumbling,
+  lying down and getting up are the instance's matrix.
 
 ## Terrain loading (`src/game/site.ts`, `terrain-view.ts`)
 

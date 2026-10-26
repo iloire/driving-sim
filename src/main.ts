@@ -17,6 +17,7 @@ import { FlightHud, secondsToGround } from './game/flight-hud';
 import { buffet, JetEffects } from './game/jet-effects';
 import { Explosion } from './game/explosion';
 import { createJetModel } from './game/jet-model';
+import { PeopleView } from './game/people-view';
 import { createRoadsterModel } from './game/roadster-model';
 import { TrafficView } from './game/traffic-view';
 import { GroundPhoto, ScatterView } from './game/scatter-view';
@@ -34,6 +35,7 @@ import { drawCloudShadows, setCloudShadows, shadeByClouds } from './game/cloud-s
 import { setSeaWind, stepSea } from './game/sea';
 import { Birds } from './sim/birds';
 import { buildingStyle } from './sim/objects';
+import { People } from './sim/people';
 import { Traffic } from './sim/traffic';
 import { FAR_LAYERS, NEAR_LAYERS, ScatterField, scatterSpec, type ScatterWorld } from './sim/scatter';
 import { createPilot, PILOT, stepPilot } from './sim/pilot';
@@ -247,6 +249,19 @@ async function boot(): Promise<void> {
   const trafficView = new TrafficView(extent, heightAt);
   scene.add(trafficView.group);
   let trafficAcc = 0;
+  // People on the pavements in town, by the street lamps.
+  const people = new People({
+    roads: site.roads,
+    height: heightAt,
+    wall: (x, y, z) => site.buildings.wall(x, y, z),
+    lamps: (x, y, r) => site.detailTiles.flatMap((t) => {
+      const x0 = t.col * site.detailTileM, y0 = t.row * site.detailTileM;
+      if (!t.objects || x < x0 - r || x > x0 + site.detailTileM + r || y < y0 - r || y > y0 + site.detailTileM + r) return [];
+      return t.objects.lamps.filter((l) => Math.abs(l.x - x) < r && Math.abs(l.y - y) < r);
+    }),
+  });
+  const peopleView = new PeopleView(extent);
+  scene.add(peopleView.mesh);
   /** What the car hits: a building, a tree or a boulder, or another car. */
   const obstacle = (x: number, y: number, z: number) => site.buildings.wall(x, y, z) ?? farScatter.solid(x, y, z) ?? traffic.contact(x, y, z);
 
@@ -669,7 +684,7 @@ async function boot(): Promise<void> {
 
   // Dev builds expose the live state for poking at from the console.
   const perf = { physics: 0, terrain: 0, scatter: 0, render: 0, frames: 0, worst: 0 };
-  if (import.meta.env.DEV) Object.assign(window, { drive: { car: () => car, pilot: () => pilot, controls: input.controls, terrain, site, perf, renderer, clouds: () => clouds, launch: () => launch, birds, traffic,
+  if (import.meta.env.DEV) Object.assign(window, { drive: { car: () => car, pilot: () => pilot, controls: input.controls, terrain, site, perf, renderer, clouds: () => clouds, launch: () => launch, birds, traffic, people,
     // Fast-forwards the launch on its autopilot, for looking at a phase without waiting for it.
     skip: (seconds: number) => {
       for (let t = 0; launch && t < seconds; t += STEP) {
@@ -934,9 +949,16 @@ async function boot(): Promise<void> {
     birdsView.update(paused ? 0 : dt, birds.poses());
     if (!paused && live) {
       trafficAcc = Math.min(trafficAcc + dt, 4 * STEP);
-      for (; trafficAcc >= STEP; trafficAcc -= STEP) traffic.step(STEP, [eye.x, eye.y, 0], [{ pos: car.pos, vel: car.vel }]);
+      const knocked = people.hits;
+      const hitter = rocketMode || wreck > 0 ? null : { pos: car.pos, vel: car.vel, heading: car.heading, front: spec.body[1], back: spec.body[0], side: spec.body[2], top: spec.body[4] };
+      for (; trafficAcc >= STEP; trafficAcc -= STEP) {
+        traffic.step(STEP, [eye.x, eye.y, 0], [{ pos: car.pos, vel: car.vel }]);
+        people.step(STEP, [eye.x, eye.y, 0], hitter);
+      }
+      if (people.hits > knocked) audio.crash(0.2);
     }
     trafficView.update(traffic.cars);
+    peopleView.update(people.people);
     perf.scatter += performance.now() - t3;
 
     const road = onRoad(site.roads, view.pos[0], view.pos[1], 2);
