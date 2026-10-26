@@ -9,6 +9,7 @@ src/sim/    pure TypeScript, no three.js, no DOM — unit-tested
   thrusters.ts  the Roadster's hover: lift on its exhaust, height hold, attitude assists
   starship.ts   Starship: the stack, staging, the booster flown home and caught, and its autopilot
   roads.ts    road model: profiles, carving, nearest-road index
+  scatter.ts  trees, bushes, grass and rocks round the car, picked from the aerial photo
   buildings.ts  building footprints as obstacles: point-in-polygon, way out, per-tile index
   objects.ts  per-tile objects file, building heights, lamp and edge-post placement
   terrain.ts  Heightmap with 5 m detail tiles (shared with paragliding-sim)
@@ -42,6 +43,7 @@ Each zone is a folder with a `site.json`, which `scripts/fetch-terrain.ts` fills
 | `heightmap.unitM` | metres per stored step. 0.1 (default) holds 3,276 m. Tenerife and Benasque use 0.2 for Teide and Aneto |
 | `spawns` | the places, as lat/lon, snapped to the nearest paved road; `toward` starts on a runway facing that way |
 | `weather` | the weather on offer, the first the default; omitted = a clear sky. See *Weather* below |
+| `scatter` | the plant life off the roads, every field optional: `trees` and `bushes` the relative odds of each species (`broadleaf`, `pine`, `umbrella`, `cypress`, `palm`; `bush`, `cactus`), `lone` how thick trees stand in open ground the photo doesn't show green, `density` a multiplier on everything. Omitted = a Mediterranean mix. See *Scatter* below |
 
 | zone | square | projection | notes |
 |---|---|---|---|
@@ -484,6 +486,36 @@ low rumble and a crackle that fade and dull with distance.
   renderer draws) is set once its tile's ground loads, and above it there is no wall, so a car
   flying over a roof isn't shoved sideways. Roofs aren't solid to land on, and lamps and posts
   aren't solid.
+
+## Scatter (`src/sim/scatter.ts`, `src/game/scatter-view.ts`)
+
+Trees, bushes, grass tufts, stones and boulders, placed only round the camera and the same every
+visit: the land is cut into cells, and each cell rolls its own dice (a hash of its column and row).
+
+- **What grows where.** The island photo is read once into a 2048² canvas (`GroundPhoto`), and each
+  candidate spot asks it for its pixel: `groundOf` turns the colour into how green, dark (lava),
+  warm (farmland, scrub) and bare (sand, salt, snow) it is. Each layer has a top density a 1000 m²
+  and a chance from those: grass up to 30 on green ground, stones up to 24 and boulders up to 2.5
+  on lava, bushes up to 6 on farmland, trees up to 8 where the photo is green. Trees also stand in
+  open ground at the zone's `lone` density, gathered into groves by a 300 m noise. Rocks take the
+  colour of the photo under them; grass and bushes go from straw to green with the ground.
+- **Where it can't.** Nothing within its clearance of a carriageway (0.6 m for a stone, 3 m for a
+  tree) or inside a building, nothing below 0.5 m (the sea), and a cell waits until its 5 m ground
+  has loaded, so nothing is placed on the coarse heights and left floating.
+- **Two fields.** Grass, stones and bushes in 25 m cells out to 240 m; trees and boulders in 50 m
+  cells out to 680 m. Missing cells fill nearest first, about a millisecond a frame each, and cells
+  more than a quarter past the radius are dropped.
+- **Drawing.** One flat-shaded low-poly model per kind (a broadleaf is three lumpy balls on a
+  trunk, a palm fourteen drooping fronds), one `InstancedMesh` per kind, coloured per instance. A
+  few lines of vertex shader grow each one up out of the ground over the last quarter of its kind's
+  reach (grass 110 m, bushes 220 m, trees 640 m), which is the pop-in, and sway grass and leaves
+  with the square of their height, more in a stronger wind. The CPU only refills the instance lists
+  when cells come or go, at most four times a second, copying matrices worked out once per cell.
+- **Collisions.** Trees and boulders are solid: `env.wall` asks the far field after the buildings,
+  and a trunk pushes the car out radially. Each obstacle is fattened by half a metre, because the
+  car feels walls at eight points round its waist about a metre apart and a bare trunk could slip
+  between two. Above the tree top there's nothing, so the Jet clears a forest it flies over, and
+  crashes into one it doesn't.
 
 ## Terrain loading (`src/game/site.ts`, `terrain-view.ts`)
 

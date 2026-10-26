@@ -143,5 +143,15 @@
         "es": "Despejado"
       }
     }
-  ]
+  ],
+  "scatter": {
+    "trees": {
+      "pine": 4,
+      "broadleaf": 1.5
+    },
+    "bushes": {
+      "bush": 1
+    },
+    "lone": 0.05
+  }
 }

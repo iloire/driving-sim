@@ -12,6 +12,7 @@ import { area, inside, roofline, type Building } from '../sim/buildings';
 import type { BuildingStyle, TileObjects } from '../sim/objects';
 import type { Heightmap } from '../sim/terrain';
 import { shadeByClouds } from './cloud-shadow';
+import { paint } from './shapes';
 import type { RoadView } from './road-view';
 import type { DetailTile } from './site';
 
@@ -337,11 +338,6 @@ function lampGeometry(): THREE.BufferGeometry {
 
 /** A hito: white post, black band, amber reflector, coloured per vertex. */
 function postGeometry(): THREE.BufferGeometry {
-  const paint = (g: THREE.BufferGeometry, hex: number) => {
-    const c = new THREE.Color(hex), n = g.attributes.position.count;
-    g.setAttribute('color', new THREE.Float32BufferAttribute(Array.from({ length: n * 3 }, (_, i) => [c.r, c.g, c.b][i % 3]), 3));
-    return g.toNonIndexed();
-  };
   const white = paint(new THREE.CylinderGeometry(0.08, 0.09, 0.85, 8).translate(0, 0.425, 0), 0xf2f2ee);
   const band = paint(new THREE.CylinderGeometry(0.083, 0.083, 0.16, 8).translate(0, 0.72, 0), 0x151515);
   const eye = paint(new THREE.BoxGeometry(0.03, 0.07, 0.05).translate(0.085, 0.72, 0), 0xffa21a);

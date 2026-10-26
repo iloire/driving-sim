@@ -180,5 +180,17 @@
         "es": "Despejado"
       }
     }
-  ]
+  ],
+  "scatter": {
+    "trees": {
+      "pine": 3,
+      "palm": 1,
+      "broadleaf": 1
+    },
+    "bushes": {
+      "bush": 3,
+      "cactus": 1
+    },
+    "lone": 0.08
+  }
 }

@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-10-26 14:05
+
+- Trees, bushes, grass and rocks off the roads. The land round the car fills with low-poly
+  scenery that grows up out of the ground as you come near it, and what grows where follows the
+  aerial photo: green ground gets trees (in groves) and grass, black lava gets rocks and boulders
+  coloured like the lava under them, brown farmland gets bushes and tufts, sand and snow little.
+  Each zone picks its species in site.json `scatter`: Canary palms, figs, tabaibas and prickly
+  pears on Lanzarote; Canary pines on Tenerife; holm oaks, stone pines and cypresses round
+  Zaragoza; firs and broadleaves at Benasque. Trees and boulders are solid, so you can crash into
+  them (and the Jet can fly into them); grass, stones and bushes are driven through. Grass and
+  leaves sway with the weather's wind. It is all instanced (about ten draw calls) and placed a
+  cell at a time round the car, about 0.15 ms a frame (`src/sim/scatter.ts`, `src/game/scatter-view.ts`, with tests).
+
 ## 2026-10-25 22:13
 
 - Waves on the sea. The flat sea's material now tilts its surface with ten travelling waves, from a

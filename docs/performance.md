@@ -36,6 +36,10 @@ calls), not the polygon count.
 - **Lamps and posts.** One street lamp and one edge post (*hito*) are built once. Each tile draws
   them with a `THREE.InstancedMesh`: the same triangles, plus a list of positions and rotations.
   The GPU stamps out every copy in a single call per tile.
+- **Scatter.** Trees, bushes, grass and rocks are one `InstancedMesh` per kind, ten draw calls for
+  all of them, their matrices worked out once per 25 or 50 m cell. Growing in with distance and
+  swaying in the wind happen in the vertex shader, so nothing is updated per instance per frame
+  (`src/game/scatter-view.ts`). Placing them is about 0.15 ms a frame in a Pyrenean forest.
 - **Wheels.** The tread geometry (40 lugs merged into the tyre) and the rim are built once and
   shared by all four wheels and the spare in the bed (`src/game/car-model.ts`).
 

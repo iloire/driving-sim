@@ -1,4 +1,4 @@
-// Shape helpers shared by the vehicle models: bodies drawn as extruded side profiles, and boxes
+// Shape helpers shared by the models: bodies drawn as extruded side profiles, boxes and painted parts
 // ready to merge.
 
 import * as THREE from 'three';
@@ -22,4 +22,12 @@ export function slab(profile: [number, number][], width: number, bevel: number, 
 /** A non-indexed box in one call: size, then centre (ready to merge). */
 export function box(sx: number, sy: number, sz: number, x: number, y: number, z: number): THREE.BufferGeometry {
   return new THREE.BoxGeometry(sx, sy, sz).translate(x, y, z).toNonIndexed();
+}
+
+/** One colour on every vertex, the UVs dropped and the faces unshared: ready to merge with other painted parts. */
+export function paint(g: THREE.BufferGeometry, hex: number): THREE.BufferGeometry {
+  const c = new THREE.Color(hex), n = g.attributes.position.count;
+  g.setAttribute('color', new THREE.Float32BufferAttribute(Array.from({ length: n * 3 }, (_, i) => [c.r, c.g, c.b][i % 3]), 3));
+  g.deleteAttribute('uv');
+  return g.index ? g.toNonIndexed() : g;
 }

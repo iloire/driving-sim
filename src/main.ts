@@ -17,6 +17,7 @@ import { buffet, JetEffects } from './game/jet-effects';
 import { Explosion } from './game/explosion';
 import { createJetModel } from './game/jet-model';
 import { createRoadsterModel } from './game/roadster-model';
+import { GroundPhoto, ScatterView } from './game/scatter-view';
 import { RocketHud } from './game/rocket-hud';
 import { createLaunchView } from './game/starship-model';
 import { applyPose, poseOf, ReplayBuffer } from './game/replay';
@@ -30,6 +31,7 @@ import { CloudsView } from './game/clouds-view';
 import { drawCloudShadows, setCloudShadows, shadeByClouds } from './game/cloud-shadow';
 import { setSeaWind, stepSea } from './game/sea';
 import { buildingStyle } from './sim/objects';
+import { FAR_LAYERS, NEAR_LAYERS, ScatterField, scatterSpec, type ScatterWorld } from './sim/scatter';
 import { createPilot, PILOT, stepPilot } from './sim/pilot';
 import { createCar, JET, ROADSTER, TRUCK, stepCar, type CarEnv, type CarSpec, type CarState, type Surface } from './sim/car';
 import { isPaved, MAX_HALF_WIDTH, ROAD_WIDTH, type Road } from './sim/roads';
@@ -219,13 +221,30 @@ async function boot(): Promise<void> {
   document.body.classList.toggle('rocket', rocketMode);
   const hud = new Hud(__COMMIT_SHA__, site.roads.roads, ortho.image as HTMLImageElement, extent);
 
+  // Trees, bushes, grass and rocks round the car, from what the photo shows growing there.
+  const photo = new GroundPhoto(ortho.image as HTMLImageElement, extent);
+  const scatterWorld: ScatterWorld = {
+    ground: (x, y) => photo.at(x, y),
+    height: heightAt,
+    clear: (x, y, r) => !onRoad(site.roads, x, y, r)
+      && [[0, 0], [r, 0], [-r, 0], [0, r], [0, -r]].every(([dx, dy]) => !site.buildings.wall(x + dx, y + dy, -Infinity)),
+    ready: (x, y) => !!terrain.detailAt(x, y),
+  };
+  const scatter = scatterSpec(site.spec.scatter);
+  const nearScatter = new ScatterField(NEAR_LAYERS, 25, 240, scatterWorld, scatter);
+  const farScatter = new ScatterField(FAR_LAYERS, 50, 680, scatterWorld, scatter);
+  const scatterView = new ScatterView([nearScatter, farScatter], extent);
+  scene.add(scatterView.group);
+  /** What the car hits: a building, a tree or a boulder. */
+  const obstacle = (x: number, y: number, z: number) => site.buildings.wall(x, y, z) ?? farScatter.solid(x, y, z);
+
   const env: CarEnv = {
     height: (x, y) => terrain.heightAt(x, y),
     surface: (x, y) => {
       const road = onRoad(site.roads, x, y, 0.75);
       return !road ? OFFROAD : isPaved(road.kind) ? TARMAC : GRAVEL;
     },
-    wall: (x, y, z) => site.buildings.wall(x, y, z),
+    wall: obstacle,
   };
 
   let spawn: Spawn = site.spawns.find((s) => s.spec.id === query.get('spawn')) ?? site.spawns[0];
@@ -495,6 +514,7 @@ async function boot(): Promise<void> {
     clouds = w.layers?.length ? new CloudField(w.layers, extent, seedOf(`${zone}/${w.id}`), TOUCH ? 0.6 : 1) : null;
     cloudsView.setField(clouds);
     setSeaWind(w.wind ?? [0, 0]);
+    scatterView.setWind(Math.hypot(...(w.wind ?? [0, 0])));
     applySun();
   };
   setWeather(weather);
@@ -636,7 +656,7 @@ async function boot(): Promise<void> {
   }
 
   // Dev builds expose the live state for poking at from the console.
-  const perf = { physics: 0, terrain: 0, render: 0, frames: 0, worst: 0 };
+  const perf = { physics: 0, terrain: 0, scatter: 0, render: 0, frames: 0, worst: 0 };
   if (import.meta.env.DEV) Object.assign(window, { drive: { car: () => car, pilot: () => pilot, controls: input.controls, terrain, site, perf, renderer, clouds: () => clouds, launch: () => launch,
     // Fast-forwards the launch on its autopilot, for looking at a phase without waiting for it.
     skip: (seconds: number) => {
@@ -778,7 +798,7 @@ async function boot(): Promise<void> {
       if (isJet(spec) && !crashing) {
         const low = agl < spec.cgHeight + 0.6;
         const hard = car.airspeed > LANDING.speed || car.vel[2] < -LANDING.sink || !upright;
-        if ((low && hard) || site.buildings.wall(car.pos[0], car.pos[1], car.pos[2])) {
+        if ((low && hard) || obstacle(car.pos[0], car.pos[1], car.pos[2])) {
           crashing = true;
           track('crash', { speed: Math.round(car.airspeed) });
           hud.say(t('say.crash'), 2.5);
@@ -890,6 +910,12 @@ async function boot(): Promise<void> {
     const t1 = performance.now();
     terrainView.update(camera.position, camera.position.y - ground(camera.position), Math.hypot(...view.vel));
     perf.terrain += performance.now() - t1;
+    const t3 = performance.now();
+    const eye = { x: camera.position.x + extent / 2, y: extent / 2 - camera.position.z };
+    nearScatter.update(eye.x, eye.y, 1);
+    farScatter.update(eye.x, eye.y, 1);
+    scatterView.update(paused ? 0 : dt, eye);
+    perf.scatter += performance.now() - t3;
 
     const road = onRoad(site.roads, view.pos[0], view.pos[1], 2);
     placesView.update(camera);

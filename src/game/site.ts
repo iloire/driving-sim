@@ -9,6 +9,7 @@ import { BuildingIndex, roofline } from '../sim/buildings';
 import type { BuildingStyle } from '../sim/objects';
 import { parseObjects, type TileObjects, type TileObjectsFile } from '../sim/objects';
 import type { Place, PlacesFile, PlacesSpec } from '../sim/places';
+import type { ScatterSpec } from '../sim/scatter';
 import { isPaved, parseRoads, RoadIndex, type RoadsFile } from '../sim/roads';
 import { Heightmap } from '../sim/terrain';
 import type { WeatherSpec } from '../sim/weather';
@@ -61,6 +62,8 @@ export interface SiteSpec {
   launch?: { name: string; lat: number; lon: number; azimuth: number };
   /** The weather on offer (src/sim/weather.ts), the first the default; omitted = a clear sky. */
   weather?: WeatherSpec[];
+  /** The trees and bushes that grow off the roads (src/sim/scatter.ts); omitted = a Mediterranean mix. */
+  scatter?: Partial<ScatterSpec>;
 }
 
 /** A place to start, already on the road: the nearest paved road to the spec's point. */
