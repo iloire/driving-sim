@@ -1,6 +1,6 @@
 // A shared moment of a drive, as a link: where the car is, which way it points and how fast it goes.
 // It rides in the query as ?site=<zone>&at=x,y,z,heading,speed (the zone's metres to the decimetre,
-// compass degrees, km/h along the nose) plus ?fly=1 while the car is in the air, next to the ?time and ?car the page
+// compass degrees, km/h along the nose), ?car=<vehicle> always, and ?fly=1 while the car is in the air, next to the ?time the page
 // already reads. The view rides along too, so the link looks as it did: ?cam=bonnet|orbit, ?hud=0|1
 // (flight HUD hidden or, in the Jet where it starts off, shown), ?map=0 (minimap hidden) and ?drive=RWD|FWD; defaults are left out.
 
@@ -16,6 +16,8 @@ export interface Moment {
   /** Signed speed along the nose, m/s. */
   speed: number;
   flying: boolean;
+  /** The vehicle it was in, as a ?car id. */
+  car: string;
 }
 
 /** Writes the moment in zone `site` into `q`, in place of any ?spawn. */
@@ -26,10 +28,11 @@ export function writeMoment(m: Moment, site: string, q: URLSearchParams): void {
   q.set('at', [m.x.toFixed(1), m.y.toFixed(1), m.z.toFixed(1), deg.toFixed(0), (m.speed * 3.6).toFixed(0)].join(','));
   if (m.flying) q.set('fly', '1');
   else q.delete('fly');
+  q.set('car', m.car); // always: a link without one opens in the Roadster, and a newcomer's URL has none
 }
 
 /** The moment in `q`, or null when there is none or it doesn't parse. */
-export function readMoment(q: URLSearchParams): Moment | null {
+export function readMoment(q: URLSearchParams): Omit<Moment, 'car'> | null {
   const v = (q.get('at') ?? '').split(',').map(Number);
   if (v.length !== 5 || !v.every(Number.isFinite)) return null;
   return { x: v[0], y: v[1], z: v[2], heading: (v[3] * Math.PI) / 180, speed: v[4] / 3.6, flying: q.get('fly') === '1' };

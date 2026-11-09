@@ -4,7 +4,7 @@ import { formatHour, readMoment, readView, vehicleOf, writeMoment, writeView } f
 describe('shared moments', () => {
   it('round-trips a car in the air, replacing the spawn', () => {
     const q = new URLSearchParams('spawn=haria&car=4x4');
-    writeMoment({ x: 12345.678, y: 2345.61, z: 412.04, heading: -Math.PI / 2, speed: 25, flying: true }, 'lanzarote', q);
+    writeMoment({ x: 12345.678, y: 2345.61, z: 412.04, heading: -Math.PI / 2, speed: 25, flying: true, car: '4x4' }, 'lanzarote', q);
     expect(q.get('spawn')).toBeNull();
     expect(q.get('car')).toBe('4x4');
     expect(q.get('site')).toBe('lanzarote');
@@ -20,15 +20,21 @@ describe('shared moments', () => {
 
   it('drops ?fly on the ground and keeps reversing negative', () => {
     const q = new URLSearchParams('fly=1');
-    writeMoment({ x: 1, y: 2, z: 3, heading: 0, speed: -5, flying: false }, 'lanzarote', q);
+    writeMoment({ x: 1, y: 2, z: 3, heading: 0, speed: -5, flying: false, car: 'jet' }, 'lanzarote', q);
     expect(q.get('fly')).toBeNull();
     expect(readMoment(q)!.speed).toBeCloseTo(-5, 0);
   });
 
   it('names the zone it was shared in, over the one the sharer arrived by', () => {
     const q = new URLSearchParams('site=lanzarote&spawn=pilar');
-    writeMoment({ x: 1, y: 2, z: 3, heading: 0, speed: 0, flying: false }, 'zaragoza', q);
+    writeMoment({ x: 1, y: 2, z: 3, heading: 0, speed: 0, flying: false, car: 'jet' }, 'zaragoza', q);
     expect(q.get('site')).toBe('zaragoza');
+  });
+
+  it('names the vehicle even when the sharer arrived without ?car, so the Jet stays the Jet', () => {
+    const q = new URLSearchParams('');
+    writeMoment({ x: 1, y: 2, z: 3, heading: 0, speed: 0, flying: true, car: 'jet' }, 'lanzarote', q);
+    expect(vehicleOf(q, ['roadster', 'jet'])).toBe('jet');
   });
 
   it('ignores a missing or broken moment', () => {

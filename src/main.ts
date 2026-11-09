@@ -369,7 +369,7 @@ async function boot(): Promise<void> {
   }
 
   /** Puts the car back into a shared moment: there, pointing that way, at that speed, in the air if it was. */
-  async function resume(m: Moment): Promise<void> {
+  async function resume(m: Omit<Moment, 'car'>): Promise<void> {
     await place(m.x, m.y, m.heading);
     car.vel = [Math.sin(m.heading) * m.speed, Math.cos(m.heading) * m.speed, 0];
     car.speed = m.speed;
@@ -632,7 +632,7 @@ async function boot(): Promise<void> {
   const shareLink = document.getElementById('share-link') as HTMLInputElement;
   document.getElementById('share-btn')!.addEventListener('click', () => {
     const q = new URLSearchParams(location.search);
-    writeMoment({ x: car.pos[0], y: car.pos[1], z: car.pos[2], heading: car.heading, speed: car.speed, flying: car.flying }, zone, q);
+    writeMoment({ x: car.pos[0], y: car.pos[1], z: car.pos[2], heading: car.heading, speed: car.speed, flying: car.flying, car: vehicleKey() }, zone, q);
     writeView({ cam: rig.mode, hud: hudShown, map: !minimap.classList.contains('hidden'), drive: settings.drivetrain }, q, !isJet(spec));
     q.set('time', formatHour(sky.hour));
     if (weather === weathers[0]) q.delete('wx');

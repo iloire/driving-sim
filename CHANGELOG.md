@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-11-09 10:27
+
+- A shared moment remembers the vehicle. A newcomer starts in the Jet with no `?car` in the URL,
+  so the link carried none and opened in the Roadster; the link now always names the vehicle.
+
 ## 2026-10-26 19:03
 
 - New README screenshots: the welcome screen, the Roadster on the LZ-67 and hovering over Timanfaya,
